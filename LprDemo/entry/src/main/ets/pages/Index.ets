@@ -294,6 +294,57 @@ function colourLabel(colour: string): string {
   return '未知';
 }
 
+/**
+ * 解析 native 的 `backends=` 字段为落点面板的显示行（ADR-0003）。
+ *
+ * 输入形如（三个角色用 `|` 分隔，字段用 `,` 分隔）：
+ *   det,cpu,CPU,,1076.7692,nan,1|rec,nnrt,NNRT:NPU_...kirin8020_v2_0,,4.0489,3692.1536,1|...
+ * 字段顺序：role, req, landed, fallback, l2, l2AsFp16, used
+ *
+ * 显示要点（这些是"榨干"这个项目的全部证据，不能糊）：
+ *   - req 与 landed 不同时，明说"回落"而不是只显示 landed —— 静默回落正是要抓的东西
+ *   - 落点是 NPU 时给个标记，方便一眼看出谁真的上了加速器
+ *   - used=0 表示本次没调这个会话（如 det 走 ncnn 时），此时 l2 是陈旧值，不显示
+ *   - l2AsFp16 不显示：它只在"声明 fp16 却按 fp32 读"的错标场景里才有意义，
+ *     三个模型输出都声明 FP32 时它是垃圾（实测 nan / 10424）
+ */
+function evidenceRows(backends: string): string[] {
+  const rows: string[] = [];
+  if (backends.length === 0) {
+    return rows;
+  }
+  for (const seg of backends.split('|')) {
+    const f: string[] = seg.split(',');
+    if (f.length < 7) {
+      continue;
+    }
+    const role: string = f[0];
+    // cls 角色已无模型：牌色自 2026-09-21 起走像素测量（ADR-0005），native 仍会在
+    // backends= 里带一行 cls 以保持字段数稳定，但它恒为 l2=0 且 used=1（没有会话可调）。
+    // 展示它会让读者以为"cls 也算了"，所以面板直接跳过。
+    if (role === 'cls') {
+      continue;
+    }
+    const req: string = f[1];
+    const landed: string = f[2];
+    const fallback: string = f[3];
+    const l2: string = f[4];
+    const used: string = f[6];
+    const isNpu: boolean = landed.indexOf('NPU') >= 0 || landed.indexOf('NNRT') >= 0;
+    let line: string = role + '  ' + (isNpu ? '⚡' : '  ') + 'LANDED=' + landed;
+    if (req.length > 0 && req !== landed) {
+      line += '  (req=' + req + (fallback.length > 0 ? ', 回落自 ' + fallback : '') + ')';
+    }
+    if (used === '1') {
+      line += '  l2=' + l2;
+    } else {
+      line += '  (本次未调用)';
+    }
+    rows.push(line);
+  }
+  return rows;
+}
+
 /** 解码后的 RGBA 帧：pipeline 只吃这个。 */
 interface RgbaFrame {
   data: ArrayBuffer;
@@ -316,6 +367,11 @@ struct Index {
   @State nPlate: string = '';
   @State nDetail: string = '';
   @State nTiming: string = '';
+  /**
+   * 落点自证面板（ADR-0003）。内容直接来自 native 的 `backends=` 字段，**不重算**。
+   * 每行形如：`det  req=cpu  LANDED=cpu  l2=1076.77`，回落时额外标出 `←from`。
+   */
+  @State nEvidence: string[] = [];
   @State nLenses: string[] = [];
 
   private ctx: common.UIAbilityContext | undefined = undefined;
@@ -527,9 +583,12 @@ struct Index {
         (f[3] === '1' ? '双层' : '单层') + ' · 裁剪 ' + f[5].replace('|', 'x') +
         ' · 字符 ' + f[7];
       this.nTiming = 'total ' + str(kv, 'totalMs') + ' ms   [' + f[9].replace(/\\|/g, ' / ') + ']';
+      // 落点面板：直接取 native 的 backends= 字段渲染，ArkTS 不重算（ADR-0003）
+      this.nEvidence = evidenceRows(str(kv, 'backends'));
       this.appendNative('NATIVE PIPE code=' + f[0] + ' colour=' + colour +
         ' count=' + count + ' total=' + str(kv, 'totalMs') + ' stages=' + f[9] +
-        ' cropSum=' + f[10]);
+        ' cropSum=' + f[10] +
+        ' backends=' + str(kv, 'backends'));
     } catch (e) {
       const err = e as Error;
       this.nStatus = '异常: ' + err.message;
@@ -1275,6 +1334,26 @@ struct Index {
             .fontSize(11)
             .fontColor(IOS_LABEL3)
             .width('100%')
+          // ── 落点自证（ADR-0003）
+          // NPU 利用率在这平台上读不到，所以"谁真的算了"只能这样显示：
+          // 模块名前缀的 ⚡ = 该角色落在 NPU 上，否则是 CPU。
+          // req 与 landed 不同时明写"回落"，因为静默回落正是要抓的东西。
+          if (this.nEvidence.length > 0) {
+            Divider()
+              .color(IOS_SEP)
+              .margin({ top: 6, bottom: 6 })
+            Text('落点自证 · LANDED')
+              .fontSize(10)
+              .fontColor(IOS_LABEL3)
+              .width('100%')
+            ForEach(this.nEvidence, (row: string) => {
+              Text(row)
+                .fontSize(10)
+                .fontFamily('monospace')
+                .fontColor(IOS_LABEL2)
+                .width('100%')
+            }, (row: string) => row)
+          }
         }
         .width('100%')
         .padding(14)

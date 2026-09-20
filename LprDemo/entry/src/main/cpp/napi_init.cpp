@@ -743,7 +743,10 @@ static void RunJob(AsyncJob* job) {
         kv += "|";
         kv += rec("rec", s.rec, s.recSlot < 0);
         kv += "|";
-        kv += rec("cls", s.cls, s.clsSlot < 0);
+        // cls 恒定 used=0：牌色自 2026-09-21 起走像素测量（ADR-0005），
+        // 分类模型不再进入流水线，没有任何会话被调用。保留这一行是为了让
+        // 字段数稳定（下游按位置解析），但 used=0 会让面板跳过它。
+        kv += rec("cls", s.cls, false);
         kv += ";";
       }
 
