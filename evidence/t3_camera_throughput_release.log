@@ -1,0 +1,204 @@
+09-21 03:52:22.952 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 rawlen det=271 rec=344 cls=260
+09-21 03:52:22.952 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 LOADED det=CPU rec=NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0 cls=CPU warmup=10
+09-21 03:52:23.029 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STREAM START show=960x960 analyze=640x480 rot=90
+09-21 03:52:23.741 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=2.7453 infer=57.4647 count=1 wh=480x640 rgbaSum=112604138 stages=34.1681|5.6147|27.5019|0.0450|0.5208|22.6372|0.0655|0.3606|27.1413
+09-21 03:52:23.741 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: FIRST FRAME kind=NV21 decode=2 infer=141 rot=90
+09-21 03:52:24.737 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=1.7655 infer=26.6698 count=1 wh=480x640 rgbaSum=111483589 stages=19.9900|2.5197|16.9622|0.0180|0.0403|6.5466|0.0302|0.3448|16.6173
+09-21 03:52:26.778 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=13.73 fps done=13.73 fps dropped_in_win=0 cum_arrived=28 cum_done=28 cum_dropped=0
+09-21 03:52:26.980 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=30 conv=2.8195 infer=37.1417 count=1 wh=480x640 rgbaSum=122413116 stages=30.9659|1.8297|28.6502|0.0158|0.7308|5.3536|0.0572|0.3362|28.3139
+09-21 03:52:28.796 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=15.35 fps done=15.35 fps dropped_in_win=0 cum_arrived=59 cum_done=59 cum_dropped=0
+09-21 03:52:28.997 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=60 conv=1.5622 infer=25.2608 count=1 wh=480x640 rgbaSum=122476497 stages=19.1648|1.0502|17.7019|0.0169|0.5416|5.4372|0.0872|0.1555|17.5464
+09-21 03:52:33.347 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=5.05 fps done=5.05 fps dropped_in_win=0 cum_arrived=82 cum_done=82 cum_dropped=0
+09-21 03:52:34.167 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=90 conv=2.6489 infer=28.7141 count=1 wh=480x640 rgbaSum=122629048 stages=19.4356|1.9919|16.8470|0.0178|0.8798|8.2972|0.0647|0.3361|16.5109
+09-21 03:52:35.936 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.86 fps done=3.86 fps dropped_in_win=0 cum_arrived=92 cum_done=92 cum_dropped=0
+09-21 03:52:38.111 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=4.60 fps done=4.60 fps dropped_in_win=0 cum_arrived=102 cum_done=102 cum_dropped=0
+09-21 03:52:40.456 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.56 fps done=2.56 fps dropped_in_win=0 cum_arrived=108 cum_done=108 cum_dropped=0
+09-21 03:52:42.465 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.49 fps done=1.49 fps dropped_in_win=0 cum_arrived=111 cum_done=111 cum_dropped=0
+09-21 03:52:44.537 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.41 fps done=2.41 fps dropped_in_win=0 cum_arrived=116 cum_done=116 cum_dropped=0
+09-21 03:52:45.926 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=120 conv=1.4242 infer=19.9458 count=0 wh=480x640 rgbaSum=120679893 stages=-
+09-21 03:52:46.941 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.91 fps done=2.91 fps dropped_in_win=0 cum_arrived=123 cum_done=123 cum_dropped=0
+09-21 03:52:49.405 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.44 fps done=2.44 fps dropped_in_win=0 cum_arrived=129 cum_done=129 cum_dropped=0
+09-21 03:52:51.766 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.69 fps done=1.69 fps dropped_in_win=0 cum_arrived=133 cum_done=133 cum_dropped=0
+09-21 03:52:54.500 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.19 fps done=2.19 fps dropped_in_win=0 cum_arrived=139 cum_done=139 cum_dropped=0
+09-21 03:52:55.154 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=150 conv=10.2902 infer=35.9497 count=0 wh=480x640 rgbaSum=114948777 stages=-
+09-21 03:52:56.540 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.12 fps done=19.61 fps dropped_in_win=0 cum_arrived=178 cum_done=179 cum_dropped=0
+09-21 03:52:56.682 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=180 conv=12.4764 infer=44.9555 count=0 wh=480x640 rgbaSum=109744333 stages=-
+09-21 03:52:58.210 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=210 conv=5.5188 infer=27.1111 count=0 wh=480x640 rgbaSum=114518762 stages=-
+09-21 03:52:58.606 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.36 fps done=19.36 fps dropped_in_win=0 cum_arrived=218 cum_done=219 cum_dropped=0
+09-21 03:52:59.724 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=240 conv=7.9778 infer=29.9002 count=0 wh=480x640 rgbaSum=113738106 stages=-
+09-21 03:53:00.645 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.62 fps done=19.62 fps dropped_in_win=0 cum_arrived=258 cum_done=259 cum_dropped=0
+09-21 03:53:01.273 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=270 conv=10.8317 infer=39.6448 count=0 wh=480x640 rgbaSum=112593853 stages=-
+09-21 03:53:02.666 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.29 fps done=19.79 fps dropped_in_win=0 cum_arrived=299 cum_done=299 cum_dropped=0
+09-21 03:53:02.736 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=300 conv=3.6684 infer=18.6777 count=0 wh=480x640 rgbaSum=133127844 stages=-
+09-21 03:53:04.218 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=330 conv=2.4886 infer=22.9009 count=0 wh=480x640 rgbaSum=109804933 stages=-
+09-21 03:53:04.708 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.08 fps done=20.08 fps dropped_in_win=0 cum_arrived=340 cum_done=340 cum_dropped=0
+09-21 03:53:05.754 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=360 conv=6.4436 infer=30.7431 count=0 wh=480x640 rgbaSum=111516047 stages=-
+09-21 03:53:06.731 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.77 fps done=20.27 fps dropped_in_win=0 cum_arrived=380 cum_done=381 cum_dropped=0
+09-21 03:53:07.227 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=390 conv=3.6695 infer=22.6797 count=0 wh=480x640 rgbaSum=111112805 stages=-
+09-21 03:53:08.724 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=420 conv=4.6253 infer=24.8783 count=0 wh=480x640 rgbaSum=110617748 stages=-
+09-21 03:53:08.780 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.01 fps done=20.01 fps dropped_in_win=0 cum_arrived=421 cum_done=422 cum_dropped=0
+09-21 03:53:10.266 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=450 conv=3.1281 infer=28.8464 count=1 wh=480x640 rgbaSum=104940029 stages=24.0227|1.8697|21.2744|0.0245|0.1145|4.6072|0.0422|0.4067|20.8677
+09-21 03:53:10.843 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.87 fps done=19.39 fps dropped_in_win=0 cum_arrived=462 cum_done=462 cum_dropped=0
+09-21 03:53:11.840 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=480 conv=2.1780 infer=29.3872 count=1 wh=480x640 rgbaSum=102764775 stages=20.7667|1.9855|18.2095|0.0152|0.0830|8.3995|0.0789|0.3541|17.8555
+09-21 03:53:12.878 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.66 fps done=19.66 fps dropped_in_win=0 cum_arrived=502 cum_done=502 cum_dropped=0
+09-21 03:53:13.322 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=510 conv=10.8041 infer=30.4083 count=0 wh=480x640 rgbaSum=101818831 stages=-
+09-21 03:53:14.940 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=540 conv=14.1956 infer=38.8794 count=1 wh=480x640 rgbaSum=100766879 stages=33.3384|6.3856|26.1961|0.0209|0.0859|5.2875|0.0420|2.8277|23.3684
+09-21 03:53:14.940 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=18.91 fps done=18.91 fps dropped_in_win=0 cum_arrived=541 cum_done=541 cum_dropped=0
+09-21 03:53:16.433 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=570 conv=13.4080 infer=29.3866 count=0 wh=480x640 rgbaSum=109577479 stages=-
+09-21 03:53:16.982 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.08 fps done=20.08 fps dropped_in_win=0 cum_arrived=582 cum_done=582 cum_dropped=0
+09-21 03:53:17.967 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=600 conv=2.7931 infer=22.0272 count=0 wh=480x640 rgbaSum=109970822 stages=-
+09-21 03:53:18.986 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=18.96 fps done=19.46 fps dropped_in_win=0 cum_arrived=620 cum_done=621 cum_dropped=0
+09-21 03:53:19.493 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=630 conv=10.5700 infer=36.8039 count=0 wh=480x640 rgbaSum=110074625 stages=-
+09-21 03:53:20.982 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=660 conv=2.7637 infer=31.2917 count=0 wh=480x640 rgbaSum=110994094 stages=-
+09-21 03:53:21.017 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.20 fps done=20.20 fps dropped_in_win=0 cum_arrived=661 cum_done=662 cum_dropped=0
+09-21 03:53:22.468 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=690 conv=10.3128 infer=23.1306 count=0 wh=480x640 rgbaSum=108968875 stages=-
+09-21 03:53:23.029 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.88 fps done=19.88 fps dropped_in_win=0 cum_arrived=701 cum_done=702 cum_dropped=0
+09-21 03:53:23.975 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=720 conv=7.5208 infer=23.0528 count=0 wh=480x640 rgbaSum=111078618 stages=-
+09-21 03:53:25.035 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.93 fps done=19.93 fps dropped_in_win=0 cum_arrived=741 cum_done=742 cum_dropped=0
+09-21 03:53:25.486 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=750 conv=5.0520 infer=41.2572 count=0 wh=480x640 rgbaSum=112069580 stages=-
+09-21 03:53:26.954 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=780 conv=2.0302 infer=19.9136 count=0 wh=480x640 rgbaSum=111203240 stages=-
+09-21 03:53:27.098 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.36 fps done=19.87 fps dropped_in_win=0 cum_arrived=783 cum_done=783 cum_dropped=0
+09-21 03:53:28.536 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=810 conv=4.1445 infer=29.1445 count=0 wh=480x640 rgbaSum=117753486 stages=-
+09-21 03:53:29.124 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.25 fps done=19.74 fps dropped_in_win=0 cum_arrived=822 cum_done=823 cum_dropped=0
+09-21 03:53:30.012 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=840 conv=6.0223 infer=28.2856 count=0 wh=480x640 rgbaSum=125320321 stages=-
+09-21 03:53:31.139 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.86 fps done=19.36 fps dropped_in_win=0 cum_arrived=862 cum_done=862 cum_dropped=0
+09-21 03:53:31.589 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=870 conv=13.0391 infer=30.2219 count=0 wh=480x640 rgbaSum=116514576 stages=-
+09-21 03:53:33.154 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=17.86 fps done=17.86 fps dropped_in_win=0 cum_arrived=898 cum_done=898 cum_dropped=0
+09-21 03:53:33.341 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=900 conv=11.7439 infer=34.5289 count=1 wh=480x640 rgbaSum=117781728 stages=29.3500|4.8467|23.9459|0.0195|0.8139|4.2158|0.0534|0.4423|23.5036
+09-21 03:53:35.031 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=930 conv=7.1398 infer=39.7195 count=1 wh=480x640 rgbaSum=109484523 stages=29.8178|2.6853|24.6047|0.0805|3.3506|6.3142|0.1669|0.5308|24.0739
+09-21 03:53:35.163 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=17.42 fps done=17.42 fps dropped_in_win=0 cum_arrived=933 cum_done=933 cum_dropped=0
+09-21 03:53:36.694 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=960 conv=4.9412 infer=29.4655 count=1 wh=480x640 rgbaSum=120322349 stages=23.6355|2.3691|20.5930|0.0220|0.9595|4.6069|0.1870|0.4398|20.1531
+09-21 03:53:37.201 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=18.16 fps done=18.16 fps dropped_in_win=0 cum_arrived=970 cum_done=970 cum_dropped=0
+09-21 03:53:38.815 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=990 conv=4.3008 infer=56.9034 count=1 wh=480x640 rgbaSum=120079288 stages=48.8609|5.6302|42.6584|0.0348|0.9484|6.9736|0.0606|0.3667|42.2917
+09-21 03:53:39.376 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=10.57 fps done=10.57 fps dropped_in_win=0 cum_arrived=993 cum_done=993 cum_dropped=0
+09-21 03:53:41.051 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1020 conv=3.2098 infer=21.6280 count=1 wh=480x640 rgbaSum=120533236 stages=15.8267|2.3792|12.9184|0.0192|0.7537|4.9422|0.0566|0.2948|12.6236
+09-21 03:53:41.414 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=16.69 fps done=17.18 fps dropped_in_win=0 cum_arrived=1027 cum_done=1028 cum_dropped=0
+09-21 03:53:43.431 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=11.40 fps done=10.90 fps dropped_in_win=0 cum_arrived=1050 cum_done=1050 cum_dropped=0
+09-21 03:53:43.486 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1050 conv=8.7550 infer=30.7900 count=1 wh=480x640 rgbaSum=120925800 stages=21.0342|1.9167|16.2266|0.0653|3.0092|5.9691|0.1630|0.2962|15.9303
+09-21 03:53:44.978 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1080 conv=8.3761 infer=31.1144 count=1 wh=480x640 rgbaSum=121311774 stages=24.1419|4.0525|19.2659|0.0263|1.1947|5.3647|0.2900|0.3686|18.8973
+09-21 03:53:45.470 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.62 fps done=20.11 fps dropped_in_win=0 cum_arrived=1090 cum_done=1091 cum_dropped=0
+09-21 03:53:46.487 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1110 conv=7.3584 infer=35.9311 count=1 wh=480x640 rgbaSum=120876839 stages=27.0066|2.8652|21.2236|0.0673|2.8842|5.7697|0.1664|0.4908|20.7328
+09-21 03:53:47.553 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.16 fps done=19.68 fps dropped_in_win=0 cum_arrived=1132 cum_done=1132 cum_dropped=0
+09-21 03:53:48.017 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1140 conv=7.2972 infer=24.7708 count=1 wh=480x640 rgbaSum=114381026 stages=18.8950|1.9200|15.9397|0.0316|0.3781|5.3261|0.1009|0.4084|15.5312
+09-21 03:53:49.585 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1170 conv=8.6175 infer=22.0231 count=0 wh=480x640 rgbaSum=112396293 stages=-
+09-21 03:53:49.586 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=18.70 fps done=19.19 fps dropped_in_win=0 cum_arrived=1170 cum_done=1171 cum_dropped=0
+09-21 03:53:51.102 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1200 conv=9.1927 infer=44.2991 count=1 wh=480x640 rgbaSum=113254382 stages=37.1981|4.4506|29.3566|0.0709|0.5973|6.2870|0.0734|1.9058|27.4508
+09-21 03:53:51.638 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.97 fps done=19.48 fps dropped_in_win=0 cum_arrived=1211 cum_done=1211 cum_dropped=0
+09-21 03:53:52.614 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1230 conv=2.0853 infer=18.6861 count=0 wh=480x640 rgbaSum=106885332 stages=-
+09-21 03:53:53.692 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.97 fps done=19.97 fps dropped_in_win=0 cum_arrived=1252 cum_done=1252 cum_dropped=0
+09-21 03:53:54.146 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1260 conv=12.6030 infer=34.2744 count=0 wh=480x640 rgbaSum=106905541 stages=-
+09-21 03:53:55.678 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1290 conv=9.9061 infer=28.4588 count=0 wh=480x640 rgbaSum=103303778 stages=-
+09-21 03:53:55.735 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.08 fps done=19.57 fps dropped_in_win=0 cum_arrived=1291 cum_done=1292 cum_dropped=0
+09-21 03:53:57.189 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1320 conv=8.7034 infer=21.3006 count=0 wh=480x640 rgbaSum=103771643 stages=-
+09-21 03:53:57.783 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.51 fps done=20.02 fps dropped_in_win=0 cum_arrived=1333 cum_done=1333 cum_dropped=0
+09-21 03:53:58.666 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1350 conv=3.6956 infer=18.4380 count=0 wh=480x640 rgbaSum=104124990 stages=-
+09-21 03:53:59.810 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.73 fps done=20.23 fps dropped_in_win=0 cum_arrived=1373 cum_done=1374 cum_dropped=0
+09-21 03:54:00.162 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1380 conv=7.4906 infer=19.0919 count=0 wh=480x640 rgbaSum=107233599 stages=-
+09-21 03:54:01.648 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1410 conv=2.1288 infer=19.1183 count=0 wh=480x640 rgbaSum=113049839 stages=-
+09-21 03:54:01.826 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.84 fps done=19.84 fps dropped_in_win=0 cum_arrived=1413 cum_done=1414 cum_dropped=0
+09-21 03:54:03.330 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1440 conv=6.5842 infer=27.9331 count=1 wh=480x640 rgbaSum=98893132 stages=23.4511|1.4877|21.2361|0.0214|0.1261|4.2848|0.0270|0.3344|20.9017
+09-21 03:54:03.836 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=18.41 fps done=18.41 fps dropped_in_win=0 cum_arrived=1450 cum_done=1451 cum_dropped=0
+09-21 03:54:04.817 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1470 conv=9.9889 infer=27.1237 count=0 wh=480x640 rgbaSum=108248323 stages=-
+09-21 03:54:05.860 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.77 fps done=19.28 fps dropped_in_win=0 cum_arrived=1490 cum_done=1490 cum_dropped=0
+09-21 03:54:06.380 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1500 conv=8.5611 infer=25.5311 count=0 wh=480x640 rgbaSum=112085440 stages=-
+09-21 03:54:07.870 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1530 conv=8.4061 infer=22.3661 count=0 wh=480x640 rgbaSum=117983321 stages=-
+09-21 03:54:07.870 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.89 fps done=20.39 fps dropped_in_win=0 cum_arrived=1530 cum_done=1531 cum_dropped=0
+09-21 03:54:09.361 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1560 conv=2.4591 infer=17.5200 count=0 wh=480x640 rgbaSum=116082201 stages=-
+09-21 03:54:09.908 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.12 fps done=20.12 fps dropped_in_win=0 cum_arrived=1571 cum_done=1572 cum_dropped=0
+09-21 03:54:10.850 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1590 conv=2.3627 infer=16.5862 count=0 wh=480x640 rgbaSum=131366673 stages=-
+09-21 03:54:11.968 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.90 fps done=19.90 fps dropped_in_win=0 cum_arrived=1612 cum_done=1613 cum_dropped=0
+09-21 03:54:12.361 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1620 conv=5.5325 infer=17.9608 count=0 wh=480x640 rgbaSum=127813384 stages=-
+09-21 03:54:13.891 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1650 conv=13.7766 infer=26.3891 count=0 wh=480x640 rgbaSum=116002857 stages=-
+09-21 03:54:13.972 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.96 fps done=19.96 fps dropped_in_win=0 cum_arrived=1652 cum_done=1653 cum_dropped=0
+09-21 03:54:15.441 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1680 conv=9.2242 infer=44.7114 count=0 wh=480x640 rgbaSum=121603737 stages=-
+09-21 03:54:15.978 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.94 fps done=19.44 fps dropped_in_win=0 cum_arrived=1692 cum_done=1692 cum_dropped=0
+09-21 03:54:16.987 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1710 conv=7.3061 infer=26.1717 count=0 wh=480x640 rgbaSum=126763640 stages=-
+09-21 03:54:17.990 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.38 fps done=19.38 fps dropped_in_win=0 cum_arrived=1731 cum_done=1731 cum_dropped=0
+09-21 03:54:18.455 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=1740 conv=2.5544 infer=21.2698 count=0 wh=480x640 rgbaSum=128267955 stages=-
+09-21 03:54:18.668 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=10.2200 infer=23.1738 count=0 wh=480x640 rgbaSum=128691415 stages=-
+09-21 03:54:18.683 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR <private> <private> 就绪（不加载模型）
+09-21 03:54:18.683 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 3 apply ok=1 status=实时识别中 · 基准：只取帧不推理
+09-21 03:54:21.234 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.49 fps done=20.49 fps dropped_in_win=0 cum_arrived=41 cum_done=41 cum_dropped=0
+09-21 03:54:23.239 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.94 fps done=19.94 fps dropped_in_win=0 cum_arrived=81 cum_done=81 cum_dropped=0
+09-21 03:54:25.244 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.96 fps done=19.96 fps dropped_in_win=0 cum_arrived=121 cum_done=121 cum_dropped=0
+09-21 03:54:27.285 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.09 fps done=20.09 fps dropped_in_win=0 cum_arrived=162 cum_done=162 cum_dropped=0
+09-21 03:54:29.291 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.93 fps done=19.93 fps dropped_in_win=0 cum_arrived=202 cum_done=202 cum_dropped=0
+09-21 03:54:31.293 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.98 fps done=19.98 fps dropped_in_win=0 cum_arrived=242 cum_done=242 cum_dropped=0
+09-21 03:54:33.327 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.16 fps done=20.16 fps dropped_in_win=0 cum_arrived=283 cum_done=283 cum_dropped=0
+09-21 03:54:35.330 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.97 fps done=19.97 fps dropped_in_win=0 cum_arrived=323 cum_done=323 cum_dropped=0
+09-21 03:54:36.650 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 rawlen det=271 rec=344 cls=260
+09-21 03:54:36.650 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 LOADED det=CPU rec=NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0 cls=CPU warmup=10
+09-21 03:54:36.650 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 apply ok=1 status=实时识别中 · 生产 det=CPU rec=NPU cls=CPU
+09-21 03:54:36.715 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=4.8844 infer=23.1011 count=1 wh=480x640 rgbaSum=123224385 stages=16.1705|1.5845|14.0708|0.0222|0.8022|5.9953|0.0619|0.2950|13.7758
+09-21 03:54:37.227 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=8.9689 infer=29.1303 count=1 wh=480x640 rgbaSum=121460263 stages=20.8898|2.1678|15.5636|0.0645|2.8995|4.8155|0.3942|0.3531|15.2105
+09-21 03:54:38.770 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=30 conv=2.0291 infer=19.0987 count=0 wh=480x640 rgbaSum=151621550 stages=-
+09-21 03:54:39.231 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.46 fps done=19.96 fps dropped_in_win=0 cum_arrived=39 cum_done=40 cum_dropped=0
+09-21 03:54:40.293 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=60 conv=7.9044 infer=40.3734 count=0 wh=480x640 rgbaSum=150975506 stages=-
+09-21 03:54:41.235 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.46 fps done=19.96 fps dropped_in_win=0 cum_arrived=80 cum_done=80 cum_dropped=0
+09-21 03:54:41.795 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=90 conv=6.6400 infer=25.4606 count=0 wh=480x640 rgbaSum=150354713 stages=-
+09-21 03:54:43.240 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.45 fps done=19.45 fps dropped_in_win=0 cum_arrived=119 cum_done=119 cum_dropped=0
+09-21 03:54:43.327 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=120 conv=5.7820 infer=27.6967 count=0 wh=480x640 rgbaSum=149752467 stages=-
+09-21 03:54:44.834 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=150 conv=4.4231 infer=28.3002 count=0 wh=480x640 rgbaSum=150081078 stages=-
+09-21 03:54:45.252 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.88 fps done=20.38 fps dropped_in_win=0 cum_arrived=159 cum_done=160 cum_dropped=0
+09-21 03:54:46.330 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=180 conv=5.8145 infer=27.4839 count=0 wh=480x640 rgbaSum=150032808 stages=-
+09-21 03:54:47.286 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.16 fps done=19.67 fps dropped_in_win=0 cum_arrived=200 cum_done=200 cum_dropped=0
+09-21 03:54:47.842 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=210 conv=9.6306 infer=30.4273 count=0 wh=480x640 rgbaSum=149588977 stages=-
+09-21 03:54:49.314 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=240 conv=8.4397 infer=21.3952 count=0 wh=480x640 rgbaSum=148471860 stages=-
+09-21 03:54:49.315 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.71 fps done=20.21 fps dropped_in_win=0 cum_arrived=240 cum_done=241 cum_dropped=0
+09-21 03:54:50.805 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=270 conv=2.9664 infer=18.1073 count=0 wh=480x640 rgbaSum=148238023 stages=-
+09-21 03:54:51.316 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.99 fps done=19.99 fps dropped_in_win=0 cum_arrived=280 cum_done=281 cum_dropped=0
+09-21 03:54:52.303 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=300 conv=4.4828 infer=17.6845 count=0 wh=480x640 rgbaSum=148008152 stages=-
+09-21 03:54:53.357 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.09 fps done=20.09 fps dropped_in_win=0 cum_arrived=321 cum_done=322 cum_dropped=0
+09-21 03:54:53.828 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=330 conv=9.5098 infer=28.7070 count=0 wh=480x640 rgbaSum=149134892 stages=-
+09-21 03:54:54.316 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=11.7527 infer=23.1027 count=0 wh=480x640 rgbaSum=149374860 stages=-
+09-21 03:54:54.352 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 1 rawlen det=350 rec=344 cls=371
+09-21 03:54:54.352 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 1 LOADED det=NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0 rec=NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0 cls=CPU warmup=10
+09-21 03:54:54.353 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 1 apply ok=1 status=实时识别中 · 全 NPU
+09-21 03:54:54.912 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=0 conv=3.2303 infer=26.0969 count=0 wh=480x640 rgbaSum=149441627 stages=-
+09-21 03:54:56.414 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=30 conv=11.0491 infer=13.6370 count=0 wh=480x640 rgbaSum=163307046 stages=-
+09-21 03:54:56.954 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.57 fps done=20.57 fps dropped_in_win=0 cum_arrived=42 cum_done=42 cum_dropped=0
+09-21 03:54:57.905 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=60 conv=8.7923 infer=13.6430 count=0 wh=480x640 rgbaSum=150396277 stages=-
+09-21 03:54:58.960 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.95 fps done=19.95 fps dropped_in_win=0 cum_arrived=82 cum_done=82 cum_dropped=0
+09-21 03:54:59.416 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=90 conv=9.0597 infer=13.0489 count=0 wh=480x640 rgbaSum=98728622 stages=-
+09-21 03:55:00.900 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=120 conv=3.1733 infer=13.0733 count=0 wh=480x640 rgbaSum=99731775 stages=-
+09-21 03:55:00.959 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.00 fps done=20.00 fps dropped_in_win=0 cum_arrived=122 cum_done=122 cum_dropped=0
+09-21 03:55:02.411 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=150 conv=4.3902 infer=29.1930 count=0 wh=480x640 rgbaSum=102225612 stages=-
+09-21 03:55:03.024 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.86 fps done=19.86 fps dropped_in_win=0 cum_arrived=163 cum_done=163 cum_dropped=0
+09-21 03:55:03.921 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=180 conv=7.6164 infer=18.6456 count=0 wh=480x640 rgbaSum=103033604 stages=-
+09-21 03:55:05.065 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.08 fps done=20.08 fps dropped_in_win=0 cum_arrived=204 cum_done=204 cum_dropped=0
+09-21 03:55:05.407 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=210 conv=7.2292 infer=13.1383 count=0 wh=480x640 rgbaSum=114466026 stages=-
+09-21 03:55:06.908 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=240 conv=9.3016 infer=15.5781 count=0 wh=480x640 rgbaSum=117837600 stages=-
+09-21 03:55:07.096 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.19 fps done=20.19 fps dropped_in_win=0 cum_arrived=245 cum_done=245 cum_dropped=0
+09-21 03:55:08.405 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=270 conv=7.3402 infer=10.9984 count=0 wh=480x640 rgbaSum=112178038 stages=-
+09-21 03:55:09.119 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.77 fps done=19.77 fps dropped_in_win=0 cum_arrived=285 cum_done=285 cum_dropped=0
+09-21 03:55:09.912 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=300 conv=11.4227 infer=12.7934 count=0 wh=480x640 rgbaSum=101836990 stages=-
+09-21 03:55:11.147 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.22 fps done=20.22 fps dropped_in_win=0 cum_arrived=326 cum_done=326 cum_dropped=0
+09-21 03:55:11.420 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=330 conv=12.0228 infer=16.3959 count=0 wh=480x640 rgbaSum=120314908 stages=-
+09-21 03:55:12.900 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=360 conv=2.4288 infer=14.1133 count=0 wh=480x640 rgbaSum=118125518 stages=-
+09-21 03:55:13.154 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.94 fps done=19.94 fps dropped_in_win=0 cum_arrived=366 cum_done=366 cum_dropped=0
+09-21 03:55:14.446 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=390 conv=11.1384 infer=33.1359 count=1 wh=480x640 rgbaSum=118105347 stages=14.0256|2.5878|8.6458|0.0739|2.1837|16.6006|0.2541|0.6655|7.9803
+09-21 03:55:15.163 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.90 fps done=19.90 fps dropped_in_win=0 cum_arrived=406 cum_done=406 cum_dropped=0
+09-21 03:55:15.906 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=420 conv=5.5497 infer=15.2375 count=0 wh=480x640 rgbaSum=118717459 stages=-
+09-21 03:55:17.202 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.11 fps done=20.11 fps dropped_in_win=0 cum_arrived=447 cum_done=447 cum_dropped=0
+09-21 03:55:17.402 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=450 conv=7.8686 infer=10.5158 count=0 wh=480x640 rgbaSum=110565682 stages=-
+09-21 03:55:18.914 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=480 conv=4.1873 infer=12.0805 count=0 wh=480x640 rgbaSum=120205588 stages=-
+09-21 03:55:19.211 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.91 fps done=19.91 fps dropped_in_win=0 cum_arrived=487 cum_done=487 cum_dropped=0
+09-21 03:55:20.424 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=510 conv=12.1556 infer=13.1277 count=0 wh=480x640 rgbaSum=126303090 stages=-
+09-21 03:55:21.252 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.10 fps done=20.10 fps dropped_in_win=0 cum_arrived=528 cum_done=528 cum_dropped=0
+09-21 03:55:21.897 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=540 conv=2.6336 infer=14.2236 count=0 wh=480x640 rgbaSum=151724137 stages=-
+09-21 03:55:23.263 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.88 fps done=19.88 fps dropped_in_win=0 cum_arrived=568 cum_done=568 cum_dropped=0
+09-21 03:55:23.392 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=570 conv=5.5009 infer=10.3011 count=0 wh=480x640 rgbaSum=149800309 stages=-
+09-21 03:55:24.907 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=600 conv=10.5220 infer=13.5111 count=0 wh=480x640 rgbaSum=148958349 stages=-
+09-21 03:55:25.312 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.01 fps done=20.01 fps dropped_in_win=0 cum_arrived=609 cum_done=609 cum_dropped=0
+09-21 03:55:26.405 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=630 conv=12.0519 infer=12.2145 count=0 wh=480x640 rgbaSum=149111064 stages=-
+09-21 03:55:27.317 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.96 fps done=19.96 fps dropped_in_win=0 cum_arrived=649 cum_done=649 cum_dropped=0
+09-21 03:55:27.921 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=660 conv=10.3222 infer=22.5942 count=0 wh=480x640 rgbaSum=149415518 stages=-
+09-21 03:55:29.355 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.11 fps done=20.11 fps dropped_in_win=0 cum_arrived=690 cum_done=690 cum_dropped=0
+09-21 03:55:29.404 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=690 conv=6.9948 infer=14.6803 count=0 wh=480x640 rgbaSum=149631375 stages=-
+09-21 03:55:30.903 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=720 conv=7.4505 infer=13.2828 count=0 wh=480x640 rgbaSum=149815869 stages=-
+09-21 03:55:31.359 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.96 fps done=19.96 fps dropped_in_win=0 cum_arrived=730 cum_done=730 cum_dropped=0
+09-21 03:55:32.403 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=750 conv=6.2397 infer=16.5019 count=0 wh=480x640 rgbaSum=122472802 stages=-
+09-21 03:55:33.374 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=19.85 fps done=19.85 fps dropped_in_win=0 cum_arrived=770 cum_done=770 cum_dropped=0
+09-21 03:55:33.919 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=780 conv=12.1220 infer=17.8006 count=0 wh=480x640 rgbaSum=116082708 stages=-
+09-21 03:55:35.402 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: STAGE n=810 conv=5.3920 infer=15.4389 count=0 wh=480x640 rgbaSum=115792007 stages=-
+09-21 03:55:35.403 46454 46454 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=20.21 fps done=20.21 fps dropped_in_win=0 cum_arrived=811 cum_done=811 cum_dropped=0

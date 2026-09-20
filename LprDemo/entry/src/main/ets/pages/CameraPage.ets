@@ -125,11 +125,15 @@ const WINDOW: number = 30;
  */
 const WARMUP_FRAMES: number = 10;
 /** 是否在会话启动后主动把预览帧率蹬到设备支持的最高档。
- *  理由：单帧工作耗时（≈25–35 ms）已经低于帧间隔，完成率
- *  等于到达率 —— 此时唯一的加速空间在**相机出帧率**本身。
+ *  理由：单帧工作耗时已经低于帧间隔，此时唯一的加速空间在**相机出帧率**本身。
  *  实测建流前 PreviewOutput.getSupportedFrameRates() 返回空数组，
- *  必须在 session.start() 之后查（API 文档：during session running）。 */
-const WANT_HIGH_FPS: boolean = false;
+ *  必须在 session.start() 之后查（API 文档：during session running）。
+ *
+ *  【2026-09-21 改为 true】原为 false，理由是「自动档已最优」—— 那个结论是
+ *  在 -O0 下得出的，已作废（详见下面 FPS_TARGET 的说明）。修好构建后复测：
+ *  自动 20.00 fps，显式设 30-30 得 30.00 fps。**相机自动档并没有跑到传感器
+ *  上限**，所以必须主动设。改动收益：基准档 20→30 fps，生产档 7→25–27 fps。 */
+const WANT_HIGH_FPS: boolean = true;
 /** 【实验】是否把**显示路**（XComponent 那条 960x960 PreviewOutput）从会话里摘掉。
  *  动机：现在是双路预览 —— 显示路 960x960 + 分析路 640x480 同时出流。
  *  基准档测到的 15 fps 仍然带着显示路，所以「显示路是不是在抢
@@ -137,20 +141,32 @@ const WANT_HIGH_FPS: boolean = false;
  *  「相机物理上限」与「双流互抢」。
  *  代价：摘掉后 XComponent 收不到帧，预览是黑的 —— 仅用于实验，不做产品形态。
  *
- *  【实测结论 2026-09-18】摘掉显示路**完全没有帮助**：
- *    显示路 ON ：生产档 arrive 14.7–15.3 · 基准档 14.9–15.1
- *    显示路 OFF：生产档 arrive 14.8–15.4 · 基准档 14.9–15.1
- *  即「双流互抢」被排除。当前 15.00 fps（抖动仅 ±0.1）是相机在暗场景
- *  把帧率**砍半换曝光**（30→15）的典型行为，是传感器决策，不是我们的开销。
- *  因此保持关闭；留这个开关是为了下次能一分钟内复查同一假设。 */
+ *  【2026-09-18 的结论已作废】当时测「摘掉显示路完全没帮助」，
+ *  是在 native 以 **-O0** 构建、流水线只有 ~7 fps 的条件下测的（见
+ *  docs/notes/build-mode-o0-regression.md）。那时**相机被我们自己背压**——
+ *  我们处理不过来，相机根本发不满，显示路的带宽争用自然看不出来。
+ *  该实验因此是**混淆的**，不能用来排除「双流互抢」。
+ *
+ *  【2026-09-21 复测：摘掉后反而更糟】修好 -O0、并显式设 30-30 之后复测，
+ *  单分析路下回调在 ~86 帧后**直接停摆**（LprCamera 再无任何输出），
+ *  而双路稳定在 20.00 fps（未设帧率时）。差异方向与预期相反，且伴随
+ *  接收器缓冲占满的迹象，说明瓶颈不在「显示路抢带宽」。
+ *  **本假设仍未获支持，且单路本身引入了新的停摆问题**，故不采用。
+ *
+ *  当前默认关闭（产品形态要预览）；留这个开关是为了下次能一分钟内复查。 */
 const SKIP_PREVIEW_DISPLAY: boolean = false;
 /** 目标帧率（仅当 WANT_HIGH_FPS 为真时生效）。设备报的区间是 [1-30, 60-60]。
- *  A/B 实测（同一场景、同一 release 构建）：
- *    不设（相机自动）→ arrive 22.1 fps
- *    设 30-30        → arrive 18.1–19.4 fps
- *    设 60-60        → arrive 18.5 fps
- *  也就是说**相机自动档已经是最优**，强制固定帧率会让传感器换一套曝光/出帧
- *  配置、反而更慢。因此默认关闭，只保留查询日志作为证据。 */
+ *
+ *  【2026-09-18 的结论已作废】当时记「不设（自动）22.1 fps 最优，设 30 反而
+ *  降到 18.1–19.4」，同样是在 -O0 下测的 —— 那时是我们的流水线在拖后腿，
+ *  设不设帧率都到不了 30，读数反映的是我们的处理速度而非相机。
+ *
+ *  【2026-09-21 复测（release -O2）】结论完全相反，设 30 明确更快：
+ *    不设（相机自动）→ 基准档 20.00 fps（抖动 ±0.1）
+ *    设 30-30        → 基准档 30.00 fps（抖动 ±0.1）   ← 采用
+ *    设 60-60        → 基准档 ~29.8 fps（active 报 60-60，但传感器仍只给 30）
+ *  即 **30 是本分辨率下传感器能给的稳态上限**；60 区间被接受但拿不到 60。
+ *  生产档（det=CPU rec=NPU cls=CPU）在 30-30 下能跑到 25–27 fps。 */
 const FPS_TARGET: number = 30;
 
 function parseKv(s: string): Map<string, string> {
@@ -761,6 +777,17 @@ struct CameraPage {
       if (this.gear === GEAR_ARRIVE_ONLY) {
         // 只数 callback：不 readLatestImage，不 release，只统计 arrival 间隔分布。
         // 如果 callback 停摆 → 缓冲满；如果间隔拉长 → 背压。这是「相机上限」的唯一判据。
+        //
+        // 【2026-09-21 更正】这里**必须先记到达**。此前它在自增 totalArrived /
+        // arrivedInWin **之前**就 return 了，于是到达数与完成数都只由别的路径更新 ——
+        // 而 callback 档下根本没有别的路径。结果读数卡显示的「到达 fps」其实是
+        // 上一档残留的窗口值，不是回调率。我据此误判过一次「回调率 = 20 fps」。
+        //
+        // 到达计数必须在这里，因为「回调到达」正是这一档唯一要测的东西。
+        this.totalArrived = this.totalArrived + 1;
+        this.arrivedInWin = this.arrivedInWin + 1;
+        // 这一档不经过 record()，所以要在这里自己结算窗口，否则永远不打 RATE。
+        this.billWindow();
         this.finishFrame();
         return;
       }
@@ -836,6 +863,38 @@ struct CameraPage {
       this.busy = true;
       this.consume(recv);
     }
+  }
+
+  /**
+   * 结算一个 2 s 窗口：算到达率 / 完成率，打 RATE 行。
+   *
+   * 从 `record()` 里抽出来，因为「只数 callback」档（`GEAR_ARRIVE_ONLY`）
+   * **根本不会调 `record()`** —— 它拿到回调就把帧丢掉。原来结算逻辑只写在
+   * `record()` 里，于是那一档永远不打 RATE，读数卡上也永远不刷新：
+   * 表面上像「回调停摆」，实际是**没有任何代码去结算**。
+   * 我因此误读过一次，所以把它提成独立方法，让两条路径共用。
+   */
+  private billWindow(): void {
+    const now: number = Date.now();
+    if (this.winStart === 0) {
+      this.winStart = now;
+      return;
+    }
+    const winMs: number = now - this.winStart;
+    if (winMs < 2000) {
+      return;
+    }
+    this.arrFps = this.arrivedInWin * 1000 / winMs;
+    this.doneFps = this.doneInWin * 1000 / winMs;
+    hilog.info(DOMAIN, TAG,
+      'RATE arrive=%{public}s fps done=%{public}s fps dropped_in_win=%{public}d ' +
+      'cum_arrived=%{public}d cum_done=%{public}d cum_dropped=%{public}d gear=%{public}d',
+      this.arrFps.toFixed(2), this.doneFps.toFixed(2), this.droppedInWin,
+      this.totalArrived, this.frames, this.dropped, this.gear);
+    this.winStart = now;
+    this.arrivedInWin = 0;
+    this.doneInWin = 0;
+    this.droppedInWin = 0;
   }
 
   /**
@@ -1004,24 +1063,7 @@ struct CameraPage {
     // 到达率 vs 完成率：每 ~2 s 结算一个窗口。
     //   到达率 ≈ 完成率  → 相机就是这个速度，我们再快也没用（上限在相机）
     //   到达率 >> 完成率 → 是我们算得慢，还有优化空间
-    const now: number = Date.now();
-    if (this.winStart === 0) {
-      this.winStart = now;
-    }
-    const winMs: number = now - this.winStart;
-    if (winMs >= 2000) {
-      this.arrFps = this.arrivedInWin * 1000 / winMs;
-      this.doneFps = this.doneInWin * 1000 / winMs;
-      hilog.info(DOMAIN, TAG,
-        'RATE arrive=%{public}s fps done=%{public}s fps dropped_in_win=%{public}d ' +
-        'cum_arrived=%{public}d cum_done=%{public}d cum_dropped=%{public}d',
-        this.arrFps.toFixed(2), this.doneFps.toFixed(2), this.droppedInWin,
-        this.totalArrived, this.frames, this.dropped);
-      this.winStart = now;
-      this.arrivedInWin = 0;
-      this.doneInWin = 0;
-      this.droppedInWin = 0;
-    }
+    this.billWindow();
 
     const f: number = p50(this.frameMsWin);
     if (f > 0) {
