@@ -1,0 +1,62 @@
+{
+  "app": {
+    // 留空：由 DevEco Studio 的「自动签名」写入（File > Project Structure > Signing Configs
+    // > 勾选 Automatically generate signature）。生成的材料会落在 ~/.ohos/config/，
+    // 且其 profile 的 bundle-name 会与下方 AppScope/app.json5 的 bundleName 一致 —— 这是
+    // 真机安装的硬性前提（hvigor 在构建期即校验，不匹配直接 BUILD FAILED）。
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001AB74A8367362AE64EFD180294E816F7DDC06CD0E024321F46DCE1F131D3ABA100C3F73CE67B16",
+          "profile": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.p12",
+          "storePassword": "0000001A3866D7366D8367D911ECAFA793BAA88224A6AD6E4FE297842B6A8302588FBF3C5CACC1E45FD9"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        // ★ 必须显式引用上面的 signingConfigs.name，否则 hvigor 只产 unsigned HAP
+        //   （症状：bm install 报 code:9568320 error: no signature file）
+        "signingConfig": "default",
+        "targetSdkVersion": "6.1.1(24)",
+        "compatibleSdkVersion": "6.1.1(24)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

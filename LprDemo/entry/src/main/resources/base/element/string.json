@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "端到端车牌识别 · 浏览器内推理的离线壳"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "基于 YOLOv5 与 CRNN-CTC 的纯前端端到端车牌识别"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "车牌识别"
+    },
+    {
+      "name": "reason_for_camera",
+      "value": "拍摄车牌照片，用于在本机完成端到端识别演示"
+    }
+  ]
+}

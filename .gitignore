@@ -1,0 +1,31 @@
+# --- 构建产物（可重新产出）---
+LprDemo/entry/build/
+LprDemo/entry/.cxx/
+LprDemo/.hvigor/
+LprDemo/.idea/
+LprDemo/oh_modules/
+LprDemo/entry/oh_modules/
+*.hap
+*.har
+
+# --- 模型二进制（由 tools/convert_ms.sh 从 ONNX 重新产出）---
+*.ms
+*.om
+*.omc
+*.onnx
+*.ncnn.bin
+*.ncnn.param
+
+# --- 签名材料（在 ~/.ohos/config，不入库）---
+*.p12
+*.cer
+*.p7b
+*.csr
+
+# --- DDK（匿名可下，含 >100MB 单文件）---
+ddk/
+
+# --- 系统 ---
+Thumbs.db
+desktop.ini
+.DS_Store
