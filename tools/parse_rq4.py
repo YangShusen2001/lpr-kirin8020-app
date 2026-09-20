@@ -23,14 +23,30 @@ import json
 import os
 import re
 import statistics
+import sys
 
-RAW = r"C:\Users\26671\lpr-data\rq4_final.log"
-OUT = r"C:\Users\26671\lpr-data"
+# 日志路径可从命令行给：`parse_rq4.py <log> [outdir]`
+RAW = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\26671\lpr-data\rq4_final.log"
+OUT = sys.argv[2] if len(sys.argv) > 2 else r"C:\Users\26671\lpr-data"
 
+
+def open_log(path):
+    """hdc 重定向输出是 UTF-16LE（带 BOM）。"""
+    with open(path, "rb") as fh:
+        head = fh.read(2)
+    enc = "utf-16" if head in (b"\xff\xfe", b"\xfe\xff") else "utf-8"
+    return open(path, encoding=enc, errors="replace")
+
+
+# hilog 行形如 `09-21 02:51:10.521 65016 65016 I A0D001/pkg/Tag: RQ4 r=...`，
+# 所以锚点不能是行首，匹配目标串即可。
 RE_R = re.compile(
-    r"^RQ4 r=(\d+) t=(\d+) thermal=(-?\d+) battC=([\d.]+) soc=(\d+) chg=(\d+) "
+    r"RQ4 r=(\d+) t=(\d+) thermal=(-?\d+) battC=([\d.]+) soc=(\d+) chg=(\d+) "
     r"load=(\S+) totalMs=([\d.]*) code=(\S*) backends=(.*)$")
-RE_P = re.compile(r"^RQ4P r=(\d+) p0=(.*)$")
+RE_P = re.compile(r"RQ4P r=(\d+) p0=(.*)$")
+# 探针的行是 RQ4（不带 p0），完整 p0 在同一次推理的 pipeline: 行里。
+# 两行时间戳只差几十毫秒，按"出现在该 RQ4 行之后的第一条 pipeline: 行"配对。
+RE_PIPE_P0 = re.compile(r"pipeline: (.*)$")
 
 # p0 第 10 字段（index 9）的分段顺序，与 napi_init.cpp:776 严格对应
 STAGES = ["detect", "letterbox", "encInfer", "decNms", "rectify",
@@ -54,9 +70,17 @@ def parse_backends(b):
 
 rows = {}
 p0s = {}
-with open(RAW, encoding="utf-8", errors="replace") as fh:
+# 完整 p0 的来源有两处：
+#   1) 同一次推理的 `LprNative: pipeline: ...p0=...` 行 —— 它出现在 RQ4 行**之前**
+#      （实测 r=0: pipeline 在 .442，RQ4 在 .521）
+#   2) 探针自己另起的 `RQ4P r=N p0=...` 行 —— 出现在 RQ4 行之后
+# 所以两个方向都要兜：缓存最近一条 pipeline 的 p0 给随后的 RQ4 用，
+# 同时 RQ4P 出现时以它为准（同名覆盖）。
+last_pipe_p0 = None
+with open_log(RAW) as fh:
     for line in fh:
-        m = RE_R.match(line.strip())
+        s = line.strip()
+        m = RE_R.search(s)
         if m:
             r = int(m.group(1))
             rows[r] = {
@@ -71,10 +95,16 @@ with open(RAW, encoding="utf-8", errors="replace") as fh:
                 "code": m.group(9),
                 "backends": parse_backends(m.group(10)),
             }
+            if last_pipe_p0 is not None:
+                p0s.setdefault(r, last_pipe_p0)
             continue
-        m = RE_P.match(line.strip())
+        m = RE_P.search(s)
         if m:
-            p0s[int(m.group(1))] = m.group(2)
+            p0s[int(m.group(1))] = m.group(2)   # 显式 RQ4P 优先
+            continue
+        if "pipeline:" in s and "p0=" in s:
+            i = s.find("p0=")
+            last_pipe_p0 = s[i + 3:].split(";")[0]
 
 # 把 p0 明细并入
 for r, p0 in p0s.items():
@@ -101,6 +131,10 @@ print(f"轮数: {len(seq)}")
 
 ok = [r for r in seq if r["totalMs"] is not None]
 print(f"有效轮: {len(ok)}  破例轮: {len(seq) - len(ok)}")
+if not ok:
+    print()
+    print(f"!! 没有解析到任何 RQ4 轮。检查日志路径与格式：{RAW}")
+    raise SystemExit(1)
 
 lat = [r["totalMs"] for r in ok]
 print()

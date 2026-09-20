@@ -7,8 +7,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 86.9792,
-  "code": "苏ED512",
+  "totalMs": 86.6486,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -22,8 +22,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -35,22 +35,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "50.4620|31.8480|15.9900|0.0975|15.8036|19.1469|0.5453|2.0384|13.9516",
+  "stages": "44.2337|28.3762|13.4606|0.0753|11.9595|29.0944|0.4955|1.5712|11.8894",
   "stage_ms": {
-   "detect": 50.462,
-   "letterbox": 31.848,
-   "encInfer": 15.99,
-   "decNms": 0.0975,
-   "rectify": 15.8036,
-   "recog": 19.1469,
-   "cls": 0.5453,
-   "pack": 2.0384,
-   "infer": 13.9516
+   "detect": 44.2337,
+   "letterbox": 28.3762,
+   "encInfer": 13.4606,
+   "decNms": 0.0753,
+   "rectify": 11.9595,
+   "recog": 29.0944,
+   "cls": 0.4955,
+   "pack": 1.5712,
+   "infer": 11.8894
   }
  },
  {
@@ -61,9 +61,51 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": null,
-  "code": "-",
-  "backends": {}
+  "totalMs": 101.7519,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "52.8591|26.6117|23.0986|0.0994|16.4112|30.9784|0.5564|1.5612|21.5373",
+  "stage_ms": {
+   "detect": 52.8591,
+   "letterbox": 26.6117,
+   "encInfer": 23.0986,
+   "decNms": 0.0994,
+   "rectify": 16.4112,
+   "recog": 30.9784,
+   "cls": 0.5564,
+   "pack": 1.5612,
+   "infer": 21.5373
+  }
  },
  {
   "round": 2,
@@ -73,8 +115,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 195.977,
-  "code": "苏ED512",
+  "totalMs": 154.1247,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -88,8 +130,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -101,34 +143,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "144.3737|119.6062|21.3000|0.1242|20.2552|29.9772|0.4842|2.9752|18.3248",
+  "stages": "97.9017|76.3153|18.6420|0.0969|15.7981|38.8497|0.5483|2.3837|16.2583",
   "stage_ms": {
-   "detect": 144.3737,
-   "letterbox": 119.6062,
-   "encInfer": 21.3,
-   "decNms": 0.1242,
-   "rectify": 20.2552,
-   "recog": 29.9772,
-   "cls": 0.4842,
-   "pack": 2.9752,
-   "infer": 18.3248
+   "detect": 97.9017,
+   "letterbox": 76.3153,
+   "encInfer": 18.642,
+   "decNms": 0.0969,
+   "rectify": 15.7981,
+   "recog": 38.8497,
+   "cls": 0.5483,
+   "pack": 2.3837,
+   "infer": 16.2583
   }
  },
  {
   "round": 3,
   "t_s": 45,
   "thermal": 2,
-  "battC": 37.0,
+  "battC": 36.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 138.0678,
-  "code": "苏ED512",
+  "totalMs": 148.0239,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -142,8 +184,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -155,34 +197,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "76.3258|26.9569|45.0881|0.1277|19.4492|40.6162|0.6097|1.5870|43.5011",
+  "stages": "82.5264|28.5595|49.7052|0.1328|22.0852|41.9239|0.5733|1.5798|48.1253",
   "stage_ms": {
-   "detect": 76.3258,
-   "letterbox": 26.9569,
-   "encInfer": 45.0881,
-   "decNms": 0.1277,
-   "rectify": 19.4492,
-   "recog": 40.6162,
-   "cls": 0.6097,
-   "pack": 1.587,
-   "infer": 43.5011
+   "detect": 82.5264,
+   "letterbox": 28.5595,
+   "encInfer": 49.7052,
+   "decNms": 0.1328,
+   "rectify": 22.0852,
+   "recog": 41.9239,
+   "cls": 0.5733,
+   "pack": 1.5798,
+   "infer": 48.1253
   }
  },
  {
   "round": 4,
   "t_s": 60,
   "thermal": 2,
-  "battC": 37.0,
+  "battC": 36.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 168.8717,
-  "code": "苏ED512",
+  "totalMs": 142.4947,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -196,8 +238,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -209,22 +251,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "114.3627|63.9483|47.8033|0.0953|15.8870|37.2369|0.5300|2.2613|45.5420",
+  "stages": "81.4166|27.8773|49.4973|0.1361|19.9139|39.4253|0.6702|1.5839|47.9134",
   "stage_ms": {
-   "detect": 114.3627,
-   "letterbox": 63.9483,
-   "encInfer": 47.8033,
-   "decNms": 0.0953,
-   "rectify": 15.887,
-   "recog": 37.2369,
-   "cls": 0.53,
-   "pack": 2.2613,
-   "infer": 45.542
+   "detect": 81.4166,
+   "letterbox": 27.8773,
+   "encInfer": 49.4973,
+   "decNms": 0.1361,
+   "rectify": 19.9139,
+   "recog": 39.4253,
+   "cls": 0.6702,
+   "pack": 1.5839,
+   "infer": 47.9134
   }
  },
  {
@@ -235,8 +277,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 134.5861,
-  "code": "苏ED512",
+  "totalMs": 175.6522,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -250,8 +292,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -263,22 +305,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "75.5573|40.3898|32.0197|0.1061|17.5506|39.9059|0.6253|1.8456|30.1741",
+  "stages": "120.2786|71.7902|45.4617|0.0987|16.5309|37.1300|0.6245|2.6931|42.7686",
   "stage_ms": {
-   "detect": 75.5573,
-   "letterbox": 40.3898,
-   "encInfer": 32.0197,
-   "decNms": 0.1061,
-   "rectify": 17.5506,
-   "recog": 39.9059,
-   "cls": 0.6253,
-   "pack": 1.8456,
-   "infer": 30.1741
+   "detect": 120.2786,
+   "letterbox": 71.7902,
+   "encInfer": 45.4617,
+   "decNms": 0.0987,
+   "rectify": 16.5309,
+   "recog": 37.13,
+   "cls": 0.6245,
+   "pack": 2.6931,
+   "infer": 42.7686
   }
  },
  {
@@ -289,8 +331,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 127.4575,
-  "code": "苏ED512",
+  "totalMs": 137.6764,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -304,8 +346,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -317,22 +359,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "84.3516|25.7353|56.4727|0.0795|12.8205|28.7347|0.6220|1.5702|54.9025",
+  "stages": "71.7678|27.4464|40.3597|0.1211|21.5583|42.9241|0.5225|1.5761|38.7836",
   "stage_ms": {
-   "detect": 84.3516,
-   "letterbox": 25.7353,
-   "encInfer": 56.4727,
-   "decNms": 0.0795,
-   "rectify": 12.8205,
-   "recog": 28.7347,
-   "cls": 0.622,
-   "pack": 1.5702,
-   "infer": 54.9025
+   "detect": 71.7678,
+   "letterbox": 27.4464,
+   "encInfer": 40.3597,
+   "decNms": 0.1211,
+   "rectify": 21.5583,
+   "recog": 42.9241,
+   "cls": 0.5225,
+   "pack": 1.5761,
+   "infer": 38.7836
   }
  },
  {
@@ -343,8 +385,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 121.3347,
-  "code": "苏ED512",
+  "totalMs": 136.1614,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -358,8 +400,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -371,22 +413,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "61.5048|26.3025|31.4862|0.1036|16.6391|41.3775|0.5941|1.5816|29.9047",
+  "stages": "72.1988|27.0520|41.4355|0.1237|19.2202|43.0756|0.5998|1.5656|39.8698",
   "stage_ms": {
-   "detect": 61.5048,
-   "letterbox": 26.3025,
-   "encInfer": 31.4862,
-   "decNms": 0.1036,
-   "rectify": 16.6391,
-   "recog": 41.3775,
-   "cls": 0.5941,
-   "pack": 1.5816,
-   "infer": 29.9047
+   "detect": 72.1988,
+   "letterbox": 27.052,
+   "encInfer": 41.4355,
+   "decNms": 0.1237,
+   "rectify": 19.2202,
+   "recog": 43.0756,
+   "cls": 0.5998,
+   "pack": 1.5656,
+   "infer": 39.8698
   }
  },
  {
@@ -397,8 +439,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 153.2634,
-  "code": "苏ED512",
+  "totalMs": 168.2325,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -412,8 +454,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -425,22 +467,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "87.6130|26.7316|56.6069|0.1414|21.7922|42.1394|0.7184|1.6697|54.9372",
+  "stages": "110.6516|74.9836|32.5606|0.1072|16.6811|39.4430|0.5512|2.7298|29.8308",
   "stage_ms": {
-   "detect": 87.613,
-   "letterbox": 26.7316,
-   "encInfer": 56.6069,
-   "decNms": 0.1414,
-   "rectify": 21.7922,
-   "recog": 42.1394,
-   "cls": 0.7184,
-   "pack": 1.6697,
-   "infer": 54.9372
+   "detect": 110.6516,
+   "letterbox": 74.9836,
+   "encInfer": 32.5606,
+   "decNms": 0.1072,
+   "rectify": 16.6811,
+   "recog": 39.443,
+   "cls": 0.5512,
+   "pack": 2.7298,
+   "infer": 29.8308
   }
  },
  {
@@ -451,8 +493,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 208.242,
-  "code": "苏ED512",
+  "totalMs": 141.4173,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -466,8 +508,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -479,34 +521,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "135.0625|64.1039|61.3106|0.3319|36.7405|34.9394|0.5311|2.3472|58.9634",
+  "stages": "80.3342|27.9522|49.0594|0.1239|17.8431|41.1325|0.6548|1.5759|47.4834",
   "stage_ms": {
-   "detect": 135.0625,
-   "letterbox": 64.1039,
-   "encInfer": 61.3106,
-   "decNms": 0.3319,
-   "rectify": 36.7405,
-   "recog": 34.9394,
-   "cls": 0.5311,
-   "pack": 2.3472,
-   "infer": 58.9634
+   "detect": 80.3342,
+   "letterbox": 27.9522,
+   "encInfer": 49.0594,
+   "decNms": 0.1239,
+   "rectify": 17.8431,
+   "recog": 41.1325,
+   "cls": 0.6548,
+   "pack": 1.5759,
+   "infer": 47.4834
   }
  },
  {
   "round": 10,
   "t_s": 150,
   "thermal": 2,
-  "battC": 36.0,
+  "battC": 35.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 139.9409,
-  "code": "苏ED512",
+  "totalMs": 130.7763,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -520,8 +562,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -533,22 +575,22 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "76.9805|27.3241|46.5836|0.1228|17.4023|43.7814|0.5989|1.6041|44.9795",
+  "stages": "67.4373|26.9387|36.5123|0.1245|19.3178|42.3475|0.6028|1.6211|34.8913",
   "stage_ms": {
-   "detect": 76.9805,
-   "letterbox": 27.3241,
-   "encInfer": 46.5836,
-   "decNms": 0.1228,
-   "rectify": 17.4023,
-   "recog": 43.7814,
-   "cls": 0.5989,
-   "pack": 1.6041,
-   "infer": 44.9795
+   "detect": 67.4373,
+   "letterbox": 26.9387,
+   "encInfer": 36.5123,
+   "decNms": 0.1245,
+   "rectify": 19.3178,
+   "recog": 42.3475,
+   "cls": 0.6028,
+   "pack": 1.6211,
+   "infer": 34.8913
   }
  },
  {
@@ -559,8 +601,8 @@
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 114.0738,
-  "code": "苏ED512",
+  "totalMs": 134.0658,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -574,8 +616,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -587,34 +629,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "60.3822|27.3406|30.1303|0.1016|17.3888|34.6692|0.6530|1.5706|28.5597",
+  "stages": "69.9027|27.8653|38.4591|0.1122|20.5019|42.1420|0.5986|1.5672|36.8919",
   "stage_ms": {
-   "detect": 60.3822,
-   "letterbox": 27.3406,
-   "encInfer": 30.1303,
-   "decNms": 0.1016,
-   "rectify": 17.3888,
-   "recog": 34.6692,
-   "cls": 0.653,
-   "pack": 1.5706,
-   "infer": 28.5597
+   "detect": 69.9027,
+   "letterbox": 27.8653,
+   "encInfer": 38.4591,
+   "decNms": 0.1122,
+   "rectify": 20.5019,
+   "recog": 42.142,
+   "cls": 0.5986,
+   "pack": 1.5672,
+   "infer": 36.8919
   }
  },
  {
   "round": 12,
   "t_s": 180,
   "thermal": 2,
-  "battC": 36.0,
+  "battC": 35.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 190.1706,
-  "code": "苏ED512",
+  "totalMs": 180.42,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -628,8 +670,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -641,34 +683,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "135.7969|40.6956|82.4608|0.1470|21.8442|31.2080|0.4823|1.8409|80.6198",
+  "stages": "114.6172|27.5286|82.7197|0.1481|20.5605|43.3897|0.6980|1.5609|81.1588",
   "stage_ms": {
-   "detect": 135.7969,
-   "letterbox": 40.6956,
-   "encInfer": 82.4608,
-   "decNms": 0.147,
-   "rectify": 21.8442,
-   "recog": 31.208,
-   "cls": 0.4823,
-   "pack": 1.8409,
-   "infer": 80.6198
+   "detect": 114.6172,
+   "letterbox": 27.5286,
+   "encInfer": 82.7197,
+   "decNms": 0.1481,
+   "rectify": 20.5605,
+   "recog": 43.3897,
+   "cls": 0.698,
+   "pack": 1.5609,
+   "infer": 81.1588
   }
  },
  {
   "round": 13,
   "t_s": 195,
   "thermal": 2,
-  "battC": 36.0,
+  "battC": 35.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 125.1469,
-  "code": "苏ED512",
+  "totalMs": 123.5078,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -682,8 +724,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -695,34 +737,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "70.1914|26.3356|40.6445|0.1122|19.1705|34.4362|0.5086|1.5616|39.0830",
+  "stages": "67.4253|27.0020|37.4305|0.0998|15.7680|38.7792|0.5108|1.5905|35.8400",
   "stage_ms": {
-   "detect": 70.1914,
-   "letterbox": 26.3356,
-   "encInfer": 40.6445,
-   "decNms": 0.1122,
-   "rectify": 19.1705,
-   "recog": 34.4362,
-   "cls": 0.5086,
-   "pack": 1.5616,
-   "infer": 39.083
+   "detect": 67.4253,
+   "letterbox": 27.002,
+   "encInfer": 37.4305,
+   "decNms": 0.0998,
+   "rectify": 15.768,
+   "recog": 38.7792,
+   "cls": 0.5108,
+   "pack": 1.5905,
+   "infer": 35.84
   }
  },
  {
   "round": 14,
   "t_s": 210,
   "thermal": 2,
-  "battC": 36.0,
+  "battC": 35.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 151.3792,
-  "code": "苏ED512",
+  "totalMs": 130.358,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -736,8 +778,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -749,34 +791,34 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "93.7308|72.0822|18.5056|0.1122|16.7327|39.2742|0.6723|2.7450|15.7606",
+  "stages": "69.1995|27.9286|37.9888|0.1078|18.6970|40.7097|0.6767|1.5919|36.3969",
   "stage_ms": {
-   "detect": 93.7308,
-   "letterbox": 72.0822,
-   "encInfer": 18.5056,
-   "decNms": 0.1122,
-   "rectify": 16.7327,
-   "recog": 39.2742,
-   "cls": 0.6723,
-   "pack": 2.745,
-   "infer": 15.7606
+   "detect": 69.1995,
+   "letterbox": 27.9286,
+   "encInfer": 37.9888,
+   "decNms": 0.1078,
+   "rectify": 18.697,
+   "recog": 40.7097,
+   "cls": 0.6767,
+   "pack": 1.5919,
+   "infer": 36.3969
   }
  },
  {
   "round": 15,
   "t_s": 225,
   "thermal": 2,
-  "battC": 36.0,
+  "battC": 35.0,
   "soc": 100,
   "charging": 3,
   "load": "2",
-  "totalMs": 134.6991,
-  "code": "苏ED512",
+  "totalMs": 136.1502,
+  "code": "苏ED5172",
   "backends": {
    "det": {
     "req": "cpu",
@@ -790,8 +832,8 @@
     "req": "nnrt",
     "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
     "fallback": "",
-    "l2": "3.0965",
-    "l2AsFp16": "4521.9430",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
     "used": "1"
    },
    "cls": {
@@ -803,22 +845,238 @@
     "used": "0"
    }
   },
-  "chars": "苏|E|D|5|1|2",
+  "chars": "苏|E|D|5|1|7|2",
   "cropSum": "2773473",
   "cropHW": "78|123",
   "rect": "1751|747|1879|855",
   "colour": "green|0.9756",
-  "stages": "75.1506|26.6927|45.2264|0.1050|17.4022|40.6091|0.6414|1.6528|43.5736",
+  "stages": "70.5920|27.5670|39.1067|0.1195|21.2642|42.4694|0.6659|1.5800|37.5267",
   "stage_ms": {
-   "detect": 75.1506,
-   "letterbox": 26.6927,
-   "encInfer": 45.2264,
-   "decNms": 0.105,
-   "rectify": 17.4022,
-   "recog": 40.6091,
-   "cls": 0.6414,
-   "pack": 1.6528,
-   "infer": 43.5736
+   "detect": 70.592,
+   "letterbox": 27.567,
+   "encInfer": 39.1067,
+   "decNms": 0.1195,
+   "rectify": 21.2642,
+   "recog": 42.4694,
+   "cls": 0.6659,
+   "pack": 1.58,
+   "infer": 37.5267
+  }
+ },
+ {
+  "round": 16,
+  "t_s": 240,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 165.5436,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "106.9952|74.4800|29.1686|0.1067|18.0486|38.7419|0.6709|2.7427|26.4259",
+  "stage_ms": {
+   "detect": 106.9952,
+   "letterbox": 74.48,
+   "encInfer": 29.1686,
+   "decNms": 0.1067,
+   "rectify": 18.0486,
+   "recog": 38.7419,
+   "cls": 0.6709,
+   "pack": 2.7427,
+   "infer": 26.4259
+  }
+ },
+ {
+  "round": 17,
+  "t_s": 255,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 153.7434,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "84.6356|27.5447|52.8530|0.1256|22.1505|45.1192|0.6878|1.5761|51.2769",
+  "stage_ms": {
+   "detect": 84.6356,
+   "letterbox": 27.5447,
+   "encInfer": 52.853,
+   "decNms": 0.1256,
+   "rectify": 22.1505,
+   "recog": 45.1192,
+   "cls": 0.6878,
+   "pack": 1.5761,
+   "infer": 51.2769
+  }
+ },
+ {
+  "round": 18,
+  "t_s": 270,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 123.9978,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "73.2461|37.8167|32.4728|0.0984|19.0278|30.3312|0.5436|2.0931|30.3797",
+  "stage_ms": {
+   "detect": 73.2461,
+   "letterbox": 37.8167,
+   "encInfer": 32.4728,
+   "decNms": 0.0984,
+   "rectify": 19.0278,
+   "recog": 30.3312,
+   "cls": 0.5436,
+   "pack": 2.0931,
+   "infer": 30.3797
+  }
+ },
+ {
+  "round": 19,
+  "t_s": 285,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 149.7906,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "104.7419|73.6128|28.2814|0.0917|15.6427|27.9928|0.4523|2.8109|25.4705",
+  "stage_ms": {
+   "detect": 104.7419,
+   "letterbox": 73.6128,
+   "encInfer": 28.2814,
+   "decNms": 0.0917,
+   "rectify": 15.6427,
+   "recog": 27.9928,
+   "cls": 0.4523,
+   "pack": 2.8109,
+   "infer": 25.4705
   }
  }
 ]
