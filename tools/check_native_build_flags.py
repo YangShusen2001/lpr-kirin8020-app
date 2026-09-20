@@ -80,6 +80,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default=None,
                     help="只看某个构建模式（debug / release）")
+    ap.add_argument("--all", action="store_true",
+                    help="检查所有构建目录，含历史遗留的（默认只判最新一个）")
     args = ap.parse_args()
 
     if not CXX_DIR.is_dir():
@@ -97,7 +99,16 @@ def main() -> int:
     print("native 优化标志检查")
     print("=" * 72)
 
-    for path in ninjas:
+    # 默认只判**最新一次构建**。
+    #
+    # 为什么：hvigor 不会清理另一种模式的目录，所以 `.cxx/` 下常常同时留着
+    # `debug/` 与 `release/`。若把它们全都当失败，一条**陈旧且已不再使用**的
+    # debug 目录就会让守卫永远失败，于是守卫本身失去信号价值（狼来了）。
+    # 判据应当是「我马上要用的那个构建是否优化」，即最近构建出来的那个。
+    judged = ninjas if args.all else ninjas[:1]
+    skipped = [] if args.all else ninjas[1:]
+
+    for path in judged:
         text = open_text(path)
         # 只取 C/C++ 的 FLAGS 行（rules.ninja 里还有链接等其他规则）
         flag_lines = re.findall(r"^\s*FLAGS = (.+)$", text, re.M)
@@ -136,12 +147,17 @@ def main() -> int:
         if distinct:
             print(f"         FLAGS = {distinct[0][:150]}")
 
+    if skipped:
+        print("-" * 72)
+        print(f"（另有 {len(skipped)} 个历史构建目录未参与判定，"
+              f"用 --all 可一并检查）")
+
     print("=" * 72)
     if problems:
         print(f"\n发现 {len(problems)} 处未优化构建：\n")
         for p in problems:
             print(f"  - {p}\n")
-        print("理由：-O0 下 native 单帧 ~86 ms / 相机 7 fps；-O2 下 ~20 ms / 20 fps。")
+        print("理由：-O0 下 native 单帧 ~86 ms / 相机 7 fps；-O2 下 ~20 ms / 28 fps。")
         print("所有延迟与帧率数字必须先确认本守卫通过，否则不可引用。")
         return 1
 
