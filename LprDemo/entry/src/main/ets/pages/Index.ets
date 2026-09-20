@@ -985,10 +985,17 @@ struct Index {
         const line: string = 'OPCOLLIDE op=' + name + ' bytes=' + bytes.length + ' ' + payload;
         this.appendNative(line);
         lpr.appendLine(logPath, line);
-        // 节流：native 侧的 InferenceRunner 是**单任务槽**（`task_` + `has_` 会被后来者
-        // 覆盖），而 ExecuteOnPool 在 libuv 池线程上阻塞等待 `doneCv_`。多个池线程同时
-        // Submit 时，被覆盖的任务可能永远等不到唤醒 —— 表现就是 Promise 拿到空串或挂起。
-        // 让出事件循环，保证同一时刻只有一个任务在飞。
+        // 每轮让出事件循环。
+        //
+        // 【2026-09-21 更正】这里原本写的理由是「native 侧 InferenceRunner 是单任务槽，
+        // 多个池线程同时 Submit 会被覆盖」—— 那个描述现在**不成立也不该再出现**：
+        // InferenceRunner 已是真正的队列（每任务自带 finished 与自己的条件变量，
+        // 见 napi_init.cpp 的类注释），并发提交不会再丢任务。
+        //
+        // 保留 `await this.tick()` 的理由变成两条，都与「别丢任务」无关：
+        //   1. 51 个模型连续 await 会把 ArkTS 事件循环饿死 —— UI 无响应、日志刷不出来；
+        //   2. 每轮之间让出一次，面板能实时看到进度。
+        // 即：它现在是**响应性**措施，不是并发正确性措施。
         await this.tick();
       }
       this.appendNative('OPCOLLIDE END');
