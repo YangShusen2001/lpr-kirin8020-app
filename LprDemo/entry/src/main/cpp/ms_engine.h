@@ -70,6 +70,23 @@ struct MsSession {
 
   std::vector<OH_AI_ContextHandle> retiredCtx;
   std::vector<OH_AI_ModelHandle> retiredModel;
+
+  /**
+   * Tensor fingerprint of the LAST MsRun / MsRunMulti call (ADR-0003).
+   *
+   * `lastL2` is the L2 norm of the output buffer read according to the DECLARED
+   * dtype; `lastL2AsFp16` re-reads the same bytes as fp16. The pair fingerprints
+   * the known NNRT defect (an fp16 bitstream declared as fp32): then lastL2
+   * explodes while lastL2AsFp16 lands on the CPU value.
+   *
+   * Why this exists: NPU utilisation is NOT readable on HarmonyOS (ADR-0003), so
+   * the only honest evidence that an accelerator really computed something is the
+   * output bytes' own statistics. Non-zero lastL2AsFp16 on an NPU row with 0.0000
+   * on the CPU row is the landing evidence. It proves the backend RAN — not that
+   * it ran CORRECTLY; correctness still needs the ground-truth set.
+   */
+  double lastL2 = 0;
+  double lastL2AsFp16 = 0;
 };
 
 /** NNRT device names present on this device, priority-sorted (kirin device first). */

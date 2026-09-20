@@ -13,6 +13,47 @@
 #define LOGE(...) OH_LOG_Print(LOG_APP, LOG_ERROR, 0xD001, LPR_TAG, __VA_ARGS__)
 
 // ---------------------------------------------------------------- fp16 helpers
+static float HalfToFloat(uint16_t h);  // defined below; Fingerprint needs it
+
+/**
+ * Tensor fingerprint (ADR-0003): L2 norm of an output buffer read two ways.
+ *
+ * `declared` reads the buffer according to the dtype MindSpore Lite DECLARED;
+ * `asFp16` re-reads the same bytes as fp16. When the two disagree wildly the
+ * buffer is an fp16 bitstream mislabelled as fp32 — the known NNRT defect.
+ * Returns {declared, asFp16}; `asFp16` equals `declared` when the declared
+ * dtype already is fp16.
+ */
+static void Fingerprint(const void* buf, size_t elems, int dtype,
+                        double& declared, double& asFp16) {
+  declared = 0.0;
+  asFp16 = 0.0;
+  if (buf == nullptr || elems == 0) {
+    return;
+  }
+  if (dtype == OH_AI_DATATYPE_NUMBERTYPE_FLOAT16) {
+    const uint16_t* h = reinterpret_cast<const uint16_t*>(buf);
+    for (size_t i = 0; i < elems; i++) {
+      const double v = HalfToFloat(h[i]);
+      declared += v * v;
+      asFp16 += v * v;
+    }
+  } else {
+    const float* f = reinterpret_cast<const float*>(buf);
+    for (size_t i = 0; i < elems; i++) {
+      const double v = static_cast<double>(f[i]);
+      declared += v * v;
+    }
+    const uint16_t* h = reinterpret_cast<const uint16_t*>(buf);
+    for (size_t i = 0; i < elems; i++) {
+      const double v = HalfToFloat(h[i]);
+      asFp16 += v * v;
+    }
+  }
+  declared = std::sqrt(declared);
+  asFp16 = std::sqrt(asFp16);
+}
+
 static float HalfToFloat(uint16_t h) {
   uint32_t sign = (uint32_t)(h >> 15) & 1u;
   uint32_t exp = (uint32_t)(h >> 10) & 0x1Fu;
@@ -420,6 +461,9 @@ bool MsRun(MsSession* s, const float* in, std::vector<float>& out, std::string& 
     err = "unsupported output dtype=" + std::to_string((int)s->outputDtype);
     return false;
   }
+  // Landing evidence (ADR-0003): NPU utilisation is unreadable on this platform,
+  // so the output buffer's own statistics are what proves the backend ran.
+  Fingerprint(od, on, (int)s->outputDtype, s->lastL2, s->lastL2AsFp16);
   return true;
 }
 
@@ -492,6 +536,12 @@ bool MsRunMulti(MsSession* s, const float* in,
     } else {
       err = "unsupported output dtype=" + std::to_string((int)s->outputDtype);
       return false;
+    }
+    if (k == 0) {
+      // Landing evidence on the primary output (ADR-0003). The bare-head
+      // detector has three [1,45,H,H] outputs; output 0 is the one the
+      // pipeline consumes, so it is the one whose statistics prove the run.
+      Fingerprint(od, on, (int)s->outputDtype, s->lastL2, s->lastL2AsFp16);
     }
   }
   return true;

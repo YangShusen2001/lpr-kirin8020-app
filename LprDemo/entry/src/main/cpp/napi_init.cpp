@@ -717,6 +717,36 @@ static void RunJob(AsyncJob* job) {
       // 记录会粘进 error 的值（`error=p0=...`），ArkTS 侧就读成 undefined。
       std::string kv = "ok=1;count=" + std::to_string(plates.size()) +
                        ";totalMs=" + Num(totalMs) + ";error=;";
+
+      // ---------------------------------------------------------- 落点自证（ADR-0003）
+      // NPU 利用率在 HarmonyOS 上读不到，所以「这个后端真的算了」只能靠输出张量
+      // 自己的统计量来证。三个角色各一段，字段：
+      //   role,req,landed,fallback,l2,l2AsFp16,used
+      // - req      = 请求的后端（verbatim，见 MsSession::requested）
+      // - landed   = 实际落点；与 req 不同即发生回落
+      // - fallback = 非空表示第一次尝试没建成，加速器被静默跳过
+      // - l2AsFp16 非零（而 CPU 行为 0）是「这个后端真算过」的指纹
+      // - used     = 本次是否真调用了该 MS 会话。det 走 ncnn 时为 0，此时 l2
+      //              是上一次的陈旧值，不得引用
+      {
+        auto rec = [](const char* role, MsSession* sess, bool used) -> std::string {
+          if (sess == nullptr) {
+            return std::string(role) + ",,,,0,0,0";
+          }
+          return std::string(role) + "," + KvSanitize(sess->requested) + "," +
+                 KvSanitize(sess->backend) + "," + KvSanitize(sess->fallbackFrom) + "," +
+                 Num(sess->lastL2) + "," + Num(sess->lastL2AsFp16) + "," +
+                 (used ? "1" : "0");
+        };
+        kv += "backends=";
+        kv += rec("det", s.det, !s.detNcnn);
+        kv += "|";
+        kv += rec("rec", s.rec, s.recSlot < 0);
+        kv += "|";
+        kv += rec("cls", s.cls, s.clsSlot < 0);
+        kv += ";";
+      }
+
       for (size_t i = 0; i < plates.size(); i++) {
         const PlateResult& p = plates[i];
         std::string v = Scrub(p.code) + "," + Num(p.detScore) + "," + Num(p.recConf) + "," +
