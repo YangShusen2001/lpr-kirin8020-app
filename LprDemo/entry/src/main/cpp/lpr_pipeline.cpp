@@ -1065,14 +1065,23 @@ bool LprRunPipeline(const RgbaImage& img, const LprSessions& s,
     }
     const double t4 = NowMs();
 
-    item.tDetectMs = static_cast<float>(t_lb_end - t_lb_start);
-    // 拆分成 letterbox + encode/infer + decode/NMS
+    // 分段口径（T2 修正，2026-09-21）：
+    //   tDetectMs = 检测【整个阶段】：letterbox + pack + infer + decode/NMS
+    //   其余四个是检测段的内部拆分，不得与其相加（会重复计入）
+    // 修正前 tDetectMs 与 tLetterboxMs 是同一个表达式，导致「分段之和 ≈ 端到端」
+    // 不成立 —— 实测三处相加比 totalMs 多 18.7 ms，正是 letterbox 被重复计入。
     item.tLetterboxMs = static_cast<float>(t_lb_end - t_lb_start);
-    item.tEncodeInferMs = static_cast<float>(t_infer_end - t_encode_start);
     item.tPackMs = static_cast<float>(t_pack_end - t_encode_start);
     item.tInferMs = static_cast<float>(t_infer_end - t_pack_end);
+    item.tEncodeInferMs = static_cast<float>(t_infer_end - t_encode_start);  // = pack + infer
     item.tDecodeNmsMs = static_cast<float>(t_nms_end - t_decode_start);
-    item.tRectifyMs = static_cast<float>(t2 - t_lb_end);
+    item.tDetectMs = static_cast<float>(t_nms_end - t_lb_start);  // 整个检测阶段
+    // 分段口径第二处修正（T2，2026-09-21）：
+    //   tRectifyMs 原为 t2 - t_lb_end，而 t2 在 LprRotateCrop 之后才取 ——
+    //   中间横跨了整个检测段（encode/infer/decode/NMS），于是"矫正"把检测段
+    //   也算了进去，四段之和必然虚高（实测多 25.7 ms）。
+    //   矫正段的正确起点是检测段结束处 t_nms_end。
+    item.tRectifyMs = static_cast<float>(t2 - t_nms_end);
     item.tRecogMs = static_cast<float>(t3 - t2);
     item.tClsMs = static_cast<float>(t4 - t3);
     out.push_back(item);
