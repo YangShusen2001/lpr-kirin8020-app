@@ -130,6 +130,37 @@ const MODEL_OM_LPRNET: string = 'models/probe_om_lprnet.om';
 const MODEL_OM_LPRNET_NPUFIX: string = 'models/probe_om_lprnet_npufix.om';
 
 /**
+ * T8 · 算子覆盖对撞用的探针名单（51 个）。
+ *
+ * 与 ShusenPaper 的 `models/onnx/opbench/opbench_manifest.json`（50 个）同源，
+ * 外加一个 `convtranspose` —— 那个算子在 `.ms` 侧**根本转不出来**
+ * （manifest 的 notes 记着 converter_lite 2.6.0 形状推断失败），却在 CANN 侧
+ * 转换成功。这本身就是"支持性是模型 × 工具链的联合属性"的一条直接证据。
+ *
+ * 三类：
+ *   matrix   —— 单算子矩阵（relu / softmax / matmul / reducemean …）
+ *   rl_*     —— roofline 通道阶梯（conv k1/k3/k5 × 通道 64/128/256/512、matmul 512/1024/2048）
+ *   repro_*  —— 缺陷复现（repro_mislabel = yolov8n 尾部的 Conv→Mul+Sigmoid→Concat 模式）
+ *
+ * rawfile 里的文件名是 `models/op_<name>.om`。
+ */
+const OP_PROBE_NAMES: string[] = [
+  'add_const', 'avgpool', 'batchnorm', 'cast_f16',
+  'concat', 'conv1x1', 'conv3x3_s1', 'conv3x3_s2',
+  'conv5x5', 'convtranspose', 'div_const', 'dwconv3x3',
+  'erf', 'hardswish_explicit', 'leakyrelu', 'matmul_1024',
+  'matmul_256', 'max_const', 'maxpool', 'min_const',
+  'mul_const', 'pad', 'reducemean', 'reducesum',
+  'relu', 'relu6_clip', 'repro_mislabel', 'reshape',
+  'resize', 'rl_conv_k1_c128', 'rl_conv_k1_c256', 'rl_conv_k1_c512',
+  'rl_conv_k1_c64', 'rl_conv_k3_c128', 'rl_conv_k3_c256', 'rl_conv_k3_c512',
+  'rl_conv_k3_c64', 'rl_conv_k5_c256', 'rl_conv_k5_c512', 'rl_matmul_1024',
+  'rl_matmul_2048', 'rl_matmul_512', 'sigmoid', 'silu_explicit',
+  'slice_channel', 'softmax', 'softplus', 'strided_slice',
+  'tanh', 'transpose', 'unsqueeze'
+];
+
+/**
  * ncnn 版本的识别 / 分类模型（GPU 唯一通路；pnnx 从同一份 ONNX 转出）。
  *
  * GPU（Vulkan）在麒麟 8020 上只有 ncnn 一条通路（ADR-008），而 MS Lite 的 GPU 档是
@@ -896,6 +927,65 @@ struct Index {
     this.busy = false;
   }
 
+  /**
+   * T8 · 算子覆盖对撞：把 50 个算子探针模型逐个喂给 CANN 侧，跑三关
+   * （`hiai_compat_code` / `construct` / `build_rc`），并与 `.ms` 侧的既有矩阵对照。
+   *
+   * 回答的问题：**「NPU 支持性」不是模型的属性，而是「模型 × 工具链」的联合属性。**
+   * CANN 侧有 166 个 IR 算子，MS Lite 侧的官方算子表只有 58/198 且全 FP16-only ——
+   * 同一个算子在一侧被拒、在另一侧通过，正是这条主张的直接证据。
+   *
+   * 名单硬编码而非枚举 rawfile：`resourceManager` 没有目录枚举 API，而这份名单
+   * 同时就是实验记录（与 ShusenPaper 的 opbench_manifest.json 同源）。
+   * rawfile 里的文件名带 `op_` 前缀，避免与生产模型的 `probe_om_*.om` 混淆。
+   */
+  private async opCollideProbe(): Promise<void> {
+    const ctx = this.ctx;
+    if (ctx === undefined) {
+      this.appendNative('OPCOLLIDE FAIL no context');
+      return;
+    }
+    this.busy = true;
+    const logPath: string = ctx.filesDir + '/op_collide.log';
+    this.appendNative('OPCOLLIDE BEGIN n=' + OP_PROBE_NAMES.length);
+    lpr.appendLine(logPath, 'OPCOLLIDE BEGIN n=' + OP_PROBE_NAMES.length +
+      ' ts=' + Date.now().toString());
+    try {
+      for (let i = 0; i < OP_PROBE_NAMES.length; i++) {
+        const name: string = OP_PROBE_NAMES[i];
+        const file: string = 'models/op_' + name + '.om';
+        let bytes: Uint8Array;
+        try {
+          bytes = ctx.resourceManager.getRawFileContentSync(file);
+        } catch (e) {
+          const miss: string = 'OPCOLLIDE op=' + name + ' MISSING-RAWFILE';
+          this.appendNative(miss);
+          lpr.appendLine(logPath, miss);
+          continue;
+        }
+        const raw: string = await lpr.nnrtTryModelAsync(this.toArrayBuffer(bytes), 0);
+        // 一行一条，字段名与 T2 的落点证据同风格，便于离线聚合。
+        // 空返回标成显式失败：首轮 51 个里有 13 个收到空串，而日志分不清
+        // "没执行" 与 "执行了但结果为空"。
+        const payload: string = raw.length > 0 ? raw : 'ok=0;error=empty-return';
+        const line: string = 'OPCOLLIDE op=' + name + ' bytes=' + bytes.length + ' ' + payload;
+        this.appendNative(line);
+        lpr.appendLine(logPath, line);
+        // 节流：native 侧的 InferenceRunner 是**单任务槽**（`task_` + `has_` 会被后来者
+        // 覆盖），而 ExecuteOnPool 在 libuv 池线程上阻塞等待 `doneCv_`。多个池线程同时
+        // Submit 时，被覆盖的任务可能永远等不到唤醒 —— 表现就是 Promise 拿到空串或挂起。
+        // 让出事件循环，保证同一时刻只有一个任务在飞。
+        await this.tick();
+      }
+      this.appendNative('OPCOLLIDE END');
+      lpr.appendLine(logPath, 'OPCOLLIDE END ts=' + Date.now().toString());
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('OPCOLLIDE EXCEPTION ' + err.message);
+    }
+    this.busy = false;
+  }
+
 // ------------------------------------------------------------ 探针
 
   private async probeOne(ctx: common.UIAbilityContext, file: string, backend: string): Promise<void> {
@@ -1490,6 +1580,17 @@ struct Index {
             .height(38)
             .onClick(() => {
               this.cannProbe();
+            })
+          Button('算子对撞')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              this.opCollideProbe();
             })
           Button('正式基准 30×')
             .fontSize(13)

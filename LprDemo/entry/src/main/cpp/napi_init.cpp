@@ -39,9 +39,11 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <deque>
 #include <fstream>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -92,6 +94,22 @@ static const size_t kMaxSessions = 64;
  * 专用推理线程（纪律 1）。任务串行执行，答案通过 doneCv_ 交回。
  * 生命周期：模块加载时 start，进程退出时随进程回收（不提供 stop，避免析构期竞态）。
  */
+/**
+ * 专用推理线程：串行执行提交的任务，**且每个提交者都能等到自己那一次完成**。
+ *
+ * ⚠️ 2026-09-21 修掉一个静默丢任务的竞态（T8 首轮暴露：51 个算子有 13 个拿到空 KV，
+ * 而 native 日志里只有 46 次执行）。
+ *
+ * 旧实现是**单任务槽 + 单一 has_ 标志**：
+ *     Submit: task_ = fn; has_ = true; notify; doneCv_.wait([&]{ return !has_; });
+ *     Loop  : 取走 task_ 执行；完成后 has_ = false; doneCv_.notify_all();
+ * 当 A 正在执行、B 提交时，B 覆盖 task_；A 结束后 Loop 把 has_ 置 false 并 notify_all，
+ * **A 和 B 都被唤醒**，但 B 的 fn 从未被执行 —— 于是 B 的 job->kv 保持空串，
+ * 而调用方只看到一个"成功 resolve 但内容为空"的 Promise。
+ *
+ * 新实现用**真正的队列**：每个任务带自己的 done 标志，提交者只等自己的那个，
+ * 且任务不可能被覆盖。任务本身仍然串行执行（NNRT 委托不允许并发）。
+ */
 class InferenceRunner {
  public:
   void Start() {
@@ -100,38 +118,50 @@ class InferenceRunner {
     }
     th_ = std::thread([this] { Loop(); });
   }
-  /** 提交并在当前线程等待完成（同步 NAPI 用；JS 线程会被阻塞，仅兼容路径用）。 */
+
+  /** 提交并在当前线程等待**这一个**任务完成（同步 NAPI 用）。 */
   void Submit(const std::function<void()>& fn) {
-    std::unique_lock<std::mutex> lk(m_);
-    task_ = fn;
-    has_ = true;
-    cv_.notify_one();
-    doneCv_.wait(lk, [this] { return !has_; });
+    auto done = std::make_shared<Item>();
+    {
+      std::unique_lock<std::mutex> lk(m_);
+      done->fn = fn;
+      q_.push_back(done);
+      cv_.notify_one();
+    }
+    std::unique_lock<std::mutex> lk(done->m);
+    done->cv.wait(lk, [&done] { return done->finished; });
   }
 
  private:
+  struct Item {
+    std::function<void()> fn;
+    bool finished = false;
+    std::mutex m;
+    std::condition_variable cv;
+  };
+
   void Loop() {
     for (;;) {
-      std::function<void()> fn;
+      std::shared_ptr<Item> item;
       {
         std::unique_lock<std::mutex> lk(m_);
-        cv_.wait(lk, [this] { return has_; });
-        fn = task_;
+        cv_.wait(lk, [this] { return !q_.empty(); });
+        item = q_.front();
+        q_.pop_front();
       }
-      fn();  // 不持锁执行：推理期间不挡新任务入队
+      item->fn();  // 不持锁执行：推理期间不挡新任务入队
       {
-        std::unique_lock<std::mutex> lk(m_);
-        has_ = false;
-        doneCv_.notify_all();
+        std::unique_lock<std::mutex> lk(item->m);
+        item->finished = true;
       }
+      item->cv.notify_all();
     }
   }
+
   std::thread th_;
   std::mutex m_;
   std::condition_variable cv_;
-  std::condition_variable doneCv_;
-  std::function<void()> task_;
-  bool has_ = false;
+  std::deque<std::shared_ptr<Item>> q_;
 };
 static InferenceRunner g_runner;
 
@@ -971,6 +1001,13 @@ static void RunJob(AsyncJob* job) {
     }
     case JobKind::kNnrtTryModel: {
       job->kv = NnrtTryModelReport(job->modelBytes, job->deviceIndex);
+      // 卫兵：绝不让空 KV 到达 JS 侧。T8 首轮就跑出过这个问题 —— 51 个算子里有 13 个
+      // 在 ArkTS 侧收到空串，而日志里分不清"没执行"与"执行了但结果为空"。
+      // 空返回一律标成显式失败，便于离线统计。
+      if (job->kv.empty()) {
+        job->kv = "ok=0;bytes=" + std::to_string(job->modelBytes.size()) +
+                  ";error=empty-report";
+      }
       LOGI("nnrtTryModel: %{public}s", job->kv.c_str());
       return;
     }
