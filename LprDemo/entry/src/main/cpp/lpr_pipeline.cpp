@@ -846,6 +846,101 @@ std::vector<float> LprEncodeClassify(const RgbaImage& crop, int size, bool nhwc)
   return out;
 }
 
+// ---------------------------------------------------------------- 牌色（像素测量，ADR-0005）
+/**
+ * RGB -> HSV 色相。OpenCV 口径：H ∈ [0,180)，S/V ∈ [0,255]。
+ * 只求 H 就够（判据只看色相带），但为了过滤"近白/近黑"需要 S 与 V。
+ */
+static void Rgb2Hsv(uint8_t r, uint8_t g, uint8_t b, int& h, int& s, int& v) {
+  const int mx = std::max(r, std::max(g, b));
+  const int mn = std::min(r, std::min(g, b));
+  v = mx;
+  const int d = mx - mn;
+  s = (mx == 0) ? 0 : (d * 255) / mx;
+  if (d == 0) {
+    h = 0;
+    return;
+  }
+  // 6 段，结果压到 [0,180) 以对齐 OpenCV
+  int hh;
+  if (mx == r) {
+    hh = 30 * (g - b) / d + (g < b ? 180 : 0);
+  } else if (mx == g) {
+    hh = 30 * (b - r) / d + 60;
+  } else {
+    hh = 30 * (r - g) / d + 120;
+  }
+  h = hh % 360;
+  if (h < 0) {
+    h += 360;
+  }
+  h /= 2;  // 360 -> 180
+}
+
+/**
+ * 牌色：牌面主导饱和色（移植自 plate_face_colour.py）。
+ * 阈值与色带均取自那份实现，改动会破坏可复现性。
+ */
+std::string LprPlateColour(const RgbaImage& crop, float& outConfidence) {
+  outConfidence = 0.0f;
+  if (!crop.Valid()) {
+    return "unknown";
+  }
+  const int w = crop.width;
+  const int h = crop.height;
+  // 裁掉边框：上下各 12%、左右各 8%
+  const int y0 = static_cast<int>(h * 0.12);
+  const int y1 = static_cast<int>(h * 0.88);
+  const int x0 = static_cast<int>(w * 0.08);
+  const int x1 = static_cast<int>(w * 0.92);
+
+  const int kSMin = 90;   // 饱和下限：滤掉白色字符
+  const int kVMin = 45;   // 亮度下限：滤掉黑色字符与阴影
+  const int kVMax = 250;  // 亮度上限：滤掉高光
+
+  long n = 0;
+  long inGreen = 0, inBlue = 0, inYellow = 0;
+  for (int y = y0; y < y1; y++) {
+    for (int x = x0; x < x1; x++) {
+      const size_t i = (static_cast<size_t>(y) * w + x) * 4;
+      const uint8_t r = crop.data[i];
+      const uint8_t g = crop.data[i + 1];
+      const uint8_t b = crop.data[i + 2];
+      int hh = 0, ss = 0, vv = 0;
+      Rgb2Hsv(r, g, b, hh, ss, vv);
+      if (ss < kSMin || vv < kVMin || vv > kVMax) {
+        continue;
+      }
+      n++;
+      if (hh >= 35 && hh <= 95) {
+        inGreen++;
+      } else if (hh >= 100 && hh <= 135) {
+        inBlue++;
+      } else if (hh >= 15 && hh <= 34) {
+        inYellow++;
+      }
+    }
+  }
+  // 样本太少不足以判色（与原实现一致的门槛）
+  if (n < 40) {
+    return "unknown";
+  }
+  const double fg = static_cast<double>(inGreen) / n;
+  const double fb = static_cast<double>(inBlue) / n;
+  const double fy = static_cast<double>(inYellow) / n;
+  const double best = std::max(fg, std::max(fb, fy));
+  // 必须过半才算数，否则"未知"胜过瞎猜（判色是附带属性，不进识别主链）
+  if (best < 0.55) {
+    return "unknown";
+  }
+  outConfidence = static_cast<float>(best);
+  if (best == fg) {
+    return "green";
+  }
+  return (best == fb) ? "blue" : "yellow";
+}
+
+
 void LprCtcGreedy(const std::vector<int>& idx, const std::vector<float>& prob,
                   std::string& code, float& conf,
                   std::vector<std::string>& chars, std::vector<float>& probs) {
@@ -1046,23 +1141,15 @@ bool LprRunPipeline(const RgbaImage& img, const LprSessions& s,
     item.chars = chars;
     item.charProbs = probs;
 
-    // ---- classify
-    // MS Lite 报 NHWC；ncnn 的 Mat 是平面 NCHW —— 布局差别只在这一处。
-    const bool clsNhwc = s.clsSlot >= 0 ? false : (s.cls->inputFormat == OH_AI_FORMAT_NHWC);
-    std::vector<float>& clsIn = sc.clsIn;
-    LprEncodeClassifyInto(crop, 96, clsNhwc, clsIn, sc.rs);
-    std::vector<float> clsOut;
-    if (s.clsSlot >= 0) {
-      std::string shapeKv;
-      if (!NcnnRunSlot(s.clsSlot, clsIn.data(), 3, 96, 96, clsOut, shapeKv, err)) {
-        return false;
-      }
-    } else if (!MsRun(s.cls, clsIn.data(), clsOut, err)) {
-      return false;
-    }
-    for (int k = 0; k < 3; k++) {
-      item.cls[k] = k < static_cast<int>(clsOut.size()) ? clsOut[k] : 0.0f;
-    }
+    // ---- 牌色：像素测量（ADR-0005，2026-09-21）
+    // 这里原本跑一个 1.53 MB 的分类模型（litemodel_cls_96x_r1），占 2.69 ms/帧（7.4%）。
+    // 它有两个问题：
+    //   1) 标签表是旋转的 —— 正确顺序是 blue=0/green=1/yellow=2，源码写的却是
+    //      yellow/blue/green。真机可复现：hlpr-test（实为绿牌）显示"蓝牌"、
+    //      scene-2 的 藏DT5022（蓝牌）显示"黄牌"。
+    //   2) 判色是附带属性，不进入识别主链，不值得占 7.4% 帧预算。
+    // 换成像素测量后约 0.1 ms，且无查表依赖。
+    item.colour = LprPlateColour(crop, item.colourConfidence);
     const double t4 = NowMs();
 
     // 分段口径（T2 修正，2026-09-21）：

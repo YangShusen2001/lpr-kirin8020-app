@@ -754,7 +754,9 @@ static void RunJob(AsyncJob* job) {
                         std::to_string(p.rect[0]) + "|" + std::to_string(p.rect[1]) + "|" +
                         std::to_string(p.rect[2]) + "|" + std::to_string(p.rect[3]) + "," +
                         std::to_string(p.cropH) + "|" + std::to_string(p.cropW) + "," +
-                        Num(p.cls[0]) + "|" + Num(p.cls[1]) + "|" + Num(p.cls[2]) + ",";
+                        // 牌色：像素测量结果（ADR-0005）。原为三个分类器 logits
+                        // `cls0|cls1|cls2`，那张标签表是旋转的；现在直接给结论 + 置信度。
+                        Scrub(p.colour) + "|" + Num(p.colourConfidence) + ",";
         for (size_t k = 0; k < p.chars.size(); k++) {
           if (k > 0) {
             v += "|";
@@ -847,7 +849,9 @@ static void RunJob(AsyncJob* job) {
                         std::to_string(p.rect[0]) + "|" + std::to_string(p.rect[1]) + "|" +
                         std::to_string(p.rect[2]) + "|" + std::to_string(p.rect[3]) + "," +
                         std::to_string(p.cropH) + "|" + std::to_string(p.cropW) + "," +
-                        Num(p.cls[0]) + "|" + Num(p.cls[1]) + "|" + Num(p.cls[2]) + ",";
+                        // 牌色：像素测量结果（ADR-0005）。原为三个分类器 logits
+                        // `cls0|cls1|cls2`，那张标签表是旋转的；现在直接给结论 + 置信度。
+                        Scrub(p.colour) + "|" + Num(p.colourConfidence) + ",";
         for (size_t k = 0; k < p.chars.size(); k++) {
           if (k > 0) {
             v += "|";

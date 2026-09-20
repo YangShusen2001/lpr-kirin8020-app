@@ -279,20 +279,19 @@ function posName(p: number): string {
   return '未知';
 }
 
-/** 分类输出顺序是 [yellow, blue, green]（见 pipeline.js 的 PLATE_COLOURS）。 */
-function colourOf(cls: string[]): string {
-  let best: number = 0;
-  let bv: number = -Infinity;
-  for (let i = 0; i < cls.length; i++) {
-    const v: number = Number.parseFloat(cls[i]);
-    if (!Number.isNaN(v) && v > bv) {
-      bv = v;
-      best = i;
-    }
-  }
-  if (best === 0) { return '黄牌'; }
-  if (best === 1) { return '蓝牌'; }
-  return '绿牌';
+/**
+ * 牌色标签：native 侧现在是**像素测量**的结论（ADR-0005，2026-09-21）。
+ *
+ * 这里原本按分类器三个 logits 取最大下标再查表，而那张表是**旋转的**：
+ * 源码写 `0→黄牌, 1→蓝牌, else→绿牌`，实测正确顺序是 `blue=0, green=1, yellow=2`。
+ * 真机可复现的后果 —— hlpr-test（实为绿牌）显示"蓝牌"、scene-2 的 藏DT5022
+ * （蓝牌）显示"黄牌"。现在 native 直接给结论字符串，ArkTS 不做任何查表。
+ */
+function colourLabel(colour: string): string {
+  if (colour === 'blue') { return '蓝牌'; }
+  if (colour === 'green') { return '绿牌'; }
+  if (colour === 'yellow') { return '黄牌'; }
+  return '未知';
 }
 
 /** 解码后的 RGBA 帧：pipeline 只吃这个。 */
@@ -519,9 +518,10 @@ struct Index {
 
       const p0: string = str(kv, 'p0');
       const f: string[] = p0.split(',');
-      // 0=code 1=det 2=rec 3=layer 4=rect 5=crop 6=cls 7=chars 8=probs 9=times 10=sum
+      // 0=code 1=det 2=rec 3=layer 4=rect 5=crop 6=colour 7=chars 8=probs 9=times 10=sum
+      // f[6] 现在是 `colour|confidence`（像素测量），不再是三个分类器 logits
       const clsArr: string[] = f[6].split('|');
-      const colour: string = colourOf(clsArr);
+      const colour: string = colourLabel(clsArr[0]);
       this.nPlate = f[0] + '  ' + colour;
       this.nDetail = '检测 ' + f[1] + ' · 识别 ' + f[2] + ' · 层数 ' +
         (f[3] === '1' ? '双层' : '单层') + ' · 裁剪 ' + f[5].replace('|', 'x') +
@@ -766,7 +766,7 @@ struct Index {
             const kv: Map<string, string> = parseKv(pr);
             const f: string[] = str(kv, 'p0').split(',');
             const code: string = f[0];
-            const colour: string = f.length > 6 ? colourOf(f[6].split('|')) : '-';
+            const colour: string = f.length > 6 ? colourLabel(f[6].split('|')[0]) : '-';
             const line: string = 'NCNNSLOT RESULT role=' + roles[r] + ' mode=' + modes[m] +
               ' LANDED=' + landedNcnn + ' engine=ncnn vkReq=' + vkReq + ' vk=' + vkReal +
               ' vkLayers=' + vkCover + ' rep=' + rep +

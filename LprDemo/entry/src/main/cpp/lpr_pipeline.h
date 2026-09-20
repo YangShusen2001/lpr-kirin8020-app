@@ -56,7 +56,23 @@ struct PlateResult {
   /** RGB-only sum of the rectified crop — the cross-implementation fingerprint. */
   long long cropSum = 0;
 
-  float cls[3] = {0, 0, 0};  // yellow, blue, green
+  /**
+   * 牌色：由**像素测量**判定，不再用分类模型（ADR-0005，2026-09-21）。
+   *
+   * 取值 "blue" / "green" / "yellow" / "unknown"。
+   *
+   * ⚠️ 这里曾是 `float cls[3]` 且注释写 `// yellow, blue, green` —— **那条注释是错的**。
+   * 实测正确顺序是 `blue=0, green=1, yellow=2`（肉眼核实四个样本 + 1000 张真实集
+   * index 0 占 982）。旧表是它的一个旋转，导致绿牌被解码成"蓝牌"、蓝牌被解码成"黄牌"，
+   * 这正是 lpr-showcase ADR-015 那个"未裁决蓝/绿冲突"的真正成因 —— 不是分类器与像素
+   * 测量的分歧，而是一张错表造出来的假冲突。
+   *
+   * 废弃分类模型的第二个理由：它占 2.69 ms/帧（7.4%），而像素测量约 0.1 ms，
+   * 且判色是附带属性、不进入识别主链。
+   */
+  std::string colour = "unknown";
+  /** 像素判色的置信度：占优色带在饱和像素中的占比。低置信度时应输出 "unknown"。 */
+  float colourConfidence = 0;
 
   float tDetectMs = 0;
   float tLetterboxMs = 0;    // letterbox 单独计时
@@ -149,6 +165,25 @@ bool LprRotateCrop(const RgbaImage& src, const int marks[4][2], RgbaImage& out);
 std::vector<float> LprEncodePlate(const RgbaImage& crop, int imgH, int imgW,
                                   int limitedMaxWidth, int limitedMinWidth, int& outW,
                                   bool nhwc);
+
+/**
+ * 牌色判定（ADR-0005，2026-09-21）：**像素测量，不用分类模型**。
+ *
+ * 移植自 lpr-showcase 的 `tools/plate_face_colour.py`。判据是"牌面主导饱和色"：
+ *   1. 裁掉边框（上下各 12%、左右各 8%），只留牌面；
+ *   2. 丢掉近白（字）与近黑（影）像素，只留被饱和涂装的像素；
+ *   3. 统计色相落在三个色带里的占比：
+ *        green  35..95   （新能源）
+ *        blue  100..135  （普通）
+ *        yellow 15..34   （大型车 / 出租）
+ *   4. 占比最高者胜出，但**必须 ≥ 0.55**，否则判 "unknown"。
+ *
+ * `outConfidence` 是胜出色带的占比；低置信度时调用方应展示 "unknown" 而非猜测。
+ *
+ * 为什么不用分类模型：它占 2.69 ms/帧（7.4%）而本函数约 0.1 ms；且实测其标签表
+ * 是旋转的（见 PlateResult::colour 的注释）。判色是附带属性，不进入识别主链。
+ */
+std::string LprPlateColour(const RgbaImage& crop, float& outConfidence);
 
 /** Classification input: square resize, [0,1], BGR. Same `nhwc` caveat. */
 std::vector<float> LprEncodeClassify(const RgbaImage& crop, int size, bool nhwc);
