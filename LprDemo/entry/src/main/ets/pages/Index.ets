@@ -26,6 +26,12 @@ import { image } from '@kit.ImageKit';
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import lpr from 'libentry.so';
+// T7 · RQ4 热特性：native sysroot 里**没有热态头文件**（已查 native/sysroot/usr/include，
+// 无 thermal*），所以热档与电池温度只能在 ArkTS 侧取。这三个都在
+// `openharmony/ets/api/` 下，不在 `hms/ets/api/`。
+import { thermal } from '@kit.BasicServicesKit';
+import { batteryInfo } from '@kit.BasicServicesKit';
+import { systemLoad } from '@kit.BasicServicesKit';
 
 const TAG = 'LprMatrix';
 const NATIVE_TAG = 'LprNativeUI';
@@ -404,6 +410,14 @@ struct Index {
    */
   @State nEvidence: string[] = [];
   @State nLenses: string[] = [];
+
+  // ---- T7 · RQ4 持续负载热特性
+  /** 热态/功耗/负载读数 + 每轮延迟，供离线聚合 */
+  @State rq4Rows: string[] = [];
+  @State rq4Status: string = '';
+  /** 当前热档（0=COOL … 越大越热）。native 侧读不到，只能 ArkTS 取。 */
+  @State thermalLevel: number = -1;
+  @State batteryTempC: number = 0;
 
   private ctx: common.UIAbilityContext | undefined = undefined;
 
@@ -982,6 +996,124 @@ struct Index {
     } catch (e) {
       const err = e as Error;
       this.appendNative('OPCOLLIDE EXCEPTION ' + err.message);
+    }
+    this.busy = false;
+  }
+
+  /**
+   * T7 · RQ4：持续负载热特性。
+   *
+   * 回答的问题：**「榨干」的收益能不能维持？**
+   *
+   * 背景：`ShusenPaper` 的既有实测发现同构建同协议两轮之间 **CPU 端方差 30–50%、
+   * NPU 端 <8%**，主因疑为热态累积。本探针把那条线索变成一条可引用的曲线。
+   *
+   * 系统会主动杀负载：`SystemLoadLevel` 有 8 档，官方要求 HIGH(3) 起「停止所有无感服务」。
+   * 所以本探针**不把被降级当作失败** —— 降级时刻本身就是数据点，如实记录。
+   *
+   * 热态数据来源：native sysroot **没有**热态头文件，只能在 ArkTS 侧取。
+   *   thermal.getThermalLevel()      热档 0=COOL … 5=EMERGENCY
+   *   batteryInfo.batteryTemperature 电池温度，单位 **0.1 ℃**（要除以 10）
+   *   batteryInfo.chargingStatus / batterySOC
+   *   systemLoad.getLevel()          系统负载档（异步）
+   */
+  private async rq4SustainedProbe(minutes: number): Promise<void> {
+    const ctx = this.ctx;
+    if (ctx === undefined) {
+      this.appendNative('RQ4 FAIL no context');
+      return;
+    }
+    this.busy = true;
+    const logPath: string = ctx.filesDir + '/rq4_thermal.log';
+    const frameFile: string = NATIVE_SAMPLES[0];
+    const intervalMs: number = 15000;                 // 每 15 s 采一轮
+    const rounds: number = Math.floor((minutes * 60000) / intervalMs);
+    const t0: number = Date.now();
+
+    this.rq4Rows = [];
+    this.rq4Status = '预热中…';
+    this.appendNative('RQ4 BEGIN minutes=' + minutes + ' rounds=' + rounds +
+      ' intervalMs=' + intervalMs + ' frame=' + frameFile);
+    lpr.appendLine(logPath, 'RQ4 BEGIN minutes=' + minutes + ' rounds=' + rounds +
+      ' intervalMs=' + intervalMs + ' frame=' + frameFile + ' ts=' + t0.toString());
+
+    let frame: RgbaFrame | null = null;
+    try {
+      frame = await this.decodeRgba(frameFile);
+    } catch (e) {
+      this.appendNative('RQ4 FAIL decodeRgba: ' + (e as Error).message);
+      this.busy = false;
+      return;
+    }
+    if (frame === null) {
+      this.appendNative('RQ4 FAIL frame null');
+      this.busy = false;
+      return;
+    }
+    // 局部常量：TS 在闭包内不会保留对 `frame` 的非空收窄，取出来更稳。
+    const f: RgbaFrame = frame;
+
+    try {
+      for (let r = 0; r < rounds; r++) {
+        const rStart: number = Date.now();
+        // ---- 一次完整流水线（与生产档同路径）
+        const raw: string = await lpr.pipelineAsync(
+          f.data, f.width, f.height,
+          this.detId, this.recId, this.clsId, 0);
+        const kv: Map<string, string> = parseKv(raw);
+        const ok: string = str(kv, 'ok');
+        const totalMs: string = str(kv, 'totalMs');
+        const backends: string = str(kv, 'backends');
+        const code: string = ok === '1' ? str(kv, 'p0').split(',')[0] : '-';
+        // 记完整 p0（含 cropSum 与分段明细）。首版只记 code，导致发现
+        // 「苏ED5172 → 苏ED512」时无法自查 —— cropSum 正是为这种跨会话对照设计的。
+        const p0: string = ok === '1' ? str(kv, 'p0') : '-';
+
+        // ---- 热态/功耗读数
+        const tl: number = thermal.getThermalLevel();
+        const bt: number = batteryInfo.batteryTemperature;   // 0.1 ℃
+        const soc: number = batteryInfo.batterySOC;
+        const charging: number = batteryInfo.chargingStatus;
+        let load: string = '-';
+        try {
+          load = (await systemLoad.getLevel()).toString();
+        } catch (e) {
+          load = 'na';
+        }
+        this.thermalLevel = tl;
+        this.batteryTempC = bt / 10;
+
+        // 一行一轮：时间 / 热档 / 温度 / SOC / 充电 / 负载档 / 端到端 / 车牌 / 落点
+        const line: string = 'RQ4 r=' + r + ' t=' + Math.round((rStart - t0) / 1000) +
+          ' thermal=' + tl + ' battC=' + (bt / 10).toFixed(1) +
+          ' soc=' + soc + ' chg=' + charging + ' load=' + load +
+          ' totalMs=' + totalMs + ' code=' + code + ' backends=' + backends;
+        // p0 单独一行：它很长（含 chars/probs/分段），与上面那行拼在一起会被
+        // hilog 的单行上限截断。单独成行才能完整落盘。
+        const p0line: string = 'RQ4P r=' + r + ' p0=' + p0;
+        this.rq4Rows = this.rq4Rows.concat([line]);
+        this.appendNative(line);
+        lpr.appendLine(logPath, line);
+        lpr.appendLine(logPath, p0line);
+
+        this.rq4Status = '第 ' + (r + 1) + '/' + rounds + ' 轮 · 热档 ' + tl +
+          ' · ' + (bt / 10).toFixed(1) + '℃ · 端到端 ' + totalMs + ' ms';
+
+        // ---- 等下一轮（保持连续负载，不空转 JS）
+        const elapsed: number = Date.now() - rStart;
+        const wait: number = intervalMs - elapsed;
+        if (wait > 0) {
+          await this.sleep(wait);
+        }
+      }
+      const totalMin: number = (Date.now() - t0) / 60000;
+      this.rq4Status = '完成 · ' + rounds + ' 轮 · ' + totalMin.toFixed(1) + ' 分钟';
+      this.appendNative('RQ4 END rounds=' + rounds + ' minutes=' + totalMin.toFixed(2));
+      lpr.appendLine(logPath, 'RQ4 END rounds=' + rounds +
+        ' minutes=' + totalMin.toFixed(2) + ' ts=' + Date.now().toString());
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('RQ4 EXCEPTION ' + err.message);
     }
     this.busy = false;
   }
@@ -1592,6 +1724,18 @@ struct Index {
             .onClick(() => {
               this.opCollideProbe();
             })
+          Button('RQ4 热特性')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // 20 分钟：够跨过 thermal 2→3 的台阶，又不至于把电量耗尽
+              this.rq4SustainedProbe(20);
+            })
           Button('正式基准 30×')
             .fontSize(13)
             .fontColor(IOS_BLUE)
@@ -1656,6 +1800,44 @@ struct Index {
             .fontColor('#d7dce3')
             .width('100%')
         }, (item: string, idx: number) => idx.toString() + '_' + item)
+
+        // ── T7 · RQ4 热特性卡
+        // 热档与电池温度**只有 ArkTS 侧读得到**（native sysroot 无热态头文件）。
+        // 放在探针页而不是原生演示页：它属于测量，不属于演示。
+        // 注意：Scroll 只能有一个子组件，所以这张卡必须在这个 Column 内。
+        if (this.rq4Status.length > 0) {
+          Column({ space: 6 }) {
+            Text('RQ4 · 持续负载热特性')
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(IOS_LABEL)
+              .width('100%')
+            Text(this.rq4Status)
+              .fontSize(11)
+              .fontColor(IOS_LABEL2)
+              .width('100%')
+            if (this.rq4Rows.length > 0) {
+              Text('热档 ' + this.thermalLevel.toString() + ' · 电池 ' +
+                this.batteryTempC.toFixed(1) + '℃')
+                .fontSize(11)
+                .fontColor(IOS_LABEL3)
+                .width('100%')
+              ForEach(this.rq4Rows, (row: string) => {
+                Text(row)
+                  .fontSize(9)
+                  .fontFamily('monospace')
+                  .fontColor(IOS_LABEL2)
+                  .width('100%')
+              }, (row: string, idx: number) => 'rq4_' + idx.toString())
+            }
+          }
+          .width('100%')
+          .padding(12)
+          .backgroundColor(IOS_CARD)
+          .borderRadius(12)
+          .alignItems(HorizontalAlign.Start)
+          .margin({ top: 8 })
+        }
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
