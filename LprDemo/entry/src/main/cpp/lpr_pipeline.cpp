@@ -783,8 +783,26 @@ static void LprEncodePlateInto(const RgbaImage& crop, int imgH, int imgW,
   RgbaImage& resized = sc.img;
   ResizeLinearInto(crop, resizedW, imgH, resized, sc);
 
+  // Padding 必须显式清零 —— assign 而不是 resize。
+  //
+  // 参照实现是 `padding_im = np.zeros((3,imgH,imgW))` 后只填 `[:, :, 0:resizedW]`，
+  // 即 padding 列恒为 0。这里原来用 resize(3*plane)：只有当**元素数变大**时
+  // 才会值初始化，而本函数的 targetW 固定在 [48,160]、crop 尺寸也固定，
+  // 3*plane 几乎每次都不变 => resize 是空操作 => 列 [resizedW, targetW)
+  // 保留**上一次调用**留下的值。
+  //
+  // 为什么这会真的算错（2026-09-21 实测，见 docs/t7-rq4-thermal.md）：
+  // NHWC 与 NCHW 写的是**不同的下标集合**（NHWC: (y*W+x)*3+c；NCHW: c*plane + y*W+x），
+  // 所以空洞里留下的是**另一种布局的残值**，不是"上一次的同一位置"。
+  // 生产档 det=CPU / rec=NNRT 本来不该互相影响，但只要中间跑过一次 ncnn 槽位
+  // （NCHW，且写满整个缓冲），随后 MS(NHWC) 就会读到被 NCHW 残值污染的输入张量。
+  //
+  // 真机可复现：全新进程（缓冲全 0）MS 稳定给 `苏ED5172` / rec.l2=4.0489；
+  // 一旦跑过「三后端槽位」探针，**切回 MS 也**变成 `苏ED512` / rec.l2=3.0965，
+  // 且字符数 6 非法（合法为 7/8）。张量指纹忠实记录了这次输入污染 —— 这正是
+  // ADR-0003 的落点自证要抓的东西。
   const size_t plane = static_cast<size_t>(imgH) * targetW;
-  out.resize(3 * plane);
+  out.assign(3 * plane, 0.0f);
   for (int y = 0; y < imgH; y++) {
     for (int x = 0; x < resizedW; x++) {
       const size_t s = (static_cast<size_t>(y) * resizedW + x) * 4;

@@ -147,6 +147,24 @@ if seg:
         if statistics.mean(v) > 0:
             print(f"    {s:<10} mean={statistics.mean(v):7.2f}  "
                   f"CV={statistics.stdev(v)/statistics.mean(v)*100:5.1f}%")
+
+    # 完整性校验：顶层四段是否闭合到端到端。
+    # detect 是【整段】（已含 letterbox/pack/infer/decNms），故顶层分解只能是
+    #   detect + rectify + recog + cls
+    # 若它俩不闭合，说明有未计入的时间 —— CPU/NPU 分列就会漏掉那段。
+    print()
+    print("=== 完整性校验：顶层四段之和 vs 端到端 ===")
+    print("  （detect 已含 letterbox/pack/infer/decNms，不可再重复相加）")
+    gaps = []
+    for r in seg:
+        sm = r["stage_ms"]
+        top = sm["detect"] + sm["rectify"] + sm["recog"] + sm["cls"]
+        gaps.append(r["totalMs"] - top)
+    print(f"  未计入的残差: n={len(gaps)}  mean={statistics.mean(gaps):.2f} ms  "
+          f"min={min(gaps):.2f}  max={max(gaps):.2f}")
+    rel = statistics.mean(gaps) / statistics.mean([r["totalMs"] for r in seg]) * 100
+    print(f"  占端到端: {rel:.2f}%  -> "
+          + ("闭合良好，分列未漏时间" if abs(rel) < 3 else "**存在未解释时间，分列有漏项**"))
 else:
     print("  (日志无 p0 分段，无法分列 —— 检查探针是否记录完整 p0)")
 
