@@ -180,6 +180,44 @@ function num(m: Map<string, string>, k: string): number {
   return Number.isNaN(n) ? -1 : n;
 }
 
+/**
+ * 解析 native 的 `backends=` 字段为落点面板的显示行（ADR-0003）。
+ * 与 Index.ets 里同名函数保持一致的语义；两页各留一份是本文件的既有约定
+ * （parseKv / str / num 也是各自复制的）。
+ *
+ * 字段顺序：role, req, landed, fallback, l2, l2AsFp16, used
+ * cls 行跳过：牌色自 2026-09-21 起走像素测量（ADR-0005），没有会话可调。
+ */
+function evidenceRows(backends: string): string[] {
+  const rows: string[] = [];
+  if (backends.length === 0) {
+    return rows;
+  }
+  for (const seg of backends.split('|')) {
+    const f: string[] = seg.split(',');
+    if (f.length < 7) {
+      continue;
+    }
+    const role: string = f[0];
+    if (role === 'cls') {
+      continue;
+    }
+    const req: string = f[1];
+    const landed: string = f[2];
+    const fallback: string = f[3];
+    const l2: string = f[4];
+    const used: string = f[6];
+    const isNpu: boolean = landed.indexOf('NPU') >= 0 || landed.indexOf('NNRT') >= 0;
+    let line: string = role + '  ' + (isNpu ? '⚡' : '  ') + 'LANDED=' + landed;
+    if (req.length > 0 && req !== landed) {
+      line += '  (req=' + req + (fallback.length > 0 ? ', 回落自 ' + fallback : '') + ')';
+    }
+    line += (used === '1') ? ('  l2=' + l2) : '  (本次未调用)';
+    rows.push(line);
+  }
+  return rows;
+}
+
 /** 分段控件选中项的投影。条件表达式直接返回对象字面量在 ArkTS 里类型推断不稳，抽成函数。 */
 function segShadow(on: boolean): ShadowOptions {
   if (on) {
@@ -255,6 +293,9 @@ struct CameraPage {
   @State lastInferMs: number = 0;
   /** 本帧是否真的检出车牌 —— 决定读数卡是强调色还是灰色。 */
   @State hit: boolean = false;
+
+  /** 落点自证（ADR-0003）。直接来自 native 的 backends=，不在 UI 层重算。 */
+  @State evidence: string[] = [];
   /** 指标卡第二行的分段耗时文本（conv / det / crop / rec / cls）。 */
   @State segText: string = '';
   /** 最近一帧 native 返回的分段串（det|crop|rec|cls），record() 里拼进 segText。 */
@@ -826,6 +867,9 @@ struct CameraPage {
         const stages: string = p0.length > 9 ? p0[9] : '-';
         this.lastInferMs = inferMs;
         this.lastStages = stages;
+        // 落点自证：相机档同样把 native 的 backends= 渲染出来（ADR-0003）。
+        // 相机是一次一帧、每帧都重取，所以这里的值就是本帧的观测值。
+        this.evidence = evidenceRows(str(kv, 'backends'));
         if (count > 0 && p0.length > 0) {
           this.plate = p0[0];
           this.hit = true;
@@ -1242,6 +1286,26 @@ struct CameraPage {
         .width('100%')
         .alignItems(VerticalAlign.Top)
         .padding({ top: 10 })
+
+        // 第三行：落点自证（ADR-0003）
+        // 相机是榨干硬件的**真战场**（热、功耗、掉帧都在这里出现），
+        // 所以落点必须和吞吐指标并排显示，而不是藏在日志里。
+        if (this.evidence.length > 0) {
+          Divider()
+            .color(IOS_SEP)
+            .margin({ top: 8, bottom: 8 })
+          Text('落点自证 · LANDED')
+            .fontSize(10)
+            .fontColor(IOS_LABEL3)
+            .width('100%')
+          ForEach(this.evidence, (row: string) => {
+            Text(row)
+              .fontSize(10)
+              .fontFamily('monospace')
+              .fontColor(IOS_LABEL2)
+              .width('100%')
+          }, (row: string) => row)
+        }
       }
       .width('100%')
       .padding({ left: 16, right: 16, top: 12, bottom: 12 })

@@ -845,6 +845,29 @@ static void RunJob(AsyncJob* job) {
                        ";w=" + std::to_string(img.width) +
                        ";h=" + std::to_string(img.height) +
                        ";rgbaSum=" + std::to_string(rgbaSum) + ";error=;";
+
+      // 相机档同样带落点自证（ADR-0003）—— 相机页的落点面板靠它。
+      // 相机是逐帧调用，所以这里的值就是本帧的观测值，不存在"陈旧"问题；
+      // 但仍保留 used 字段，以便 det 走 ncnn 旁路时标明该会话未被调用。
+      {
+        auto rec = [](const char* role, MsSession* sess, bool used) -> std::string {
+          if (sess == nullptr) {
+            return std::string(role) + ",,,,0,0,0";
+          }
+          return std::string(role) + "," + KvSanitize(sess->requested) + "," +
+                 KvSanitize(sess->backend) + "," + KvSanitize(sess->fallbackFrom) + "," +
+                 Num(sess->lastL2) + "," + Num(sess->lastL2AsFp16) + "," +
+                 (used ? "1" : "0");
+        };
+        kv += "backends=";
+        kv += rec("det", s.det, !s.detNcnn);
+        kv += "|";
+        kv += rec("rec", s.rec, s.recSlot < 0);
+        kv += "|";
+        kv += rec("cls", s.cls, false);  // 牌色走像素测量，无会话调用（ADR-0005）
+        kv += ";";
+      }
+
       for (size_t i = 0; i < plates.size(); i++) {
         const PlateResult& p = plates[i];
         std::string v = Scrub(p.code) + "," + Num(p.detScore) + "," + Num(p.recConf) + "," +
