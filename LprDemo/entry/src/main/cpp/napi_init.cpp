@@ -39,9 +39,11 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <deque>
 #include <fstream>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -92,6 +94,22 @@ static const size_t kMaxSessions = 64;
  * 专用推理线程（纪律 1）。任务串行执行，答案通过 doneCv_ 交回。
  * 生命周期：模块加载时 start，进程退出时随进程回收（不提供 stop，避免析构期竞态）。
  */
+/**
+ * 专用推理线程。所有 MindSpore Lite / ncnn 调用都排到这里，串行执行。
+ *
+ * **必须用队列，不能用单个任务槽。** 曾经是 `task_` + `has_` 一个槽：
+ * 两个并发 Submit 时，第二个覆盖 `task_` 而 `has_` 已经是 true；第一个跑完把
+ * `has_` 置 false 并 notify_all，于是**两个提交者都被唤醒**，但第二个的任务
+ * 从未被执行 —— 它的 job->kv 保持空串，Promise 静默 resolve 成 `""`。
+ *
+ * 真机症状（2026-09-21，相机页）：`loadModelAsync` 三次调用全部返回空串，
+ * 面板显示「档位加载失败」，而 native 侧**一条 loadModel 日志都没有**。
+ * 触发条件是并发：相机页加载模型的同一次 ensuresSessions 期间，首页的自动
+ * 探针仍在后台提交任务。串行 await 本身不会碰撞，**跨页面的并发提交才会**。
+ *
+ * 修法：`std::deque` + 每个任务自带 `finished` 标志与自己的 condition_variable，
+ * 唤醒只针对该任务，不存在「唤醒错人」。任务在锁外执行，推理期间不挡入队。
+ */
 class InferenceRunner {
  public:
   void Start() {
@@ -100,38 +118,50 @@ class InferenceRunner {
     }
     th_ = std::thread([this] { Loop(); });
   }
-  /** 提交并在当前线程等待完成（同步 NAPI 用；JS 线程会被阻塞，仅兼容路径用）。 */
+
+  /** 提交并等待完成（同步 NAPI 用；JS 线程会被阻塞，仅兼容路径用）。 */
   void Submit(const std::function<void()>& fn) {
-    std::unique_lock<std::mutex> lk(m_);
-    task_ = fn;
-    has_ = true;
+    auto item = std::make_shared<Item>();
+    item->fn = fn;
+    {
+      std::unique_lock<std::mutex> lk(m_);
+      q_.push_back(item);
+    }
     cv_.notify_one();
-    doneCv_.wait(lk, [this] { return !has_; });
+    std::unique_lock<std::mutex> lk(item->m);
+    item->doneCv.wait(lk, [&item] { return item->finished; });
   }
 
  private:
+  struct Item {
+    std::function<void()> fn;
+    bool finished = false;
+    std::mutex m;
+    std::condition_variable doneCv;
+  };
+
   void Loop() {
     for (;;) {
-      std::function<void()> fn;
+      std::shared_ptr<Item> item;
       {
         std::unique_lock<std::mutex> lk(m_);
-        cv_.wait(lk, [this] { return has_; });
-        fn = task_;
+        cv_.wait(lk, [this] { return !q_.empty(); });
+        item = q_.front();
+        q_.pop_front();
       }
-      fn();  // 不持锁执行：推理期间不挡新任务入队
+      item->fn();  // 不持锁执行：推理期间不挡新任务入队
       {
-        std::unique_lock<std::mutex> lk(m_);
-        has_ = false;
-        doneCv_.notify_all();
+        std::unique_lock<std::mutex> lk(item->m);
+        item->finished = true;
       }
+      item->doneCv.notify_all();  // 只唤醒等这一个任务的人
     }
   }
+
   std::thread th_;
   std::mutex m_;
   std::condition_variable cv_;
-  std::condition_variable doneCv_;
-  std::function<void()> task_;
-  bool has_ = false;
+  std::deque<std::shared_ptr<Item>> q_;
 };
 static InferenceRunner g_runner;
 

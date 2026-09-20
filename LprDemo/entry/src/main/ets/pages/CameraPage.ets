@@ -396,6 +396,10 @@ struct CameraPage {
   private async ensureSessions(): Promise<boolean> {
     const c: common.UIAbilityContext | undefined = this.ctx;
     if (c === undefined) {
+      // 这里原来静默 return false，而调用方 applyGear() 会把 status 覆盖成
+      // 「档位加载失败」—— 于是真因（拿不到 UIAbilityContext）被抹掉。
+      hilog.error(DOMAIN, TAG, 'GEAR %{public}d ENSURE FAIL ctx=undefined', this.gear);
+      this.status = '拿不到 UIAbilityContext';
       return false;
     }
     if (this.loadedGear === this.gear && this.detId >= 0 && this.recId >= 0 && this.clsId >= 0) {
@@ -430,19 +434,27 @@ struct CameraPage {
       }
 
       const detBytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_DET);
-      const d: Map<string, string> = parseKv(
-        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), detBe));
+      const detRaw: string = await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), detBe);
+      const d: Map<string, string> = parseKv(detRaw);
       const recBytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_REC);
-      const r: Map<string, string> = parseKv(
-        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), recBe));
+      const recRaw: string = await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), recBe);
+      const r: Map<string, string> = parseKv(recRaw);
       const clsBytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_CLS);
-      const k: Map<string, string> = parseKv(
-        await lpr.loadModelAsync(MODEL_CLS, this.toArrayBuffer(clsBytes), clsBe));
+      const clsRaw: string = await lpr.loadModelAsync(MODEL_CLS, this.toArrayBuffer(clsBytes), clsBe);
+      const k: Map<string, string> = parseKv(clsRaw);
+      // 原始返回单独记一行：面板只显示得到一小段，而「raw 为空」与「raw 有内容但
+      // 没有 ok 键」是两种完全不同的故障，必须能区分。
+      hilog.info(DOMAIN, TAG, 'GEAR %{public}d rawlen det=%{public}d rec=%{public}d cls=%{public}d',
+        this.gear, detRaw.length, recRaw.length, clsRaw.length);
 
       if (d.get('ok') !== '1' || r.get('ok') !== '1' || k.get('ok') !== '1') {
         this.status = '模型加载失败 det=' + str(d, 'error') + ' rec=' + str(r, 'error') +
           ' cls=' + str(k, 'error');
-        hilog.error(DOMAIN, TAG, 'GEAR %{public}d LOAD FAIL', this.gear);
+        // 把完整返回也记下来：面板只放得下一小段，hilog 才是可追的现场。
+        hilog.error(DOMAIN, TAG, 'GEAR %{public}d LOAD FAIL det_ok=%{public}s rec_ok=%{public}s '
+          + 'cls_ok=%{public}s det_err=%{public}s rec_err=%{public}s cls_err=%{public}s',
+          this.gear, str(d, 'ok'), str(r, 'ok'), str(k, 'ok'),
+          str(d, 'error'), str(r, 'error'), str(k, 'error'));
         return false;
       }
       this.detId = num(d, 'id');
@@ -489,6 +501,7 @@ struct CameraPage {
     } catch (e) {
       const err = e as Error;
       this.status = '模型加载异常: ' + err.message;
+      hilog.error(DOMAIN, TAG, 'GEAR %{public}d EXCEPTION %{public}s', this.gear, err.message);
       return false;
     }
   }
@@ -1081,9 +1094,14 @@ struct CameraPage {
       this.ready = ok;
       if (ok) {
         this.status = this.gear === GEAR_ARRIVE_ONLY ? '只数 callback' : '实时识别中 · ' + GEAR_NAMES[this.gear];
-      } else {
+      } else if (this.status.indexOf('失败') < 0 && this.status.indexOf('异常') < 0) {
+        // ensureSessions 已经写过具体原因（读不到 rawfile / 原生 loadModel 报错…）
+        // 时就保留它；只有它没写原因时才兜底成这句泛化文案。
+        // 原实现无条件覆盖，把真因抹掉了 —— 现场只剩「档位加载失败」四个字。
         this.status = '档位加载失败';
       }
+      hilog.info(DOMAIN, TAG, 'GEAR %{public}d apply ok=%{public}d status=%{public}s',
+        this.gear, ok ? 1 : 0, this.status);
     });
   }
 

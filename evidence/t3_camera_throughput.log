@@ -1,0 +1,30 @@
+09-21 03:09:47.672 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 rawlen det=271 rec=344 cls=260
+09-21 03:09:47.672 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: GEAR 0 LOADED det=CPU rec=NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0 cls=CPU warmup=10
+09-21 03:09:47.695 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FRAME RATES n=0 min=-1 max=-1
+09-21 03:09:47.782 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: STREAM START show=960x960 analyze=640x480 rot=90
+09-21 03:09:50.269 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FIRST FRAME kind=NV21 decode=11 infer=1896 rot=90
+09-21 03:09:55.548 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=4.03 fps done=4.03 fps dropped_in_win=0 cum_arrived=9 cum_done=9 cum_dropped=0
+09-21 03:09:57.611 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.88 fps done=3.88 fps dropped_in_win=0 cum_arrived=17 cum_done=17 cum_dropped=0
+09-21 03:09:59.866 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.99 fps done=3.99 fps dropped_in_win=0 cum_arrived=26 cum_done=26 cum_dropped=0
+09-21 03:10:01.193 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FRAME n=30 fps=3.68 plate=赣AD38888 split=8|0
+09-21 03:10:01.870 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.99 fps done=2.99 fps dropped_in_win=0 cum_arrived=32 cum_done=32 cum_dropped=0
+09-21 03:10:04.023 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.72 fps done=3.72 fps dropped_in_win=0 cum_arrived=40 cum_done=40 cum_dropped=0
+09-21 03:10:06.193 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.69 fps done=3.69 fps dropped_in_win=0 cum_arrived=48 cum_done=48 cum_dropped=0
+09-21 03:10:08.296 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.33 fps done=3.33 fps dropped_in_win=0 cum_arrived=55 cum_done=55 cum_dropped=0
+09-21 03:10:09.535 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FRAME n=60 fps=3.65 plate=赣AD38888 split=6|1
+09-21 03:10:10.495 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=4.09 fps done=4.09 fps dropped_in_win=0 cum_arrived=64 cum_done=64 cum_dropped=0
+09-21 03:10:12.528 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.44 fps done=3.44 fps dropped_in_win=0 cum_arrived=71 cum_done=71 cum_dropped=0
+09-21 03:10:14.680 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.25 fps done=3.25 fps dropped_in_win=0 cum_arrived=78 cum_done=78 cum_dropped=0
+09-21 03:10:16.746 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.39 fps done=3.39 fps dropped_in_win=0 cum_arrived=85 cum_done=85 cum_dropped=0
+09-21 03:10:18.186 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FRAME n=90 fps=3.47 plate=赣AD38888 split=8|1
+09-21 03:10:18.835 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.35 fps done=3.35 fps dropped_in_win=0 cum_arrived=92 cum_done=92 cum_dropped=0
+09-21 03:10:20.973 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.74 fps done=3.74 fps dropped_in_win=0 cum_arrived=100 cum_done=100 cum_dropped=0
+09-21 03:10:23.007 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.44 fps done=3.44 fps dropped_in_win=0 cum_arrived=107 cum_done=107 cum_dropped=0
+09-21 03:10:27.673 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.29 fps done=1.29 fps dropped_in_win=0 cum_arrived=113 cum_done=113 cum_dropped=0
+09-21 03:10:29.747 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.89 fps done=2.89 fps dropped_in_win=0 cum_arrived=119 cum_done=119 cum_dropped=0
+09-21 03:10:30.060 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: FRAME n=120 fps=3.36 plate=（未检测到） split=5|0
+09-21 03:10:32.210 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.22 fps done=1.22 fps dropped_in_win=0 cum_arrived=122 cum_done=122 cum_dropped=0
+09-21 03:10:34.338 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=3.76 fps done=3.76 fps dropped_in_win=0 cum_arrived=130 cum_done=130 cum_dropped=0
+09-21 03:10:36.993 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=2.26 fps done=2.26 fps dropped_in_win=0 cum_arrived=136 cum_done=136 cum_dropped=0
+09-21 03:10:39.048 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.46 fps done=1.46 fps dropped_in_win=0 cum_arrived=139 cum_done=139 cum_dropped=0
+09-21 03:10:41.821 14469 14469 I A0D001/com.shusen.lprdemo/LprCamera: RATE arrive=1.08 fps done=1.08 fps dropped_in_win=0 cum_arrived=142 cum_done=142 cum_dropped=0
