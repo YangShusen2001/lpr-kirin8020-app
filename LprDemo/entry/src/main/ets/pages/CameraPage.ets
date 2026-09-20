@@ -276,8 +276,10 @@ struct CameraPage {
   /** 预热剩余帧数：模型装载后前 N 帧不计入统计（kernel 首编不是稳态）。
    *  实测冷启动首帧 infer=184 ms，稳态 ~20 ms —— 混进去会报出假性能。 */
   private warmLeft: number = 0;
-  /** 累计到达帧数（含被丢的）。丢帧率的分母必须是它，不是完成帧数。 */
-  private totalArrived: number = 0;
+  /** 累计到达帧数（含被丢的）。丢帧率的分母必须是它，不是完成帧数。
+   *  必须是 @State：它直接渲染在读数卡上（「丢帧 x / N 帧到达」），
+   *  普通成员变量不会触发重绘 —— 真机上这行会一直显示切档时清零的那个 0。 */
+  @State totalArrived: number = 0;
   /** 当前帧处理期间是否有新帧到达 —— 有则算完立刻接手（见 finishFrame）。 */
   private pending: boolean = false;
   /** 本窗口的真丢帧数（被顶掉的帧）。与 arrivedInWin 同窗口，不做差。 */
@@ -771,7 +773,25 @@ struct CameraPage {
         this.arrivedInWin = this.arrivedInWin + 1;
       }
       if (this.busy || this.switching) {
-        // 上一帧还没算完（或正在切档）→ 这一帧本轮不处理。
+        // 切档中：**必须把帧抽走并释放**，不能像 busy 那样留在缓冲里。
+        //
+        // 理由：切一次档要连装三个模型（全 NPU 档实测 ~7 s），而接收器只有 8 格。
+        // 留帧策略是给「一帧工作略超帧间隔」设计的（见下方注释），能积压的只有
+        // 一两帧；但 7 s × 3.4 fps ≈ 24 帧，8 格会在 ~2.4 s 内填满。接收器缓冲
+        // 一满，相机**不再回调 imageArrival** —— 于是切档完成后再没有任何事件能
+        // 触发 consume，循环永久停摆：画面显示「实时识别中」，却一帧都不出。
+        //
+        // 真机症状（2026-09-21）：切到「全 NPU」档后 `GEAR 1 LOADED` 与
+        // `apply ok=1` 都打出来了，此后 LprCamera 再无一行 STAGE/RATE，
+        // 而 CAMERA 打了 8823 行 `all buffer are using`。切档前生产档一切正常。
+        //
+        // 这些帧本来就要丢掉（新档的 mode/slot 与旧会话不匹配，算出来是错的），
+        // 所以「读出来直接 release」既不浪费信息，又让缓冲始终有空位。
+        if (this.switching) {
+          this.drainOne(recv);
+          return;
+        }
+        // 上一帧还没算完 → 这一帧本轮不处理。
         //
         // 这里**故意不** readLatestImage + release：那样会把接收器缓冲里的帧抽走，
         // 当前帧算完后只能干等下一次 imageArrival。只要单帧工作耗时（实测 24–47 ms）
@@ -816,6 +836,37 @@ struct CameraPage {
       this.busy = true;
       this.consume(recv);
     }
+  }
+
+  /**
+   * 切档期间专用：把最新一帧抽出来立刻释放，只为**腾空接收器缓冲**。
+   *
+   * 不推理、不计任何指标。它的唯一职责是让 `imageArrival` 继续回调 ——
+   * 见 listenFrames 里 switching 分支的说明。读不到帧（缓冲空）时静默返回。
+   */
+  private drainOne(recv: image.ImageReceiver): void {
+    recv.readLatestImage().then((img: image.Image) => {
+      img.release();
+    }).catch(() => {
+      // 缓冲空时 readLatestImage 会失败；这正是「已经腾空」的正常情况。
+    });
+  }
+
+  /**
+   * 切档结束后重新接上帧循环。
+   *
+   * **不能只调 finishFrame()**：切档期间走的是 drainOne 分支，那条路径**不置
+   * `pending`**（它只是把帧丢掉），所以 finishFrame 的条件 `pending && ...`
+   * 不成立，kick 落空 —— 循环仍然停着。这里显式起一帧。
+   */
+  private resumeFrames(): void {
+    const recv: image.ImageReceiver | undefined = this.receiver;
+    if (!this.running || recv === undefined || this.busy || this.switching) {
+      return;
+    }
+    this.pending = false;
+    this.busy = true;
+    this.consume(recv);
   }
 
   /** 取一帧 → 直接交给 native（转换+旋转+推理一次做完）。 */
@@ -1102,6 +1153,32 @@ struct CameraPage {
       }
       hilog.info(DOMAIN, TAG, 'GEAR %{public}d apply ok=%{public}d status=%{public}s',
         this.gear, ok ? 1 : 0, this.status);
+      // 切档完成 → 主动重新接上帧循环。
+      //
+      // 为什么必须显式做：切档期间走 drainOne 分支，那条路径只是把帧丢掉、
+      // **不置 pending**，所以 finishFrame 里 `pending && !switching` 的接手条件
+      // 不成立 —— 光调 finishFrame 会落空，循环就永久停着（画面「实时识别中」
+      // 但一帧不出）。必须直接起一帧。
+      //
+      // 另一层原因：切档要连装三个模型（全 NPU 档实测 ~7 s），接收器只有 8 格。
+      // 若切档期间完全不读，8 格会在 ~2.4 s 内填满，相机随即**停止回调**
+      // imageArrival，之后没有任何事件能唤醒循环。
+      if (ok) {
+        this.resumeFrames();
+      } else if (this.loadedGear >= 0 && this.loadedGear !== this.gear) {
+        // 加载失败：会话还是上一档的，而 `this.gear` 已被 switchGear 改成新档 ——
+        // 这个组合会拿旧会话去跑新档语义（mode/slot 不匹配），静默算出错的东西。
+        // 把 gear 退回上一档，让「档位」与「实际会话」重新一致，再恢复帧循环，
+        // 相机保持可用；面板上的 status 已经写明失败原因。
+        hilog.warn(DOMAIN, TAG, 'GEAR %{public}d load failed, reverting to %{public}d',
+          this.gear, this.loadedGear);
+        this.gear = this.loadedGear;
+        this.ready = true;
+        this.resumeFrames();
+      } else {
+        // 没有可退回的档位（首次加载就失败）：不恢复。
+        hilog.error(DOMAIN, TAG, 'GEAR %{public}d load failed with no fallback gear', this.gear);
+      }
     });
   }
 
