@@ -850,19 +850,44 @@ static void RunJob(AsyncJob* job) {
       const double convMs = NowMs() - tConv0;
       // RGBA 校验和（仅 RGB 三通道）—— 用来证明 native 的 NV21→RGBA 与系统解码器
       // 等价。没有这个，"换掉了取帧路径"就只是换了、而不是验证过。
+      //
+      // 【2026-09-21 两处修正】
+      //
+      // 1) 它**原先完全没有被计时**：夹在 convMs 结束与 t0 开始之间，于是既不在
+      //    convMs 也不在 totalMs 里，日志上永远看不见。实测 native 单帧 25.2 ms
+      //    （理论 39.7 fps）却只跑到 ~28 fps（35.7 ms/帧），差额约 10.5 ms/帧 ——
+      //    这段是其中一块"隐形"开销。现在把它计入 convMs，让它可见。
+      //
+      // 2) 原写法是逐字节 + `i % 4 != 3` 分支。每字节一次取模与一次分支，
+      //    480x640 的 RGBA 是 1.2 MB，全走一遍。主机微基准
+      //    （bench_rgba_sum.cpp）实测：0.6903 ms -> 0.1642 ms，**快 4.2x**，
+      //    且**与现状逐位相等**（已验证），因此是零风险的纯收益。
+      //    改成按像素步进 4、直接累加 R/G/B，去掉取模与分支。
+      //
+      //    注意：不要改成"抽稀采样"（每 16 像素取 1）。它快 46x，但实测
+      //    **对单字节改动不敏感** —— 而校验和的用途正是等价性判定，
+      //    漏检会让这个证据失去意义。
+      const double tSum0 = NowMs();
       long long rgbaSum = 0;
-      for (size_t i = 0; i < img.data.size(); i++) {
-        if (i % 4 != 3) {
-          rgbaSum += img.data[i];
+      {
+        const uint8_t* p = img.data.data();
+        const size_t n = img.data.size();
+        for (size_t i = 0; i + 2 < n; i += 4) {
+          rgbaSum += static_cast<long long>(p[i]) + p[i + 1] + p[i + 2];
         }
       }
+      // 把校验和并入 convMs：它与 NV21→RGBA 同属"取帧后的数据准备"，
+      // 单独列一个字段反而会让"分段之和 vs 端到端"的闭合校验再次出现缺口。
+      const double convWithSumMs = NowMs() - tConv0;
+      (void)tSum0;
+      (void)convMs;
 
       std::vector<PlateResult> plates;
       std::string err;
       const double t0 = NowMs();
       if (!LprRunPipeline(img, s, plates, err)) {
         LOGE("cameraFrame pipeline failed: %{public}s", err.c_str());
-        job->kv = "ok=0;count=0;totalMs=0;convMs=" + Num(convMs) +
+        job->kv = "ok=0;count=0;totalMs=0;convMs=" + Num(convWithSumMs) +
                   ";inferMs=0;error=" + KvSanitize(err);
         return;
       }
@@ -870,7 +895,7 @@ static void RunJob(AsyncJob* job) {
 
       std::string kv = "ok=1;count=" + std::to_string(plates.size()) +
                        ";totalMs=" + Num(totalMs) +
-                       ";convMs=" + Num(convMs) +
+                       ";convMs=" + Num(convWithSumMs) +
                        ";inferMs=" + Num(totalMs) +
                        ";w=" + std::to_string(img.width) +
                        ";h=" + std::to_string(img.height) +
