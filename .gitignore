@@ -30,6 +30,13 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
+# --- Python 字节码 ---
+# 曾被误跟踪过一个 tools/__pycache__/*.pyc（2026-09-22 清掉）。
+# 它是**本机字节码缓存**，跨机器/跨解释器版本无意义，且会让
+# 「按对象直推 API」的推送方式 422（远端解不出这个 blob）。
+__pycache__/
+*.py[cod]
+
 # --- 运行时临时产物 ---
 # `uitest dumpLayout` 的界面树快照，由 tools/run_camera_sweep.ps1 写入。
 # 它们是**运行时读取的中间物**（脚本靠它找控件坐标），不是证据，不入库。
