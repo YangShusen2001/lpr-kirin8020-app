@@ -29,3 +29,9 @@ ddk/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# --- 运行时临时产物 ---
+# `uitest dumpLayout` 的界面树快照，由 tools/run_camera_sweep.ps1 写入。
+# 它们是**运行时读取的中间物**（脚本靠它找控件坐标），不是证据，不入库。
+# 证据在 evidence/ —— 那个目录是**故意跟踪**的（见已有 rq4_thermal.* 等）。
+_scratch/

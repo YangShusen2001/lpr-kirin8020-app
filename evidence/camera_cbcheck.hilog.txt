@@ -1,0 +1,7 @@
+﻿RATE arrive=30.05 fps done=0.00 fps dropped_in_win=0 cum_arrived=912 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0n  �?l�j��� ��  ��
+RATE arrive=30.00 fps done=0.00 fps dropped_in_win=0 cum_arrived=121 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0�   %l�jx � ��  2�
+STAGE n=150 conv=10.5111 infer=44.0284 count=1 wh=480x640 rgbaSum=101090939 stages=38.6581|5.6869|32.3311|0.0264|0.5127|4.7150|0.0397|0.6737|31.6573W  v�k�j��U:��  2�   �   � Rcom.shusen.lprdemo/LprStages v E2E preprocess begin ncnn=%{publi
+FRAME n=150 fps=26.32 plate=浙GML513 split=1|0 infer_hit_p50=37.00 infer_empty_p50=113.00 hit_n=30 empty_n=30�  z�k�j ��6��  �    �  �+ XCameraDaemon/DYTONE_V20250108 J%{public}sv  fr744 exp 10000 iso 730 sexp 3671 siso 1987 period 8 iir 0.0
+STAGE n=90 conv=10.7842 infer=47.8137 count=0 wh=480x640 rgbaSum=113680508 stages=-# �Z�k�j%�& }�  �   S�  �  �CameraDaemon/HDM[mdc] =��� '�  2�  �  ��k�jb * }�  �   S�  �+ PCameraDaemon/CIEDirectProcessor } T:%{public}u %{public}s:%{public
+FRAME n=90 fps=29.41 plate=（未检测到） split=1|0 infer_hit_p50=-1.00 infer_empty_p50=32.00 hit_n=0 empty_n=30  �B�k�j'�7}�  �   �   `! �hiaiserver/TSCH &���( g 07:26:55.835 234 126:smart_isp_hwts_mode_msg_proc: msg 113 model 0 is set to rtsq 9,
+

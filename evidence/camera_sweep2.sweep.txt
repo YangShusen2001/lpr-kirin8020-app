@@ -1,0 +1,4 @@
+﻿gear=0 rate_windows_in_tail=40 hit_frames_in_tail=1200
+gear=1 rate_windows_in_tail=35 hit_frames_in_tail=0
+gear=3 rate_windows_in_tail=35 hit_frames_in_tail=0
+gear=4 rate_windows_in_tail=35 hit_frames_in_tail=0

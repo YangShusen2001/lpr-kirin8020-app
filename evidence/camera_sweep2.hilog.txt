@@ -1,0 +1,4 @@
+﻿RATE arrive=29.70 fps done=29.70 fps dropped_in_win=0 cum_arrived=998 cum_done=998 cum_dropped=0 gear=1 hit_n=0 empty_n=30 rt_hit_p50=-1.00 rt_empty_p50=22.00 prep_hit_p50=-1.00 prep_empty_p50=1.00 thermal=3 battC=41.0W  v_n�j 2;/    ��  R�
+STAGE n=990 conv=5.2008 infer=9.3275 count=0 wh=480x640 rgbaSum=120978269 stages=-�  __n�j�<'     �   ��  �+ PCameraDaemon/IPSFilter v T:%{public}u %{public}s:%{public}d %{public}s is true!;�� XAttachMscXStyleOutBuffer.P]mscXStyleOutBuffer
+FRAME n=990 fps=43.48 plate=（未检测到） split=0|1 rt_hit_p50=-1.00 rt_empty_p50=22.00 hit_n=0 empty_n=30# �Z_n�j�Ʉ     �   5�  �  �CameraDaemon/HDM[mdc] =��� '�  &�  W  v_n�j���     ��  R�   � Rcom.shusen.lprdemo/LprStages v E2E preprocess begin
+

@@ -1,0 +1,4 @@
+﻿FRAME n=2460 fps=1000.00 plate=浙GML513 split=1|0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 hit_n=0 empty_n=0>  z j�j_��'��  �   T�   B �resource_schedule_service/DMS �] �F��         1� 7� @E3158  �  � j�j,��'��  �   .      �resource_schedul
+FRAME n=1680 fps=500.00 plate=浙GML513 split=1|0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 hit_n=0 empty_n=02  k�i�j��D(��  �   ű  �+ XCameraDaemon/MotionDetect W%s(%d), division error!V  f�i�ja8�(��  �   ��  �+ �CameraDaemon/IPS_CAPTURE "��
+FRAME n=720 fps=500.00 plate=浙GML513 split=1|0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 hit_n=0 empty_n=0m  ��i�j��  j�      e�  �+ �aam_connection_svc/AamConnectionSvc ?×� (� *�	HEmitData  QC0:DA:xxxxxxxx:48Kdefault sppT5a 02 6a 00 2b ac
+

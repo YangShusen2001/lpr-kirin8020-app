@@ -1,0 +1,42 @@
+CAMRUN BEGIN ts=1789946837403 gear=0 analyze=640x480 show=960x960 rotation=90 settleMs=45000 warmupFrames=10 window=30 detModel=models/y5fu_320x_head_fp32.ms recModel=models/rpv3_mdict_160_r3.ms analyzeTargetW=640 fpsTarget=30
+STREAM START show=960x960 analyze=640x480 rot=90
+STAGE n=0 conv=2.4844 infer=22.4916 count=0 wh=480x640 rgbaSum=117628430 stages=-
+STAGE n=0 conv=2.5016 infer=19.6948 count=0 wh=480x640 rgbaSum=114664852 stages=-
+STAGE n=30 conv=2.8637 infer=16.7628 count=0 wh=480x640 rgbaSum=111532019 stages=-
+STAGE n=60 conv=3.9511 infer=27.5391 count=1 wh=480x640 rgbaSum=100864631 stages=23.5920|2.0034|21.0775|0.0180|0.4855|3.3945|0.0387|0.4198|20.6577
+STAGE n=90 conv=9.8508 infer=29.9655 count=1 wh=480x640 rgbaSum=101182465 stages=25.0936|2.5558|21.6136|0.0366|0.8236|3.9217|0.0673|0.5398|21.0737
+STAGE n=120 conv=8.1811 infer=37.2734 count=1 wh=480x640 rgbaSum=100937910 stages=30.4739|5.3817|22.2947|0.1105|2.5467|3.9827|0.1544|0.6066|21.6881
+STAGE n=150 conv=10.5111 infer=44.0284 count=1 wh=480x640 rgbaSum=101090939 stages=38.6581|5.6869|32.3311|0.0264|0.5127|4.7150|0.0397|0.6737|31.6573
+STAGE n=180 conv=10.6395 infer=27.9963 count=1 wh=480x640 rgbaSum=100940940 stages=23.8798|1.5394|21.7009|0.0316|0.5042|3.4195|0.1305|0.3400|21.3609
+STAGE n=210 conv=7.6209 infer=48.7744 count=1 wh=480x640 rgbaSum=101048189 stages=39.7934|5.3705|32.1716|0.0714|1.7378|6.9589|0.1706|1.9831|30.1884
+STAGE n=240 conv=2.0656 infer=21.9570 count=1 wh=480x640 rgbaSum=100693145 stages=17.7113|1.3127|15.7628|0.0245|0.5294|3.6233|0.0517|0.2984|15.4644
+STAGE n=270 conv=3.6344 infer=17.7417 count=0 wh=480x640 rgbaSum=116297826 stages=-
+GEAR SWITCH -> 4 (只数 callback) settle restarts
+STAGE n=0 conv=4.6797 infer=19.9166 count=0 wh=480x640 rgbaSum=114701158 stages=-
+SETTLE done after 45 s gear=4
+RATE win=1 arrive=30.14 done=0.00 dropped_in_win=0 cum_arrived=61 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0
+RATE win=2 arrive=30.00 done=0.00 dropped_in_win=0 cum_arrived=121 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0
+RATE win=3 arrive=29.92 done=0.00 dropped_in_win=0 cum_arrived=182 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0
+RATE win=4 arrive=29.99 done=0.00 dropped_in_win=0 cum_arrived=242 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0
+RATE win=5 arrive=30.08 done=0.00 dropped_in_win=0 cum_arrived=303 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=40.0
+RATE win=6 arrive=29.98 done=0.00 dropped_in_win=0 cum_arrived=364 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=7 arrive=30.09 done=0.00 dropped_in_win=0 cum_arrived=425 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=8 arrive=29.96 done=0.00 dropped_in_win=0 cum_arrived=486 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=9 arrive=30.05 done=0.00 dropped_in_win=0 cum_arrived=547 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=10 arrive=29.97 done=0.00 dropped_in_win=0 cum_arrived=607 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=11 arrive=30.05 done=0.00 dropped_in_win=0 cum_arrived=668 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=12 arrive=30.00 done=0.00 dropped_in_win=0 cum_arrived=729 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=13 arrive=29.90 done=0.00 dropped_in_win=0 cum_arrived=790 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=14 arrive=30.20 done=0.00 dropped_in_win=0 cum_arrived=851 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=15 arrive=30.05 done=0.00 dropped_in_win=0 cum_arrived=912 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=16 arrive=29.87 done=0.00 dropped_in_win=0 cum_arrived=972 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=17 arrive=30.03 done=0.00 dropped_in_win=0 cum_arrived=1033 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=18 arrive=30.05 done=0.00 dropped_in_win=0 cum_arrived=1094 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=19 arrive=29.87 done=0.00 dropped_in_win=0 cum_arrived=1154 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=20 arrive=30.17 done=0.00 dropped_in_win=0 cum_arrived=1215 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=21 arrive=29.97 done=0.00 dropped_in_win=0 cum_arrived=1275 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=22 arrive=30.06 done=0.00 dropped_in_win=0 cum_arrived=1336 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=23 arrive=29.99 done=0.00 dropped_in_win=0 cum_arrived=1396 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=24 arrive=29.91 done=0.00 dropped_in_win=0 cum_arrived=1456 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=25 arrive=30.11 done=0.00 dropped_in_win=0 cum_arrived=1517 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0
+RATE win=26 arrive=29.97 done=0.00 dropped_in_win=0 cum_arrived=1577 cum_done=0 cum_dropped=0 gear=4 hit_n=0 empty_n=0 infer_hit_p50=-1.00 infer_empty_p50=-1.00 conv_hit_p50=-1.00 conv_empty_p50=-1.00 thermal=3 battC=39.0

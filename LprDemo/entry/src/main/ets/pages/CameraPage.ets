@@ -28,7 +28,18 @@
  *   decodeMs = 取帧 + 解码 + 旋转 + 拷进 ArrayBuffer 的整段
  *   inferMs  = lpr.pipelineAsync 端到端（letterbox→det→NMS→矫正→rec→CTC→cls）
  *   frameMs  = 两者之和 = 一帧真正占用的墙钟时间
- *   fps      = 1000 / p50(frameMs)
+ *
+ * ⚠️ **`1000/p50(frameMs)` 不是 fps，是服务时间的倒数**（CONTEXT.md：服务时间 /
+ * 到达率 / 完成率是三个量，只有后两者可以对外称 fps）。它读出的「40–50 帧」
+ * 在相机路上**不可达** —— 相机侧上限实测 ~30 fps（基准档 8 窗口 29.90–30.17）。
+ * 真正该看的是**余量 = 33.3 ms − frameMs**，即「我们离吃满相机帧预算还有多远」。
+ *
+ * ⚠️ **p50 必须分桶，否则是两种分布的混合**（2026-09-21 定位）：
+ * 未检出帧不跑矫正/识别/判色，比检出帧便宜得多。同一份日志按 count 分桶实测：
+ *   生产档  未检出 infer p50 20.30 ms (n=92)  vs  检出 30.32 ms (n=21)
+ *   全 NPU  未检出 infer p50 13.64 ms (n=27)  vs  检出 33.14 ms (n=1)
+ * 界面一度显示「延迟 20–25 ms」又「有时 13 ms」，其实是**档位 × 是否检出**
+ * 两个变量在同一个窗口里混合，不是抖动。所以现在按 count 分桶统计（见 record）。
  *
  * 丢帧是**有意**的：帧到达时若上一帧还在算，直接 release 不排队。排队会让 fps 变成
  * 「输入帧率」的假象，而这里要测的是**这条流水线能跑多快**。
@@ -40,6 +51,10 @@ import { image } from '@kit.ImageKit';
 import { display, router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+// 热态与电池温度：native sysroot 没有热态头文件（已查 native/sysroot/usr/include，
+// 无 thermal*），只能在 ArkTS 侧取。与 Index.ets 的 RQ4 探针同一套 API。
+import { thermal } from '@kit.BasicServicesKit';
+import { batteryInfo } from '@kit.BasicServicesKit';
 import lpr from 'libentry.so';
 
 const TAG = 'LprCamera';
@@ -121,7 +136,15 @@ const IOS_TRACK: string = 'rgba(118,118,128,0.12)';
  * 即 **~30 fps 是传感器/ISP 的上限，与分辨率无关**：640x480 时设 30 或 60
  * 都只给 ~30，480x480 时设 60 也只给 ~27。
  * 既然降分辨率换不到帧率，就该保持 640x480 以保住小车牌的检出率。
- * 结论：**通过降分辨率提帧率这条路走不通**，不要再试。 */
+ * 结论：**通过降分辨率提帧率这条路走不通**，不要再试。
+ *
+ * ⚠️ 【2026-09-21 前提更正：这个常量从来没有过 320】
+ * 曾有人记成「刚把分析路改成了 320x320」。**查全 git 历史：`ANALYZE_TARGET_W`
+ * 只有 640 一个值，从未出现过 320**；真机预览档列表（`PROFILES[0]`，24 档）
+ * 里也**没有 320 宽的档**（最接近是 480x480）。320 是**检测器自己的输入边长**
+ * （`MODEL_DET = models/y5fu_320x_head_fp32.ms`，`inputShape=[1,320,320,3]`，
+ * native 侧 `LprSessions::detSize = 320`）—— 与本常量无关，且自 T1 起未变。
+ * 详见 docs 仓库 `docs/notes/camera-npu-headroom.md`「被纠正的前提」。 */
 const ANALYZE_TARGET_W: number = 640;
 
 /** 滑动窗口：帧率与 p50 用最近 N 帧算。 */
@@ -131,8 +154,27 @@ const WINDOW: number = 30;
  * 模型装载后的预热帧数：前 N 帧不计入统计。
  * kernel 首次编译 + 内存首次分配会让头几帧慢数倍（实测冷启动首帧 infer=184 ms，
  * 稳态 ~20 ms）。把它们算进 p50，会把假性能当成结论 —— 预热窗口是必须的。
+ *
+ * ⚠️ 【2026-09-21 前提更正：10 帧远远不够，真正要等的是相机】
+ * 实测（`evidence/t3_camera_30fps_release.log`）每轮开流后约 **30 s** 到达率崩到
+ * 1.4–5 fps，再花十几秒爬回 28–30。10 帧 @30fps ≈ 0.33 s，**完全盖不住这段**。
+ * 且根因不在我们这侧：相机 daemon 的 `setMaxFps()` 在开流后 0.4 s 报
+ * `mCurMaxFps=0 -> 27`，切档后才 `27 -> 30` —— 是**相机在爬坡**，不是流水线在预热。
+ * 所以现在用 `SETTLE_MS` 做稳态门（见下），`WARMUP_FRAMES` 只负责挡住 kernel 首编。
  */
 const WARMUP_FRAMES: number = 10;
+/**
+ * 稳态门：从 `STREAM START` 起算，前 SETTLE_MS 毫秒的帧**照常消费但不进统计**。
+ *
+ * 为什么不是「干脆不取帧」：接收器只有 8 格，不消费会在约 0.27 s 内填满，
+ * 相机随即**停止回调** `imageArrival`（历史缺陷，见 listenFrames 里 switching 分支
+ * 的注释）。一旦停摆就再也没有事件能唤醒循环，读数卡会永远停在「等待首帧」。
+ * 所以 settle 期必须继续 readLatestImage + release，只是不结算。
+ *
+ * 为什么是 45 s：实测崩到谷底再爬回 28+ 要 ~30 s（04:16:51 → 04:17:21），
+ * 留 50% 余量。代价是每轮至少跑 45 s + 观测时长。
+ */
+const SETTLE_MS: number = 45000;
 /** 是否在会话启动后主动把预览帧率蹬到设备支持的最高档。
  *  理由：单帧工作耗时已经低于帧间隔，此时唯一的加速空间在**相机出帧率**本身。
  *  实测建流前 PreviewOutput.getSupportedFrameRates() 返回空数组，
@@ -268,7 +310,6 @@ struct CameraPage {
   @State status: string = '正在申请相机权限…';
   @State plate: string = '—';
   @State detail: string = '';
-  @State timing: string = '';
   /**
    * 默认档 = 生产档（det=CPU, rec=NPU, cls=CPU）。
    *
@@ -292,10 +333,39 @@ struct CameraPage {
   @State gear: number = GEAR_PROD;
   @State frames: number = 0;
   @State dropped: number = 0;
-  /** 到达率相关：每个窗口的帧到达时间戳（含被丢的帧），用来区分
-   *  「我们算得慢」与「相机只给这么多」。 */
-  private arrivals: number[] = [];
+  /** 窗口起点（墙钟 ms）。0 = 尚未开始计时。 */
   private winStart: number = 0;
+  /**
+   * 开流时刻（`STREAM START` 的墙钟 ms）—— 稳态门的计时原点。
+   *
+   * 用**开流**而不是首次到达作原点：相机爬坡是从 sensor 出流那一刻开始的，
+   * 首帧到达本身已经晚了几百毫秒（冷启动首帧 infer 184 ms），拿它当原点会把
+   * 爬坡期的头几帧算进稳态。
+   */
+  private streamStartMs: number = 0;
+  /** 稳态门是否已过（过了才开始结算窗口）。 */
+  private settled: boolean = false;
+  /** 本轮落盘文件路径（filesDir/camera_run.log）。空串 = 拿不到 context，只打 hilog。 */
+  private runLogPath: string = '';
+  /** 已落盘的运行头（避免每条 RATE 都重复写）。 */
+  private runHeaderWritten: boolean = false;
+  /** 本轮落盘的行数——用于在 UI/日志里自证「真的在写」，不是静默失败。 */
+  private runLogLines: number = 0;
+  /** 窗口序号（仅落盘用）。事后核对 hilog 有没有漏行只能靠它。 */
+  private winSeq: number = 0;
+  /**
+   * 热态与电池温度（每窗口采样）。
+   *
+   * 必须记录：`CONTEXT.md` 定义热态 2→3 时 NPU 延迟 +15~20% 而 CPU <2%，
+   * 所以**任何加速比不标热态就不可比**。跨轮比较只允许在同热档内做。
+   *
+   * native sysroot 里没有热态头文件（已查 `native/sysroot/usr/include`，无
+   * `thermal*`），只能在 ArkTS 侧取 —— 与 Index.ets 的 RQ4 探针同一套 API。
+   */
+  @State thermalLevel: number = -1;
+  @State batteryTempC: number = 0;
+  /** 热态采样定时器句柄（-1 = 未启动）。 */
+  private thermalTimer: number = -1;
   private arrivedInWin: number = 0;
   private doneInWin: number = 0;
   /** 预热剩余帧数：模型装载后前 N 帧不计入统计（kernel 首编不是稳态）。
@@ -354,18 +424,81 @@ struct CameraPage {
   private firstFrameLogged: boolean = false;
   /** decode 各段耗时：取帧 / 组件 / 建PixelMap / 旋转 / 读像素。 */
   private split: number[] = [0, 0, 0, 0, 0];
+  /**
+   * 滑窗。**必须分桶**：未检出帧不跑矫正/识别/判色，比检出帧便宜一大截，
+   * 混在一个窗口里取 p50 得到的是两种分布的混合物。
+   *
+   * 命名口径（2026-09-21 更正，见 record 的注释）：
+   *   `prep*` = **JS 侧**取帧 + 组件拷贝
+   *   `rt*`   = **JS↔native 整段往返**（含 native conv + 流水线 + NAPI）
+   *   `frameMsWin` = prep + rt = 一帧实际占用的墙钟（不分桶，吞吐用它）
+   *
+   * 早先这几个桶叫 `conv*` / `infer*`，与 `STAGE` 行的 **native** `conv=` / `infer=`
+   * 同名却不同量，导致同一批数据里两个数并存、看着自相矛盾。名字必须自带口径。
+   */
   private frameMsWin: number[] = [];
-  private decodeMsWin: number[] = [];
-  private inferMsWin: number[] = [];
+  private prepMsWin: number[] = [];
+  /** 未检出帧的 JS↔native 往返。 */
+  private rtEmptyWin: number[] = [];
+  /** 检出帧的 JS↔native 往返。 */
+  private rtHitWin: number[] = [];
+  /** 未检出帧的 JS 侧取帧拷贝。 */
+  private prepEmptyWin: number[] = [];
+  /** 检出帧的 JS 侧取帧拷贝。 */
+  private prepHitWin: number[] = [];
 
   // ------------------------------------------------------------ 生命周期
 
   aboutToAppear(): void {
     this.ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.initRunLog();
     this.requestCamera();
   }
 
+  /**
+   * 准备本轮证据文件，并起一个热态采样定时器。
+   *
+   * 文件名带**本轮启动时间戳**：native 的 `appendLine` 只有追加语义（没有截断
+   * API），用固定名会把上一轮的窗口混进这一轮 —— 而「一轮 = 一个条件」正是
+   * 这套证据的全部价值。每次进页面 = 一份新文件，物理上不可能混。
+   * 拉取时按 `camera_run_*.log` 取最新（见 tools/pull_camera_evidence.ps1）。
+   */
+  private initRunLog(): void {
+    const c: common.UIAbilityContext | undefined = this.ctx;
+    if (c === undefined) {
+      hilog.error(DOMAIN, TAG, 'RUNLOG no context — 只打 hilog，本轮无落盘');
+      return;
+    }
+    const stamp: number = Date.now();
+    this.runLogPath = c.filesDir + '/camera_run_' + stamp.toString() + '.log';
+    hilog.info(DOMAIN, TAG, 'RUNLOG path=%{public}s', this.runLogPath);
+    // 热态采样：2 s 一次，与窗口同频。取值本身是同步的（thermal/batteryInfo），
+    // 失败只是读不到，不影响相机。
+    this.thermalTimer = setInterval(() => {
+      this.sampleThermal();
+    }, 2000);
+    this.sampleThermal();
+  }
+
+  /** 采一次热态 / 电池温度。读失败就保持上一次的值（-1 = 从未读到）。 */
+  private sampleThermal(): void {
+    try {
+      this.thermalLevel = thermal.getThermalLevel();
+    } catch (e) {
+      // 保持原值
+    }
+    try {
+      this.batteryTempC = batteryInfo.batteryTemperature / 10;  // 单位 0.1 ℃
+    } catch (e) {
+      // 保持原值
+    }
+  }
+
   aboutToDisappear(): void {
+    if (this.thermalTimer >= 0) {
+      clearInterval(this.thermalTimer);
+      this.thermalTimer = -1;
+    }
     this.stopCamera();
   }
 
@@ -700,6 +833,17 @@ struct CameraPage {
                 'STREAM START show=%{public}dx%{public}d analyze=%{public}dx%{public}d rot=%{public}d',
                 showProfile.size.width, showProfile.size.height,
                 analyze.size.width, analyze.size.height, this.rotation);
+              // 稳态门的计时原点 = **开流时刻**（不是首帧到达，见 streamStartMs 注释）。
+              // 重置门与窗口，这样换档重开流时不会把上一档的 settled 带过来。
+              this.streamStartMs = Date.now();
+              this.settled = false;
+              this.winStart = 0;
+              this.winSeq = 0;
+              this.writeRunHeader(analyze.size.width, analyze.size.height,
+                showProfile.size.width, showProfile.size.height);
+              this.dumpLine('STREAM START show=' + showProfile.size.width.toString() + 'x' +
+                showProfile.size.height.toString() + ' analyze=' + analyze.size.width.toString() +
+                'x' + analyze.size.height.toString() + ' rot=' + this.rotation.toString());
               this.listenFrames(recv);
             }).catch((e: Error) => {
               this.status = '会话启动失败: ' + e.message;
@@ -784,8 +928,7 @@ struct CameraPage {
       // （实测冷启动首帧 infer=184 ms，稳态 ~20 ms）。把它们计进窗口，
       // 会把「丢帧 81/87、推理 p50 54 ms」这种假象报出来 —— 不是真实性能。
       if (this.gear === GEAR_ARRIVE_ONLY) {
-        // 只数 callback：不 readLatestImage，不 release，只统计 arrival 间隔分布。
-        // 如果 callback 停摆 → 缓冲满；如果间隔拉长 → 背压。这是「相机上限」的唯一判据。
+        // 只数 callback：统计 arrival 间隔分布，是「相机上限」的判据。
         //
         // 【2026-09-21 更正】这里**必须先记到达**。此前它在自增 totalArrived /
         // arrivedInWin **之前**就 return 了，于是到达数与完成数都只由别的路径更新 ——
@@ -798,6 +941,22 @@ struct CameraPage {
         // 这一档不经过 record()，所以要在这里自己结算窗口，否则永远不打 RATE。
         this.billWindow();
         this.finishFrame();
+        // 【2026-09-21 第二处更正：必须把帧抽走】
+        //
+        // 原注释说「不 readLatestImage，不 release」，理由是「只测回调，不碰帧」。
+        // **那是错的，而且它让这一档从未产出过任何证据**：接收器只有 8 格，
+        // 30 fps 下约 0.27 s 就填满，相机随即**停止回调** `imageArrival` ——
+        // 于是这一档测到的不是「相机能回调多快」，而是「缓冲填满用了几帧」。
+        //
+        // 实测（2026-09-21 sweep1）：切到本档后 12 s + 45 s + 90 s 全程
+        // **一个 RATE 窗口都没打出来**；同时 hilog 里
+        // `all buffer are using` 持续刷屏。归档日志里也**从来没有任何 `gear=4` 行** ——
+        // 这一档从 T3 加进来起就没成功运行过。
+        //
+        // 修法：照常 readLatestImage + release（只为腾空缓冲），**不推理、不计入
+        // 任何延迟统计**。到达计数已经在上面记过，所以「数回调」这个目的不受影响 ——
+        // 被抽走的帧仍然产生过一次 imageArrival 回调。
+        this.drainOne(recv);
         return;
       }
       const warm: boolean = this.warmLeft > 0;
@@ -875,16 +1034,52 @@ struct CameraPage {
   }
 
   /**
-   * 结算一个 2 s 窗口：算到达率 / 完成率，打 RATE 行。
+   * 结算一个 2 s 窗口：算到达率 / 完成率，打 RATE 行，并落盘。
    *
    * 从 `record()` 里抽出来，因为「只数 callback」档（`GEAR_ARRIVE_ONLY`）
    * **根本不会调 `record()`** —— 它拿到回调就把帧丢掉。原来结算逻辑只写在
    * `record()` 里，于是那一档永远不打 RATE，读数卡上也永远不刷新：
    * 表面上像「回调停摆」，实际是**没有任何代码去结算**。
    * 我因此误读过一次，所以把它提成独立方法，让两条路径共用。
+   *
+   * 【2026-09-21 三处扩充】
+   *   1. 稳态门：开流后 `SETTLE_MS` 内的窗口不结算（相机在爬坡，见 SETTLE_MS 注释）。
+   *   2. 分桶 p50：检出/未检出分开报，杜绝两种分布混成一个中位数。
+   *   3. 热态 + 落盘：hilog 是环形缓冲（16 MB，实测 40 分钟就滚掉），
+   *      所以每个窗口都同时写进 filesDir 的文件，事后可 `hdc file recv` 取回。
    */
   private billWindow(): void {
     const now: number = Date.now();
+    // ── 稳态门 ────────────────────────────────────────────────────────
+    // 注意位置：必须在 winStart 之前。settle 期内 winStart 一直保持 0，
+    // 于是「第一次真正开始计时」发生在门开之后，窗口起点天然干净。
+    if (!this.settled) {
+      if (this.streamStartMs === 0 || now - this.streamStartMs < SETTLE_MS) {
+        // 仍在爬坡：重置窗口计数（本窗口的到达/完成数不进入统计），但不碰
+        // totalArrived/frames/dropped —— 那些是「本轮一共收了多少帧」的累计量，
+        // 与统计窗口是两件事。
+        this.arrivedInWin = 0;
+        this.doneInWin = 0;
+        this.droppedInWin = 0;
+        this.winStart = 0;
+        return;
+      }
+      // 门刚开：清空所有统计窗口与累计量，从干净状态起算。
+      // 与 warmup 结束时的重置同构（见 record）——两处都清，因为两处都可能先到。
+      // 用 resetWindows() 而不是再抄一遍字段列表：抄一遍就会漏字段，
+      // 而漏掉的桶会带着爬坡期的值进入稳态统计（这正是本轮要根除的病）。
+      this.settled = true;
+      this.resetWindows();
+      this.winStart = now;
+      this.arrivedInWin = 0;
+      this.doneInWin = 0;
+      this.droppedInWin = 0;
+      const settleSec: number = SETTLE_MS / 1000;
+      hilog.info(DOMAIN, TAG, 'SETTLE done after %{public}d s — stats start here gear=%{public}d',
+        settleSec, this.gear);
+      this.dumpLine('SETTLE done after ' + settleSec.toFixed(0) + ' s gear=' + this.gear.toString());
+      return;
+    }
     if (this.winStart === 0) {
       this.winStart = now;
       return;
@@ -895,15 +1090,93 @@ struct CameraPage {
     }
     this.arrFps = this.arrivedInWin * 1000 / winMs;
     this.doneFps = this.doneInWin * 1000 / winMs;
+    // 分桶 p50。空桶报 -1（解析侧据此判「样本不足 / 本档不推理」，不当成 0）。
+    const rtHit: number = p50(this.rtHitWin);
+    const rtEmpty: number = p50(this.rtEmptyWin);
+    const prepHit: number = p50(this.prepHitWin);
+    const prepEmpty: number = p50(this.prepEmptyWin);
+    const thermalNow: number = this.thermalLevel;
+    const battNow: number = this.batteryTempC;
     hilog.info(DOMAIN, TAG,
       'RATE arrive=%{public}s fps done=%{public}s fps dropped_in_win=%{public}d ' +
-      'cum_arrived=%{public}d cum_done=%{public}d cum_dropped=%{public}d gear=%{public}d',
+      'cum_arrived=%{public}d cum_done=%{public}d cum_dropped=%{public}d gear=%{public}d ' +
+      'hit_n=%{public}d empty_n=%{public}d rt_hit_p50=%{public}s rt_empty_p50=%{public}s ' +
+      'prep_hit_p50=%{public}s prep_empty_p50=%{public}s thermal=%{public}d battC=%{public}s',
       this.arrFps.toFixed(2), this.doneFps.toFixed(2), this.droppedInWin,
-      this.totalArrived, this.frames, this.dropped, this.gear);
+      this.totalArrived, this.frames, this.dropped, this.gear,
+      this.rtHitWin.length, this.rtEmptyWin.length,
+      rtHit.toFixed(2), rtEmpty.toFixed(2),
+      prepHit.toFixed(2), prepEmpty.toFixed(2),
+      thermalNow, battNow.toFixed(1));
+    // 落盘：字段与 hilog 行逐字一致，外加窗口序号 —— 事后核对「hilog 有没有漏行」
+    // 只能靠它。hilog 会丢（环形缓冲 + 高频），文件不会。
+    this.winSeq = this.winSeq + 1;
+    this.dumpLine('RATE win=' + this.winSeq.toString() +
+      ' arrive=' + this.arrFps.toFixed(2) + ' done=' + this.doneFps.toFixed(2) +
+      ' dropped_in_win=' + this.droppedInWin.toString() +
+      ' cum_arrived=' + this.totalArrived.toString() +
+      ' cum_done=' + this.frames.toString() +
+      ' cum_dropped=' + this.dropped.toString() +
+      ' gear=' + this.gear.toString() +
+      ' hit_n=' + this.rtHitWin.length.toString() +
+      ' empty_n=' + this.rtEmptyWin.length.toString() +
+      ' rt_hit_p50=' + rtHit.toFixed(2) +
+      ' rt_empty_p50=' + rtEmpty.toFixed(2) +
+      ' prep_hit_p50=' + prepHit.toFixed(2) +
+      ' prep_empty_p50=' + prepEmpty.toFixed(2) +
+      ' thermal=' + thermalNow.toString() +
+      ' battC=' + battNow.toFixed(1));
     this.winStart = now;
     this.arrivedInWin = 0;
     this.doneInWin = 0;
     this.droppedInWin = 0;
+  }
+
+  /**
+   * 追加一行到本轮证据文件（filesDir/camera_run.log）。
+   *
+   * 为什么必须有：hilog 是 16 MB 环形缓冲，实测一轮相机跑完约 40 分钟后
+   * `LprCamera` 的行会被完全滚掉（`hilog -x` 里 STAGE = 0 行）。当时只能从
+   * 设备的持久化文件 `/data/log/hilog/hilog.NNN.*.gz` 里捞回来 —— 能捞到，
+   * 但那是运气（依赖滚动窗口正好覆盖）。主证据必须自己落盘。
+   *
+   * 失败不抛：拿不到 context / 写失败都只打 hilog，不能让相机页崩掉。
+   */
+  private dumpLine(line: string): void {
+    if (this.runLogPath.length === 0) {
+      return;
+    }
+    try {
+      lpr.appendLine(this.runLogPath, line);
+      this.runLogLines = this.runLogLines + 1;
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, 'RUNLOG append failed: %{public}s', (e as Error).message);
+    }
+  }
+
+  /**
+   * 写本轮运行头：把「这批数字是在什么条件下取的」一次写清。
+   *
+   * 判据全部来自**观测值**，不写请求值：分析路分辨率取自实际选中的 profile，
+   * 落点取自 native 的 `backends=`（ADR-0003）。缺任何一条，事后都无法判断
+   * 两轮之间到底哪个变量变了。
+   */
+  private writeRunHeader(analyzeW: number, analyzeH: number, showW: number, showH: number): void {
+    if (this.runHeaderWritten) {
+      return;
+    }
+    this.runHeaderWritten = true;
+    this.dumpLine('CAMRUN BEGIN ts=' + Date.now().toString() +
+      ' gear=' + this.gear.toString() +
+      ' analyze=' + analyzeW.toString() + 'x' + analyzeH.toString() +
+      ' show=' + showW.toString() + 'x' + showH.toString() +
+      ' rotation=' + this.rotation.toString() +
+      ' settleMs=' + SETTLE_MS.toString() +
+      ' warmupFrames=' + WARMUP_FRAMES.toString() +
+      ' window=' + WINDOW.toString() +
+      ' detModel=' + MODEL_DET + ' recModel=' + MODEL_REC +
+      ' analyzeTargetW=' + ANALYZE_TARGET_W.toString() +
+      ' fpsTarget=' + FPS_TARGET.toString());
   }
 
   /**
@@ -962,8 +1235,9 @@ struct CameraPage {
         if (this.gear === GEAR_RAW) {
           // 基准档：拿到帧就结束。这里测到的是**相机 + 取帧路径**的上限，
           // 与推理无关 —— 它给出「再优化推理还有没有意义」的答案。
+          // 本档不推理，`hit` 无意义，恒传 false（只进 frameMs 与未检出桶）。
           this.finishFrame();
-          this.record(tB - t0, 0);
+          this.record(tB - t0, 0, false);
           return;
         }
         if (this.gear === GEAR_ARRIVE_ONLY) {
@@ -993,8 +1267,11 @@ struct CameraPage {
       const kv: Map<string, string> = parseKv(raw);
       const convMs: number = num(kv, 'convMs');
       const inferMs: number = num(kv, 'inferMs');
+      // 本帧是否检出 —— 分桶统计的键，必须在 record 之前定好。
+      let frameHit: boolean = false;
       if (kv.get('ok') === '1') {
         const count: number = num(kv, 'count');
+        frameHit = count > 0;
         const p0: string[] = str(kv, 'p0').split(',');
         const stages: string = p0.length > 9 ? p0[9] : '-';
         this.lastInferMs = inferMs;
@@ -1002,7 +1279,7 @@ struct CameraPage {
         // 落点自证：相机档同样把 native 的 backends= 渲染出来（ADR-0003）。
         // 相机是一次一帧、每帧都重取，所以这里的值就是本帧的观测值。
         this.evidence = evidenceRows(str(kv, 'backends'));
-        if (count > 0 && p0.length > 0) {
+        if (frameHit && p0.length > 0) {
           this.plate = p0[0];
           this.hit = true;
           // 本帧明细只放**本帧**的 conv/infer —— 分段由下方 segText 统一展示，
@@ -1019,12 +1296,19 @@ struct CameraPage {
             'wh=%{public}sx%{public}s rgbaSum=%{public}s stages=%{public}s',
             this.frames, str(kv, 'convMs'), str(kv, 'inferMs'), count,
             str(kv, 'w'), str(kv, 'h'), str(kv, 'rgbaSum'), stages);
+          // STAGE 与 FRAME 是两条不同的抽样行（一条带分段、一条带 fps），
+          // 而分析只吃文件。落盘一份，免得事后只剩混合 p50 可看。
+          this.dumpLine('STAGE n=' + this.frames.toString() +
+            ' conv=' + str(kv, 'convMs') + ' infer=' + str(kv, 'inferMs') +
+            ' count=' + count.toString() +
+            ' wh=' + str(kv, 'w') + 'x' + str(kv, 'h') +
+            ' rgbaSum=' + str(kv, 'rgbaSum') + ' stages=' + stages);
         }
       } else {
         this.detail = 'infer 失败: ' + str(kv, 'error');
       }
       // 端到端一帧 = JS 侧取帧/拷贝(prepMs) + native 转换(convMs) + 流水线(inferMs)。
-      this.record(prepMs, roundMs);
+      this.record(prepMs, roundMs, frameHit);
       this.finishFrame();
     }).catch((e: Error) => {
       hilog.error(DOMAIN, TAG, 'CAMERA FRAME FAIL %{public}s', e.message);
@@ -1032,38 +1316,71 @@ struct CameraPage {
     });
   }
 
-  private record(decodeMs: number, inferMs: number): void {
-    const frameMs: number = decodeMs + inferMs;
+  /**
+   * 记一帧。`hit` = 本帧**检出**了车牌（native 的 `count > 0`）。
+   *
+   * ⚠️ **两个入参的口径，别再搞混（2026-09-21 自查发现命名有歧义）**：
+   *   `prepMs`   = **JS 侧**取帧 + 组件拷贝的耗时（不含任何 native 工作）
+   *   `roundMs`  = `cameraFrameAsync` 的**整段往返**：NAPI 进入 + native 的
+   *                NV21→RGBA 转换 + 整条流水线 + NAPI 返回
+   *
+   * 而 `STAGE` 行里的 `conv=` / `infer=` 是 **native 侧**的 convMs / inferMs。
+   * 两者**不是同一个量**：`roundMs` 比 native `inferMs` 多出 native conv 与 NAPI 开销，
+   * `prepMs` 与 native `convMs` 也完全不同（一个是 JS 拷贝，一个是 NV21→RGBA）。
+   *
+   * 这就是为什么 RATE 的桶字段命名为 `prep_*` / `rt_*`（round-trip）而**不叫**
+   * `conv_*` / `infer_*` —— 早先叫后者时，同一批数据里
+   * `infer_hit_p50=39` 与 `STAGE infer p50=25.58` 并存，看着像自相矛盾，
+   * 实际是两个不同口径的量。名字必须自带口径，否则下一轮还会误读。
+   *
+   * 为什么 `hit` 必须传进来：检出帧要多跑矫正 + 识别 + CTC + 判色，比未检出帧贵
+   * 一大截。把两者混进同一个窗口取 p50，得到的是**两种分布的混合物** ——
+   * 界面因此一度显示「延迟 20–25 ms」又「有时 13 ms」，看着像抖动，其实条件不同。
+   * 现在按 hit 分桶；`frameMsWin` 不分桶（吞吐关心每帧实际占多少墙钟）。
+   */
+  private record(prepMs: number, roundMs: number, hit: boolean): void {
+    const frameMs: number = prepMs + roundMs;
     if (!this.firstFrameLogged) {
       this.firstFrameLogged = true;
       hilog.info(DOMAIN, TAG,
-        'FIRST FRAME kind=%{public}s decode=%{public}d infer=%{public}d rot=%{public}d',
-        this.frameKind, decodeMs, inferMs, this.rotation);
+        'FIRST FRAME kind=%{public}s prep=%{public}d round=%{public}d rot=%{public}d',
+        this.frameKind, prepMs, roundMs, this.rotation);
     }
     this.frameMsWin.push(frameMs);
-    this.decodeMsWin.push(decodeMs);
-    this.inferMsWin.push(inferMs);
+    this.prepMsWin.push(prepMs);
+    // 基准档（GEAR_RAW）不推理，roundMs 恒为 0。**不能把它推进往返桶** ——
+    // 否则 RATE 行会打出 `rt_empty_p50=0.00`，读起来像「往返只要 0 ms」，
+    // 而真相是「这一档根本没推理」。空桶报 -1（N/A），由解析侧标注为 N/A。
+    const hasInfer: boolean = roundMs > 0;
+    if (hasInfer) {
+      if (hit) {
+        this.rtHitWin.push(roundMs);
+        this.prepHitWin.push(prepMs);
+      } else {
+        this.rtEmptyWin.push(roundMs);
+        this.prepEmptyWin.push(prepMs);
+      }
+    }
     if (this.frameMsWin.length > WINDOW) {
       this.frameMsWin.shift();
-      this.decodeMsWin.shift();
-      this.inferMsWin.shift();
+      this.prepMsWin.shift();
+    }
+    if (this.rtHitWin.length > WINDOW) {
+      this.rtHitWin.shift();
+      this.prepHitWin.shift();
+    }
+    if (this.rtEmptyWin.length > WINDOW) {
+      this.rtEmptyWin.shift();
+      this.prepEmptyWin.shift();
     }
     this.frames = this.frames + 1;
     if (this.warmLeft > 0) {
       // 预热帧：只消耗预算，不进统计（见 listenFrames 注释）。
+      // 注意它只挡 kernel 首编（~0.33 s），相机爬坡那 ~30 s 由 SETTLE_MS 挡。
       this.warmLeft = this.warmLeft - 1;
       if (this.warmLeft === 0) {
         // 预热结束，窗口从干净状态起算。
-        this.frameMsWin = [];
-        this.decodeMsWin = [];
-        this.inferMsWin = [];
-        this.winStart = 0;
-        this.arrivedInWin = 0;
-        this.doneInWin = 0;
-        this.frames = 0;
-        this.dropped = 0;
-        this.totalArrived = 0;
-        this.droppedInWin = 0;
+        this.resetWindows();
       }
       return;
     }
@@ -1077,31 +1394,53 @@ struct CameraPage {
     const f: number = p50(this.frameMsWin);
     if (f > 0) {
       this.frameP50 = f;
-      this.convP50 = p50(this.decodeMsWin);
-      this.inferP50 = p50(this.inferMsWin);
-      this.timing = (1000 / f).toFixed(1) + ' fps · frame ' + f.toFixed(1) +
-        ' ms (decode ' + p50(this.decodeMsWin).toFixed(1) +
-        ' / infer ' + p50(this.inferMsWin).toFixed(1) + ')' +
-        ' · 到达 ' + this.arrFps.toFixed(1) + ' / 完成 ' + this.doneFps.toFixed(1) +
-        ' · 丢帧 ' + this.dropped.toString() + '/' + this.totalArrived.toString();
+      this.convP50 = p50(this.prepMsWin);
+      // 指标卡的「推理 p50」显示**检出帧**的那个桶（有车牌时才是用户看到延迟的
+      // 场景）；未检出桶单独在 segText 里给，两个数并排，不再混。
+      this.inferP50 = p50(this.rtHitWin);
       // 指标卡第二行：本帧分段 + 帧预算。
       // 注意：native 只在**检出车牌**时才回 p0（分段在 p0[9]），空帧没有分段数据，
       // 所以这里要区分「本帧未检出」和「有数据」，别把前者显示成 '-' 像故障。
+      const emptyP50: number = p50(this.rtEmptyWin);
+      const bucketText: string = ' · 往返 检出 ' + (this.inferP50 > 0 ? this.inferP50.toFixed(1) : '-') +
+        ' / 未检出 ' + (emptyP50 > 0 ? emptyP50.toFixed(1) : '-') + ' ms';
       if (this.gear === GEAR_RAW) {
         this.segText = '本档只取帧不推理 · 相机出帧上限';
       } else if (this.lastStages === '-') {
-        this.segText = 'conv ' + p50(this.decodeMsWin).toFixed(1) +
-          ' ms · 本帧未检出（分段仅在检出时记录）';
+        this.segText = 'prep ' + p50(this.prepMsWin).toFixed(1) +
+          ' ms · 本帧未检出（分段仅在检出时记录）' + bucketText;
       } else {
-        this.segText = 'conv ' + p50(this.decodeMsWin).toFixed(1) +
-          ' ms · 分段 det|crop|rec|cls = ' + this.lastStages;
+        this.segText = 'prep ' + p50(this.prepMsWin).toFixed(1) +
+          ' ms · 分段 det|crop|rec|cls = ' + this.lastStages + bucketText;
       }
     }
     if (this.frames % 30 === 0) {
+      // FRAME 行也带上分桶值：它每 30 帧打一条，是最常被引用的抽样行，
+      // 只报混合 p50 会再次造成「20–25 又 13」的误读。
       hilog.info(DOMAIN, TAG,
-        'FRAME n=%{public}d fps=%{public}s plate=%{public}s split=%{public}s',
-        this.frames, (1000 / f).toFixed(2), this.plate, this.split.join('|'));
+        'FRAME n=%{public}d fps=%{public}s plate=%{public}s split=%{public}s ' +
+        'rt_hit_p50=%{public}s rt_empty_p50=%{public}s hit_n=%{public}d empty_n=%{public}d',
+        this.frames, (1000 / f).toFixed(2), this.plate, this.split.join('|'),
+        p50(this.rtHitWin).toFixed(2), p50(this.rtEmptyWin).toFixed(2),
+        this.rtHitWin.length, this.rtEmptyWin.length);
     }
+  }
+
+  /** 清空全部统计窗口与累计量（预热结束 / 稳态门开启时共用）。 */
+  private resetWindows(): void {
+    this.frameMsWin = [];
+    this.prepMsWin = [];
+    this.rtEmptyWin = [];
+    this.rtHitWin = [];
+    this.prepEmptyWin = [];
+    this.prepHitWin = [];
+    this.winStart = 0;
+    this.arrivedInWin = 0;
+    this.doneInWin = 0;
+    this.frames = 0;
+    this.dropped = 0;
+    this.totalArrived = 0;
+    this.droppedInWin = 0;
   }
 
   private stopCamera(): void {
@@ -1155,16 +1494,13 @@ struct CameraPage {
     // 按钮实际点不动。改成置 switching 标志、由帧循环让路。
     this.switching = true;
     this.pending = false;
-    this.frameMsWin = [];
-    this.decodeMsWin = [];
-    this.inferMsWin = [];
-    this.frames = 0;
-    this.dropped = 0;
-    this.totalArrived = 0;
-    this.droppedInWin = 0;
-    this.arrivedInWin = 0;
-    this.doneInWin = 0;
-    this.winStart = 0;
+    this.resetWindows();
+    // 切档 = 新条件，稳态门必须重走一遍。这里的 settled 复位只是兜底：
+    // 真正重开流时 STREAM START 还会再设一次（见 openCamera 的 start 回调）。
+    // 但切档**不重开流**（会话是原地重建的），所以这里不复位就永远不会重新 settle，
+    // 新档的前几十秒爬坡会被算成稳态 —— 这正是上一轮「全 NPU 30 fps」的成因之一。
+    this.settled = false;
+    this.streamStartMs = Date.now();
     this.arrFps = 0;
     this.doneFps = 0;
     // 上一档的读数必须清掉：否则切档后标题/读数卡还挂着旧档的 conv/infer 与旧车牌，
@@ -1178,8 +1514,9 @@ struct CameraPage {
     this.lastInferMs = 0;
     this.plate = '（未检测到）';
     this.hit = false;
-    this.timing = '';
     this.status = '切换档位 → ' + GEAR_NAMES[g];
+    // 新档开跑前先记一行：档位边界是事后切分证据的唯一依据。
+    this.dumpLine('GEAR SWITCH -> ' + g.toString() + ' (' + GEAR_NAMES[g] + ') settle restarts');
     this.applyGear();
   }
 
@@ -1391,7 +1728,7 @@ struct CameraPage {
 
           Column({ space: 1 }) {
             Row({ space: 2 }) {
-              Text(this.inferP50.toFixed(1))
+              Text(this.inferP50 > 0 ? this.inferP50.toFixed(1) : '-')
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(IOS_ORANGE)
@@ -1402,7 +1739,10 @@ struct CameraPage {
                 .margin({ bottom: 2 })
             }
             .alignItems(VerticalAlign.Bottom)
-            Text('推理 p50')
+            // 标签写明是**检出帧**的桶、以及这是**往返**（不是 native 单段）：
+            // 混桶读数是上一轮误判「20–25 又 13」的根源；而把往返当 native infer
+            // 会让 RATE 与 STAGE 两个数看着自相矛盾。
+            Text('往返 p50·检出')
               .fontSize(11)
               .fontColor(IOS_LABEL2)
               .maxLines(1)
@@ -1425,13 +1765,32 @@ struct CameraPage {
           Text(this.segText)
             .fontSize(11)
             .fontColor(IOS_LABEL3)
-            .maxLines(2)
+            .maxLines(3)
             .layoutWeight(1)
             .textAlign(TextAlign.End)
         }
         .width('100%')
         .alignItems(VerticalAlign.Top)
         .padding({ top: 10 })
+
+        // 第三行：稳态门 + 热态 + 落盘自证。
+        // 「观测代码有没有被执行」必须能当场看见：settle 未过时数字全是 0，
+        // 若不在界面上说清，会和「回调停摆」长得一模一样（历史上误判过一次）。
+        Row({ space: 10 }) {
+          Text(this.settled
+            ? ('稳态已开 · 窗口 ' + this.winSeq.toString() + ' · 落盘 ' +
+               this.runLogLines.toString() + ' 行')
+            : ('稳态门中 · 相机爬坡不计入（' + (SETTLE_MS / 1000).toFixed(0) + ' s）'))
+            .fontSize(10)
+            .fontColor(this.settled ? IOS_GREEN : IOS_ORANGE)
+          Blank()
+          Text('热档 ' + this.thermalLevel.toString() + ' · ' +
+            this.batteryTempC.toFixed(1) + '℃')
+            .fontSize(10)
+            .fontColor(IOS_LABEL2)
+        }
+        .width('100%')
+        .padding({ top: 6 })
 
         // 第三行：落点自证（ADR-0003）
         // 相机是榨干硬件的**真战场**（热、功耗、掉帧都在这里出现），
