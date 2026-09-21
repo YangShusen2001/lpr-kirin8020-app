@@ -32,8 +32,6 @@ import lpr from 'libentry.so';
 import { thermal } from '@kit.BasicServicesKit';
 import { batteryInfo } from '@kit.BasicServicesKit';
 import { systemLoad } from '@kit.BasicServicesKit';
-// T10 批量数据集探针要从 filesDir 读图（hdc file send 推上来），不走 rawfile。
-import { fileIo } from '@kit.CoreFileKit';
 
 const TAG = 'LprMatrix';
 const NATIVE_TAG = 'LprNativeUI';
@@ -879,9 +877,12 @@ struct Index {
    * （`t6-balanced-evaluation.md` 附带限制已声明「不含检测环节」），
    * 正好是识别器的输入形态。det/cls 固定为生产配置，**唯一变量是 rec 的落点**。
    *
-   * 为什么读 filesDir 而不是 rawfile：1000 张小图打进 rawfile 会把 HAP 撑大、
-   * 拖慢 hvigor 资源扫描，且换数据集要重打包。用 `hdc file send` 推到 filesDir
-   * 则两者都避开 —— 这也正是 T9 已识别的「离线路径只读 rawfile」这个缺口。
+   * 为什么读 rawfile 而不是 filesDir：先试过 filesDir，**走不通** ——
+   * App 私有目录既不能 `hdc shell` 写也不能 `hdc file send` 写（两者都是 shell uid，
+   * 实测均 permission denied），数据集送不进去。1000 张小图打进 rawfile 的代价是
+   * HAP +2.5 MB、构建略慢，但换来「零权限、随包装走、可复现」——
+   * 对一份要写进论文的数据集，后者更重要。
+   * （T9 把「离线路径只读 rawfile」记为缺口；本探针证明这个缺口的解法就是打包。）
    *
    * 真值口径：**文件名即真值**（CONTEXT.md：只有 `_dataset/real/crops/` 的文件名
    * 是真值）。长度非 7/8 的直接跳过并计数 —— t6 踩过「文件名被工具改过、
@@ -905,25 +906,26 @@ struct Index {
     }
     this.busy = true;
     const logPath: string = ctx.filesDir + '/crop_ab.log';
-    const cropDir: string = ctx.filesDir + '/crops';
+    // rawfile 里的目录（相对 rawfile 根，不带前导斜杠）。
+    const cropDir: string = 'assets/crops';
     this.appendNative('CROPAB BEGIN dir=' + cropDir + ' log=' + logPath);
     try {
       // 列出数据集。目录不存在要说清楚，而不是静默跑 0 张。
-      // ⚠️ listFile 在本 API 版本返回 **Promise<string[]>**（不是同步 string[]）——
-      // 直接当数组用会在编译期报「missing length/pop/push」。
+      // ⚠️ getRawFileList 在本 API 版本同样返回 **Promise<string[]>**（不是同步）——
+      // 与 fileIo.listFile 一致。直接当数组用在编译期报「missing length/pop/push」。
       let names: string[] = [];
       try {
-        names = await fileIo.listFile(cropDir);
+        names = await ctx.resourceManager.getRawFileList(cropDir);
       } catch (e) {
         const err = e as BusinessError;
         this.appendNative('CROPAB FAIL listdir code=' + err.code + ' msg=' + err.message +
-          ' —— 先用 hdc file send 把 _dataset/real/crops 推到 ' + cropDir);
+          ' —— rawfile 里没有 ' + cropDir + '（打包漏了？）');
         this.busy = false;
         return;
       }
       names = names.filter((n: string) => n.toLowerCase().endsWith('.jpg')).sort();
       if (names.length === 0) {
-        this.appendNative('CROPAB FAIL 目录里没有 .jpg —— 推错目录了？');
+        this.appendNative('CROPAB FAIL 目录里没有 .jpg');
         this.busy = false;
         return;
       }
@@ -968,7 +970,8 @@ struct Index {
         const path: string = cropDir + '/' + name;
         let frame: RgbaFrame | null = null;
         try {
-          frame = await this.decodeRgbaFromPath(path);
+          // rawfile 路径直接走既有的 decodeRgba（getRawFileContentSync）。
+          frame = await this.decodeRgba(path);
         } catch (e) {
           const err = e as BusinessError;
           lpr.appendLine(logPath, 'CROPAB DECODEFAIL file=' + name + ' code=' + err.code);
@@ -1015,42 +1018,6 @@ struct Index {
     } finally {
       this.busy = false;
     }
-  }
-
-  /**
-   * 从**设备文件路径**（不是 rawfile）解一张 JPEG 成 RGBA。
-   *
-   * 与 `decodeRgba` 的差别只在取字节那一步：那个走 `getRawFileContentSync`，
-   * 这个走 `fileIo`。剩下的 ImageSource → PixelMap → readPixelsToBuffer 完全相同。
-   *
-   * 为什么需要它：离线路径原先只能读 rawfile（T9 已把这条记为缺口）。
-   * 批量数据集用 `hdc file send` 推到 filesDir 更实际 —— 不撑大 HAP、
-   * 不需要重打包就能换数据集。
-   */
-  private async decodeRgbaFromPath(path: string): Promise<RgbaFrame | null> {
-    const stat: fileIo.Stat = fileIo.statSync(path);
-    const buf: ArrayBuffer = new ArrayBuffer(stat.size);
-    const f: fileIo.File = fileIo.openSync(path, fileIo.OpenMode.READ_ONLY);
-    let read: number = 0;
-    try {
-      read = fileIo.readSync(f.fd, buf);
-    } finally {
-      fileIo.closeSync(f.fd);
-    }
-    if (read <= 0) {
-      return null;
-    }
-    const bytes: Uint8Array = new Uint8Array(buf.slice(0, read));
-    const src: image.ImageSource = image.createImageSource(this.toArrayBuffer(bytes));
-    const pm: image.PixelMap = await src.createPixelMap();
-    const info: image.ImageInfo = await pm.getImageInfo();
-    const w: number = info.size.width;
-    const h: number = info.size.height;
-    const rgba: ArrayBuffer = new ArrayBuffer(w * h * 4);
-    await pm.readPixelsToBuffer(rgba);
-    await pm.release();
-    await src.release();
-    return { data: rgba, width: w, height: h };
   }
 
   // ------------------------------------------------------------ ncnn 槽位探针
@@ -2092,9 +2059,9 @@ struct Index {
             .layoutWeight(1)
             .height(38)
             .onClick(() => {
-              // 数据集要先推到 filesDir/crops：
-              //   hdc file send <本地 _dataset/real/crops> /data/app/el2/100/base/
-              //     com.shusen.lprdemo/haps/entry/files/crops
+              // 数据集已打进 rawfile（assets/crops，1000 张 94x24 裁剪图）。
+              // 曾试过 hdc file send 推 filesDir，被 App 沙箱挡住（shell uid 无写权限），
+              // 详见 commit b316640 的说明。
               this.cropBackendAB();
             })
           Button('算子对撞')
