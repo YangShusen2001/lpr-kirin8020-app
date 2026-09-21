@@ -1198,17 +1198,22 @@ struct Index {
    *   **必须两个都跑**：T12 已证明 det 在真实场景下分歧率只有 0.1%，
    *   而 rec 的 4.9% 是在**裁剪图裸喂**下测的（T11）—— 跨工况不可比。
    *   只有同输入、同工况的 det vs rec 才能回答「真实场景下哪个角色更敏感」。
+   * @param set 数据集：`'ccpd'`（7 字符常规牌，1000 张，30 省分层）或
+   *   `'green'`（**8 字符新能源牌**，1000 张，13 省）。绿牌集省份极偏斜
+   *   （原分布皖 11373/11776 = 96.6%，抽样后 60%），引用时须一起说。
+   *   两个集的图都是 CCPD 整车图，同一套探针与真值口径。
    */
-  private async ccpdSceneAB(role: string): Promise<void> {
+  private async ccpdSceneAB(role: string, set: string): Promise<void> {
     const ctx = this.ctx;
     if (ctx === undefined) {
       this.appendNative('SCENE FAIL no context');
       return;
     }
     this.busy = true;
-    const logPath: string = ctx.filesDir + '/ccpd_scene_' + role + '.log';
-    const sceneDir: string = 'assets/ccpd';
-    this.appendNative('SCENE BEGIN role=' + role + ' dir=' + sceneDir + ' log=' + logPath);
+    const logPath: string = ctx.filesDir + '/scene_' + set + '_' + role + '.log';
+    const sceneDir: string = 'assets/' + set;
+    this.appendNative('SCENE BEGIN set=' + set + ' role=' + role +
+      ' dir=' + sceneDir + ' log=' + logPath);
     try {
       // 真值表：从随包的 gt.tsv 读，**不重解文件名** —— 两处解译就会有两条真值源。
       let gtMap: Map<string, string> = new Map();
@@ -1280,7 +1285,7 @@ struct Index {
       }
       const cpuId: number = num(ci, 'id');
       const npId: number = num(ni, 'id');
-      this.appendNative('SCENE SESSIONS role=' + role +
+      this.appendNative('SCENE SESSIONS set=' + set + ' role=' + role +
         ' det=' + this.detId.toString() + ' rec=' + this.recId.toString() +
         ' cls=' + this.clsId.toString() + ' cpu_id=' + cpuId.toString() +
         ' np_id=' + npId.toString());
@@ -1341,7 +1346,7 @@ struct Index {
         if (cn.length === 0) {
           noPlateNp++;
         }
-        lpr.appendLine(logPath, 'SCENE role=' + role + ' file=' + name + ' gt=' + gt +
+        lpr.appendLine(logPath, 'SCENE set=' + set + ' role=' + role + ' file=' + name + ' gt=' + gt +
           ' code_cpu=' + cc + ' code_np=' + cn +
           ' agree=' + (same ? '1' : '0') +
           ' ok_cpu=' + (cc === gt ? '1' : '0') +
@@ -1354,7 +1359,7 @@ struct Index {
             ' ok_np=' + okNp.toString());
         }
       }
-      this.appendNative('SCENE END role=' + role + ' n=' + n.toString() +
+      this.appendNative('SCENE END set=' + set + ' role=' + role + ' n=' + n.toString() +
         ' agree=' + agree.toString() +
         ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
         ' none_cpu=' + noPlateCpu.toString() + ' none_np=' + noPlateNp.toString() +
@@ -2434,7 +2439,7 @@ struct Index {
               // 工况一致，因此准确率数字可直接对比。
               this.bareHeadAccuracy();
             })
-          Button('整车场景 det A/B')
+          Button('整车 7 字 det')
             .fontSize(12)
             .fontColor(IOS_BLUE)
             .backgroundColor(IOS_BLUE_SOFT)
@@ -2443,11 +2448,11 @@ struct Index {
             .layoutWeight(1)
             .height(38)
             .onClick(() => {
-              // CCPD2019-balance 分层抽 1000 张整车图（30 省，每省上限 100）。
+              // CCPD2019-balance 分层抽 1000 张（30 省，每省上限 100）。
               // T10 那 6.8% 是裁剪图工况，不能外推到真实场景 —— 本探针补这一格。
-              this.ccpdSceneAB('det');
+              this.ccpdSceneAB('det', 'ccpd');
             })
-          Button('整车场景 rec A/B')
+          Button('整车 7 字 rec')
             .fontSize(12)
             .fontColor(IOS_BLUE)
             .backgroundColor(IOS_BLUE_SOFT)
@@ -2457,9 +2462,22 @@ struct Index {
             .height(38)
             .onClick(() => {
               // 必须与 det 同输入同工况：rec 的 4.9% 来自 T11 的**裁剪图裸喂**，
-              // 与 det 的 0.1%（真实场景）不可比。只有这里跑出来才能回答
-              // 「真实场景下哪个角色更敏感」。
-              this.ccpdSceneAB('rec');
+              // 与 det 的 0.1%（真实场景）不可比。
+              this.ccpdSceneAB('rec', 'ccpd');
+            })
+          Button('整车 8 字绿牌')
+            .fontSize(12)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // CCPD-Green（Kaggle lyhue1991/ccpd-green）抽 1000 张**8 字符新能源牌**。
+              // 此前所有真实场景结论只覆盖 7 字符，本探针补 8 字符这一格。
+              // 变 rec 落点：识别器是唯一需要逐位解码的角色，8 字符对它的压力最大。
+              this.ccpdSceneAB('rec', 'green');
             })
           Button('算子对撞')
             .fontSize(13)

@@ -32,15 +32,30 @@ ADS = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q"
 
 
 def decode_lp(field: str) -> str | None:
-    """`1_0_32_32_4_32_25` -> `沪A88E81`。长度不是 7 或下标越界时返回 None。"""
+    """`1_0_32_32_4_32_25` -> `沪A88E81`（7 位）；`0_0_3_30_30_25_31_32` -> `皖AD66178`（8 位）。
+
+    7 位是 CCPD2019 常规牌，8 位是 CCPD-Green 新能源牌。两者**同一套下标表**，
+    差别只在段数 —— 所以这里按段数分派，不复制表。
+
+    结构自检（两档都做）：
+      - 段数必须是 7 或 8；
+      - idx[0] 必须在省份表内；
+      - idx[1] 必须是**字母**（ALPHABETS 区间，即 < 24）——
+        这是唯一能把「解错表」与「解对表」区分开的硬约束：
+        若把 ADS 当成字母表用（少 11 项偏移），idx[1] 会落到数字区，立刻暴露。
+      - 其余下标在 ADS 范围内。
+    """
     parts = field.split("_")
-    if len(parts) != 7:
+    if len(parts) not in (7, 8):
         return None
     try:
         idx = [int(p) for p in parts]
     except ValueError:
         return None
     if idx[0] >= len(PROVINCES):
+        return None
+    # 第 2 位（下标 1）在真实车牌上必为字母。这一条是防「表用错」的护栏。
+    if idx[1] >= len(ALPHABETS):
         return None
     if any(i >= len(ADS) for i in idx[1:]):
         return None
@@ -61,23 +76,40 @@ def self_check() -> int:
     errs = []
     if len(PROVINCES) != 34:
         errs.append(f"PROVINCES 长度 {len(PROVINCES)} != 34")
+    if len(ALPHABETS) != 24:
+        errs.append(f"ALPHABETS 长度 {len(ALPHABETS)} != 24")
     if len(ADS) != 35:
         errs.append(f"ADS 长度 {len(ADS)} != 35")
-    # CCPD README 之外的独立锚点：下标 1/0/32/32/4/32/25 -> 沪 A 8 8 E 8 1
+    # 独立锚点：下标 1/0/32/32/4/32/25 -> 沪 A 8 8 E 8 1
     got = decode_lp("1_0_32_32_4_32_25")
     if got != "沪A88E81":
-        errs.append(f"样例解码错误: got {got!r} want '沪A88E81'")
+        errs.append(f"7 位样例解码错误: got {got!r} want '沪A88E81'")
+    # 绿牌锚点（CCPD-Green，8 段）。这 4 条取自 Kaggle ccpd-green 真实文件名。
+    for field, want in [("0_0_3_30_30_25_31_32", "皖AD66178"),
+                        ("0_0_5_24_25_24_30_24", "皖AF01060"),
+                        ("0_0_3_29_30_33_33_33", "皖AD56999"),
+                        ("0_0_3_1_24_25_26_33", "皖ADB0129")]:
+        g = decode_lp(field)
+        if g != want:
+            errs.append(f"8 位样例 {field}: got {g!r} want {want!r}")
+    # 反例：段数、省份越界、ads 越界、**第 2 位落在数字区**
     if decode_lp("1_0_32_32_4_32") is not None:
         errs.append("6 段应被拒绝")
+    if decode_lp("1_0_32_32_4_32_25_0_0") is not None:
+        errs.append("9 段应被拒绝")
     if decode_lp("99_0_0_0_0_0_0") is not None:
         errs.append("越界省份下标应被拒绝")
     if decode_lp("0_99_0_0_0_0_0") is not None:
         errs.append("越界 ads 下标应被拒绝")
+    # 这条是「表用错」的探测器：第 2 位若解出数字，说明 ALPHABETS/ADS 混用了。
+    if decode_lp("0_30_0_0_0_0_0") is not None:
+        errs.append("第 2 位是数字(下标 30)应被拒绝 —— 该约束用于发现表用错")
     for e in errs:
         print(f"[FAIL] {e}")
     if errs:
         return 1
-    print("[ok] 表长 34/35，样例解码正确，越界与短段均被拒绝")
+    print("[ok] 表长 34/24/35；7 位与 8 位样例各 4 条全对；"
+          "段数/省份越界/ads 越界/第2位为数字 均被拒绝")
     return 0
 
 
