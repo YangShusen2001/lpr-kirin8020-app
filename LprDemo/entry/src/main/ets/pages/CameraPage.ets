@@ -55,6 +55,10 @@ import { BusinessError } from '@kit.BasicServicesKit';
 // 无 thermal*），只能在 ArkTS 侧取。与 Index.ets 的 RQ4 探针同一套 API。
 import { thermal } from '@kit.BasicServicesKit';
 import { batteryInfo } from '@kit.BasicServicesKit';
+// 【2026-09-23 实验】视频档（5/6）需要 AVRecorder（提供 VideoOutput 的编码 surface）
+// 与 fileIo（给它一个 fd:// 输出文件）。video-only 录制不配音频源，不需要麦克风权限。
+import { media } from '@kit.MediaKit';
+import { fileIo } from '@kit.CoreFileKit';
 import lpr from 'libentry.so';
 
 const TAG = 'LprCamera';
@@ -103,10 +107,29 @@ const GEAR_RAW: number = 3;
  *  这是「相机上限」的唯一判据：如果 callback 停摆，说明缓冲满；如果间隔拉长，说明背压。
  *  与 GEAR_RAW 的区别：GEAR_RAW 仍然付整帧拷贝 + release 的开销，GEAR_ARRIVE_ONLY 只收 callback。 */
 const GEAR_ARRIVE_ONLY: number = 4;
+/** 【2026-09-23 实验】视频档：会话用 `SceneMode.NORMAL_VIDEO`（VideoSession），
+ *  预览/分析流 `setFrameRate(60,60)`。动机：`camera-recording.md` L74-78 的官方
+ *  双流帧率耦合规则 + `arkts-apis-camera-videosession.md` L17 明说录像流支持
+ *  「30fps、60fps」—— 这是文档面上唯一没被真机证伪的 >30fps 路径
+ *  （见 research 仓库 docs/notes/camera-60fps-alternatives-research.md）。
+ *  本档是**单流版**：只换会话模式 + 请求 60，不加 VideoOutput。
+ *  判定只用 `RATE arrive=`（真到达率），不信 `getActiveFrameRate()`。 */
+const GEAR_VIDEO: number = 5;
+/** 【2026-09-23 实验】视频+录像档：在档 5 之上再加一条 60fps `VideoOutput`
+ *  （AVRecorder 提供 surface）。按耦合规则：录像流固定 60-60 → 预览流可跟设
+ *  60-60。如果 HAL 的 60fps 传感器档位只在录像配置下激活，只有本档能验证到。
+ *  与档 3/5 一样**只取帧不推理** —— 它测的是相机到达率，不是流水线。 */
+const GEAR_VIDEO_VOUT: number = 6;
 const GEAR_NAMES: string[] =
-  ['生产 det=CPU rec=NPU cls=CPU', '全 NPU', '全 GPU(Vulkan)', '基准：只取帧不推理', '只数 callback'];
+  ['生产 det=CPU rec=NPU cls=CPU', '全 NPU', '全 GPU(Vulkan)', '基准：只取帧不推理', '只数 callback',
+    '视频档：NORMAL_VIDEO 预览请求60', '视频+录像档：60fps VideoOutput'];
 /** 分段控件用的短名 —— 五段并排会挤爆。 */
-const GEAR_SHORT: string[] = ['生产', '全 NPU', '全 GPU', '基准', 'callback'];
+const GEAR_SHORT: string[] = ['生产', '全 NPU', '全 GPU', '基准', 'callback', '视频60', '视频+录'];
+
+/** 这三档只取帧不推理（相机上限仪器族）。 */
+function isFrameOnlyGear(g: number): boolean {
+  return g === GEAR_RAW || g === GEAR_ARRIVE_ONLY || g === GEAR_VIDEO || g === GEAR_VIDEO_VOUT;
+}
 
 // ---------------------------------------------------------------- iOS 配色
 // 取 Apple HIG 的 system colors，暗色模式下也认得出来。
@@ -434,8 +457,20 @@ struct CameraPage {
   private camInput: camera.CameraInput | undefined = undefined;
   private previewOut: camera.PreviewOutput | undefined = undefined;
   private analyzeOut: camera.PreviewOutput | undefined = undefined;
-  private session: camera.PhotoSession | undefined = undefined;
+  /** 档 5/6 用 VideoSession，其余档用 PhotoSession —— 两者都 extends Session，
+   *  公共流程（beginConfig/commitConfig/addOutput/start/stop/release）走基类类型。 */
+  private session: camera.Session | undefined = undefined;
   private receiver: image.ImageReceiver | undefined = undefined;
+  /** 档 6 的 60fps 录像输出与它的 AVRecorder（提供编码 surface）。 */
+  private videoOut: camera.VideoOutput | undefined = undefined;
+  private avRecorder: media.AVRecorder | undefined = undefined;
+  /** 录像测试文件的 fd（stopCamera 时关闭并删文件）。-1 = 没有。 */
+  private videoFd: number = -1;
+  /** 当前相机会话是否为 NORMAL_VIDEO（档 5/6 时 openCamera 置位）。
+   *  applyGear 靠它判断「切档是否需要整流重启」—— 相机会话只在 openCamera 建一次。 */
+  private camVideoMode: boolean = false;
+  /** 当前会话是否带 60fps VideoOutput（档 6 且建流成功时置位）。 */
+  private camHasVout: boolean = false;
 
   /** 上一帧还在算时置位 → 新帧直接丢，不排队。@State：状态点要绑它。 */
   @State busy: boolean = false;
@@ -590,14 +625,22 @@ struct CameraPage {
       return true;
     }
     this.status = '加载模型（' + GEAR_NAMES[this.gear] + '）…';
-    if (this.gear === GEAR_RAW || this.gear === GEAR_ARRIVE_ONLY) {
-      // 基准档不推理，无需任何模型。把 id 置 0 让「已加载」判定通过。
+    if (isFrameOnlyGear(this.gear)) {
+      // 基准/只数/视频档不推理，无需任何模型。把 id 置 0 让「已加载」判定通过。
       this.detId = 0;
       this.recId = 0;
       this.clsId = 0;
       this.loadedGear = this.gear;
       this.warmLeft = WARMUP_FRAMES;
-      this.status = this.gear === GEAR_ARRIVE_ONLY ? '只数 callback' : '基准档：只取帧不推理';
+      if (this.gear === GEAR_ARRIVE_ONLY) {
+        this.status = '只数 callback';
+      } else if (this.gear === GEAR_VIDEO) {
+        this.status = '视频档：NORMAL_VIDEO · 预览请求 60';
+      } else if (this.gear === GEAR_VIDEO_VOUT) {
+        this.status = '视频+录像档：60fps VideoOutput';
+      } else {
+        this.status = '基准档：只取帧不推理';
+      }
       hilog.info(DOMAIN, TAG, 'GEAR %d %s 就绪（不加载模型）', this.gear, this.status);
       return true;
     }
@@ -735,7 +778,15 @@ struct CameraPage {
       }
       const device: camera.CameraDevice = dev;
 
-      const cap: camera.CameraOutputCapability = mgr.getSupportedOutputCapability(device);
+      // 【2026-09-23 实验】档 5/6 用 NORMAL_VIDEO 能力集。前序研究
+      // （camera-60fps-research.md §4.2 未验证项 3）指出：profile 缓存是**按
+      // SceneMode 分派**的（camera_manager.cpp L2651-2656），NORMAL_VIDEO 下的
+      // 预览/录像 profile 集合可能与 NORMAL_PHOTO 不同 —— 本轮顺带把这个问题钉死。
+      const gearAtOpen: number = this.gear;
+      const videoMode: boolean = gearAtOpen === GEAR_VIDEO || gearAtOpen === GEAR_VIDEO_VOUT;
+      const cap: camera.CameraOutputCapability = videoMode
+        ? mgr.getSupportedOutputCapability(device, camera.SceneMode.NORMAL_VIDEO)
+        : mgr.getSupportedOutputCapability(device, camera.SceneMode.NORMAL_PHOTO);
       const profiles: camera.Profile[] = cap.previewProfiles;
       if (profiles.length === 0) {
         this.status = '没有可用预览分辨率';
@@ -755,6 +806,41 @@ struct CameraPage {
       for (let i = 0; i < dump.length; i += chunk) {
         hilog.info(DOMAIN, TAG, 'PROFILES[%{public}d] %{public}s',
           Math.floor(i / chunk), dump.substring(i, Math.min(i + chunk, dump.length)));
+      }
+
+      // 【2026-09-23 实验】NORMAL_VIDEO 下的录像 profile 全量 dump（fps 三元组），
+      // 并挑「帧率范围含 60 且面积最小」的一档给档 6 的 VideoOutput 用。
+      // 这份数据同时回答 camera-60fps-research.md §4.2 未验证项 2：
+      // 「60-60 那条能力挂在哪个 (format, size, fps) 三元组上」。
+      let vProfileChosen: camera.VideoProfile | undefined = undefined;
+      if (videoMode) {
+        const vps: camera.VideoProfile[] = cap.videoProfiles;
+        let vdump: string = '';
+        for (let i = 0; i < vps.length; i++) {
+          const v: camera.VideoProfile = vps[i];
+          vdump += v.size.width.toString() + 'x' + v.size.height.toString() +
+            '/' + v.format.toString() + '@' + v.frameRateRange.min.toString() +
+            '-' + v.frameRateRange.max.toString() + ' ';
+        }
+        for (let i = 0; i < vdump.length; i += chunk) {
+          hilog.info(DOMAIN, TAG, 'VIDPROFILES[%{public}d] %{public}s',
+            Math.floor(i / chunk), vdump.substring(i, Math.min(i + chunk, vdump.length)));
+        }
+        for (let i = 0; i < vps.length; i++) {
+          const v: camera.VideoProfile = vps[i];
+          if (v.frameRateRange.max < 60 || v.frameRateRange.min > 60) {
+            continue;
+          }
+          if (vProfileChosen === undefined ||
+            v.size.width * v.size.height < vProfileChosen.size.width * vProfileChosen.size.height) {
+            vProfileChosen = v;
+          }
+        }
+        hilog.info(DOMAIN, TAG, 'VPROFILE PICK %{public}s',
+          vProfileChosen === undefined ? 'none(60fps 档不存在)'
+            : vProfileChosen.size.width.toString() + 'x' + vProfileChosen.size.height.toString() +
+              '@' + vProfileChosen.frameRateRange.min.toString() + '-' +
+              vProfileChosen.frameRateRange.max.toString());
       }
 
       // 显示路：挑一个面积最接近 1280x720 的 profile。
@@ -817,22 +903,91 @@ struct CameraPage {
       this.previewOut = show;
       this.receiver = recv;
 
-      recv.getReceivingSurfaceId().then((rid: string) => {
+      recv.getReceivingSurfaceId().then(async (rid: string) => {
         const analyzeOut: camera.PreviewOutput = mgr.createPreviewOutput(analyze, rid);
         this.analyzeOut = analyzeOut;
+        // 【2026-09-23 实验】档 6：开流前先把 AVRecorder 备好。
+        // 时序按官方录像样例：prepare → getInputSurface → createVideoOutput →
+        // （beginConfig 窗口内）addOutput；avRecorder.start() 等 session.start() 成功后。
+        const wantVout: boolean = videoMode && gearAtOpen === GEAR_VIDEO_VOUT &&
+          vProfileChosen !== undefined;
+        if (wantVout) {
+          const vp: camera.VideoProfile = vProfileChosen as camera.VideoProfile;
+          try {
+            const rec: media.AVRecorder = await media.createAVRecorder();
+            const vpath: string = c.filesDir + '/video60_' + Date.now().toString() + '.mp4';
+            const f: fileIo.File = fileIo.openSync(vpath,
+              fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+            // 60fps 视频码率给足 8 Mbps，避免码率不足反过来钳帧率。
+            const vcfgProfile: media.AVRecorderProfile = {
+              fileFormat: media.ContainerFormatType.CFT_MPEG_4,
+              videoBitrate: 8000000,
+              videoCodec: media.CodecMimeType.VIDEO_AVC,
+              videoFrameWidth: vp.size.width,
+              videoFrameHeight: vp.size.height,
+              videoFrameRate: 60,
+            };
+            const vcfg: media.AVRecorderConfig = {
+              // video-only：不配 audioSourceType，无需麦克风权限。
+              videoSourceType: media.VideoSourceType.VIDEO_SOURCE_TYPE_SURFACE_YUV,
+              profile: vcfgProfile,
+              url: 'fd://' + f.fd.toString(),
+              rotation: 0,
+            };
+            await rec.prepare(vcfg);
+            const vsid: string = await rec.getInputSurface();
+            this.videoOut = mgr.createVideoOutput(vp, vsid);
+            this.avRecorder = rec;
+            this.videoFd = f.fd;
+            hilog.info(DOMAIN, TAG, 'VOUT READY %{public}dx%{public}d fps=%{public}d-%{public}d',
+              vp.size.width, vp.size.height, vp.frameRateRange.min, vp.frameRateRange.max);
+          } catch (e) {
+            const err = e as BusinessError;
+            // 退化：VideoOutput 建不起来就退回档 5 的形态（纯预览视频会话），
+            // 实验照常跑，只是少了耦合规则那条腿。
+            hilog.error(DOMAIN, TAG, 'VOUT FAIL code=%{public}d msg=%{public}s —— 退化为纯预览',
+              err.code, err.message);
+            this.videoOut = undefined;
+            this.avRecorder = undefined;
+          }
+        }
         input.open().then(() => {
-          const sess: camera.PhotoSession = mgr.createSession(camera.SceneMode.NORMAL_PHOTO);
+          const sess: camera.Session = videoMode
+            ? mgr.createSession<camera.VideoSession>(camera.SceneMode.NORMAL_VIDEO)
+            : mgr.createSession<camera.PhotoSession>(camera.SceneMode.NORMAL_PHOTO);
           this.session = sess;
+          // 记录本流的真实条件（证据文件里每条流一行，事后切分靠它）。
+          const fpsTargetAtOpen: number = videoMode ? 60 : FPS_TARGET;
+          this.camVideoMode = videoMode;
+          this.camHasVout = wantVout && this.videoOut !== undefined;
+          this.dumpLine('SESSION MODE gear=' + gearAtOpen.toString() +
+            ' mode=' + (videoMode ? 'NORMAL_VIDEO' : 'NORMAL_PHOTO') +
+            ' vout=' + (this.camHasVout ? '1' : '0') +
+            ' fpsTarget=' + fpsTargetAtOpen.toString());
           sess.beginConfig();
           sess.addInput(input);
           if (!SKIP_PREVIEW_DISPLAY) {
             sess.addOutput(show);
           }
           sess.addOutput(analyzeOut);
-          hilog.info(DOMAIN, TAG, 'SESSION CONFIG display=%{public}s',
-            SKIP_PREVIEW_DISPLAY ? 'OFF(实验)' : 'ON');
+          if (this.camHasVout && this.videoOut !== undefined) {
+            // 双流帧率耦合规则（camera-recording.md L74-78）的「录像流」这一腿。
+            sess.addOutput(this.videoOut);
+          }
+          hilog.info(DOMAIN, TAG,
+            'SESSION CONFIG display=%{public}s mode=%{public}s vout=%{public}d',
+            SKIP_PREVIEW_DISPLAY ? 'OFF(实验)' : 'ON',
+            videoMode ? 'NORMAL_VIDEO' : 'NORMAL_PHOTO', this.camHasVout ? 1 : 0);
           sess.commitConfig().then(() => {
             sess.start().then(() => {
+              if (this.camHasVout && this.avRecorder !== undefined) {
+                this.avRecorder.start().then(() => {
+                  hilog.info(DOMAIN, TAG, 'VOUT REC START');
+                }).catch((e: BusinessError) => {
+                  hilog.error(DOMAIN, TAG, 'VOUT REC START FAIL %{public}d %{public}s',
+                    e.code, e.message);
+                });
+              }
               // 帧的旋转角要按**分析路**这条 output 问，它才是取帧来源。
               try {
                 const disp: display.Display = display.getDefaultDisplaySync();
@@ -849,14 +1004,17 @@ struct CameraPage {
               // 追平到达率，唯一的余量就在这条流本身。
               // 关键：**必须等 session.start() 之后**才查得到区间 —— 建流前查
               // 返回空数组（实测 n=0，一度让人以为设备不支持）。
-              this.negotiateFrameRate(analyzeOut, show);
+              this.negotiateFrameRate(analyzeOut, show, videoMode ? 60 : FPS_TARGET);
               this.ready = true;
               this.status = '实时识别中 · ' + analyze.size.width.toString() + 'x' +
                 analyze.size.height.toString() + ' · rot=' + this.rotation.toString();
               hilog.info(DOMAIN, TAG,
-                'STREAM START show=%{public}dx%{public}d analyze=%{public}dx%{public}d rot=%{public}d',
+                'STREAM START show=%{public}dx%{public}d analyze=%{public}dx%{public}d rot=%{public}d ' +
+                'mode=%{public}s vout=%{public}d fpsTarget=%{public}d',
                 showProfile.size.width, showProfile.size.height,
-                analyze.size.width, analyze.size.height, this.rotation);
+                analyze.size.width, analyze.size.height, this.rotation,
+                videoMode ? 'NORMAL_VIDEO' : 'NORMAL_PHOTO', this.camHasVout ? 1 : 0,
+                videoMode ? 60 : FPS_TARGET);
               // 稳态门的计时原点 = **开流时刻**（不是首帧到达，见 streamStartMs 注释）。
               // 重置门与窗口，这样换档重开流时不会把上一档的 settled 带过来。
               this.streamStartMs = Date.now();
@@ -867,7 +1025,10 @@ struct CameraPage {
                 showProfile.size.width, showProfile.size.height);
               this.dumpLine('STREAM START show=' + showProfile.size.width.toString() + 'x' +
                 showProfile.size.height.toString() + ' analyze=' + analyze.size.width.toString() +
-                'x' + analyze.size.height.toString() + ' rot=' + this.rotation.toString());
+                'x' + analyze.size.height.toString() + ' rot=' + this.rotation.toString() +
+                ' mode=' + (videoMode ? 'NORMAL_VIDEO' : 'NORMAL_PHOTO') +
+                ' vout=' + (this.camHasVout ? '1' : '0') +
+                ' fpsTarget=' + (videoMode ? '60' : FPS_TARGET.toString()));
               this.listenFrames(recv);
             }).catch((e: Error) => {
               this.status = '会话启动失败: ' + e.message;
@@ -896,9 +1057,11 @@ struct CameraPage {
     }
   }
 
-  /** 把预览帧率蹬到设备支持的最高档；两条 output 都试，日志留证。 */
+  /** 把预览帧率蹬到设备支持的最高档；两条 output 都试，日志留证。
+   *  target：目标帧率（PHOTO 档 30，视频档 60）。60-60 被 API 接受 ≠ 传感器兑现，
+   *  判定一律以 `RATE arrive=` 为准 —— 这是 camera-fps-ceiling.md 的教训。 */
   private negotiateFrameRate(analyzeOut: camera.PreviewOutput,
-    show: camera.PreviewOutput): void {
+    show: camera.PreviewOutput, target: number): void {
     const outs: camera.PreviewOutput[] = [analyzeOut, show];
     const names: string[] = ['analyze', 'show'];
     for (let i = 0; i < outs.length; i++) {
@@ -913,13 +1076,13 @@ struct CameraPage {
         if (!WANT_HIGH_FPS || ranges.length === 0) {
           continue;
         }
-        // 选「包含 FPS_TARGET 的区间」；没有就退到 min 最大的那个区间。
+        // 选「包含 target 的区间」；没有就退到 min 最大的那个区间。
         let lo: number = -1;
         let hi: number = -1;
         for (let j = 0; j < ranges.length; j++) {
-          if (ranges[j].min <= FPS_TARGET && FPS_TARGET <= ranges[j].max) {
-            lo = FPS_TARGET;
-            hi = FPS_TARGET;
+          if (ranges[j].min <= target && target <= ranges[j].max) {
+            lo = target;
+            hi = target;
             break;
           }
         }
@@ -1256,9 +1419,9 @@ struct CameraPage {
         const tB: number = Date.now();
         img.release();
         this.split = [tA - t0, tB - tA];
-        if (this.gear === GEAR_RAW) {
-          // 基准档：拿到帧就结束。这里测到的是**相机 + 取帧路径**的上限，
-          // 与推理无关 —— 它给出「再优化推理还有没有意义」的答案。
+        if (isFrameOnlyGear(this.gear) && this.gear !== GEAR_ARRIVE_ONLY) {
+          // 只取帧族（基准/视频5/视频6）：拿到帧就结束。这里测到的是
+          // **相机 + 取帧路径**的上限，与推理无关 —— 它给出「再优化推理还有没有意义」的答案。
           // 本档不推理，`hit` 无意义，恒传 false（只进 frameMs 与未检出桶）。
           this.finishFrame();
           this.record(tB - t0, 0, false);
@@ -1428,7 +1591,7 @@ struct CameraPage {
       const emptyP50: number = p50(this.rtEmptyWin);
       const bucketText: string = ' · 往返 检出 ' + (this.inferP50 > 0 ? this.inferP50.toFixed(1) : '-') +
         ' / 未检出 ' + (emptyP50 > 0 ? emptyP50.toFixed(1) : '-') + ' ms';
-      if (this.gear === GEAR_RAW) {
+      if (this.gear === GEAR_RAW || this.gear === GEAR_VIDEO || this.gear === GEAR_VIDEO_VOUT) {
         this.segText = '本档只取帧不推理 · 相机出帧上限';
       } else if (this.lastStages === '-') {
         this.segText = 'prep ' + p50(this.prepMsWin).toFixed(1) +
@@ -1469,6 +1632,33 @@ struct CameraPage {
 
   private stopCamera(): void {
     this.running = false;
+    // 【2026-09-23 实验】档 6 的录像资源：先停 recorder（它会持续吃 VideoOutput 的
+    // buffer），再关 fd。mp4 **保留**在 filesDir（可 hdc file recv 取回作证据），
+    // 文件名 video60_*.mp4，需要清理时按时间戳删。
+    try {
+      if (this.avRecorder !== undefined) {
+        this.avRecorder.stop().catch(() => {
+        });
+        this.avRecorder.release().catch(() => {
+        });
+        this.avRecorder = undefined;
+      }
+    } catch (e) {
+    }
+    try {
+      if (this.videoOut !== undefined) {
+        this.videoOut.release();
+        this.videoOut = undefined;
+      }
+    } catch (e) {
+    }
+    try {
+      if (this.videoFd >= 0) {
+        fileIo.closeSync(this.videoFd);
+        this.videoFd = -1;
+      }
+    } catch (e) {
+    }
     try {
       if (this.receiver !== undefined) {
         this.receiver.off('imageArrival');
@@ -1552,6 +1742,16 @@ struct CameraPage {
       }, 20);
       return;
     }
+    // 【2026-09-23 实验】档 5/6 需要NORMAL_VIDEO 会话（档 6 另加 VideoOutput），
+    // 而相机会话只在 openCamera 建一次 —— 目标形态与当前不一致时必须**整流重启**。
+    // 这也是为什么视频实验不能做成普通档位：普通档只换模型会话，不动相机流。
+    const wantVideo: boolean = this.gear === GEAR_VIDEO || this.gear === GEAR_VIDEO_VOUT;
+    const wantVout: boolean = this.gear === GEAR_VIDEO_VOUT;
+    const needRestart: boolean = wantVideo !== this.camVideoMode ||
+      (wantVideo && wantVout !== this.camHasVout);
+    if (needRestart) {
+      this.stopCamera();
+    }
     this.ensureSessions().then((ok: boolean) => {
       this.switching = false;
       this.ready = ok;
@@ -1565,6 +1765,13 @@ struct CameraPage {
       }
       hilog.info(DOMAIN, TAG, 'GEAR %{public}d apply ok=%{public}d status=%{public}s',
         this.gear, ok ? 1 : 0, this.status);
+      // 【2026-09-23 实验】跨形态切档：整流重启。openCamera 按当前 gear 重建会话
+      // （mode/vout 在里面置位），STREAM START 后 listenFrames 重新挂回调，
+      // 帧循环自然恢复，不走 resumeFrames（旧 receiver 已 release）。
+      if (ok && needRestart) {
+        this.tryOpen();
+        return;
+      }
       // 切档完成 → 主动重新接上帧循环。
       //
       // 为什么必须显式做：切档期间走 drainOne 分支，那条路径只是把帧丢掉、
@@ -1739,7 +1946,8 @@ struct CameraPage {
                 .margin({ bottom: 2 })
             }
             .alignItems(VerticalAlign.Bottom)
-            Text(this.gear === GEAR_RAW ? '取帧 p50' : '帧 p50')
+            Text(this.gear === GEAR_RAW || this.gear === GEAR_VIDEO ||
+              this.gear === GEAR_VIDEO_VOUT ? '取帧 p50' : '帧 p50')
               .fontSize(11)
               .fontColor(IOS_LABEL2)
               .maxLines(1)
