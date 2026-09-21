@@ -32,6 +32,8 @@ import lpr from 'libentry.so';
 import { thermal } from '@kit.BasicServicesKit';
 import { batteryInfo } from '@kit.BasicServicesKit';
 import { systemLoad } from '@kit.BasicServicesKit';
+// T12 读 gt.tsv 需要 TextDecoder（ArkTS 无浏览器那个全局 TextDecoder）。
+import { util } from '@kit.ArkTS';
 
 const TAG = 'LprMatrix';
 const NATIVE_TAG = 'LprNativeUI';
@@ -1176,6 +1178,178 @@ struct Index {
     }
   }
 
+  // ------------------------------------------------------------ 整车场景 det A/B（T12）
+
+  /**
+   * 【T12】真实整车场景 × 检测器落点 A/B。
+   *
+   * 为什么必须做：T10 用 1000 张 **94×24 裁剪图**测出「det 落点分歧率 6.8%」，
+   * 但那是在「det 面对的是一张已经是车牌的小图」这个**非真实工况**下得到的。
+   * 真实场景里 det 面对的是 720×1160 的整车画面 —— 候选框数量、尺度分布、
+   * NMS 行为全都不同，6.8% 不能直接外推。
+   *
+   * 数据集：CCPD2019-balance 分层抽 1000 张（30 省，每省上限 100，皖不再占 54%）。
+   * 真值来自 CCPD 文件名编码（`tools/ccpd_gt.py` 解出，与本探针同源），
+   * 随包的 `gt.tsv` 是唯一真值源，ArkTS 侧不重解。
+   *
+   * 设计同 T10：唯一变量是 det 落点，rec/cls 固定生产配置。
+   */
+  private async ccpdSceneAB(): Promise<void> {
+    const ctx = this.ctx;
+    if (ctx === undefined) {
+      this.appendNative('SCENE FAIL no context');
+      return;
+    }
+    this.busy = true;
+    const logPath: string = ctx.filesDir + '/ccpd_scene.log';
+    const sceneDir: string = 'assets/ccpd';
+    this.appendNative('SCENE BEGIN dir=' + sceneDir + ' log=' + logPath);
+    try {
+      // 真值表：从随包的 gt.tsv 读，**不重解文件名** —— 两处解译就会有两条真值源。
+      let gtMap: Map<string, string> = new Map();
+      try {
+        const gtBytes: Uint8Array =
+          ctx.resourceManager.getRawFileContentSync(sceneDir + '/gt.tsv');
+        // ArkTS 没有浏览器那个全局 TextDecoder，用 util.TextDecoder。
+        // 注意它的 decode 收 **Uint8Array**（不是 ArrayBuffer）—— 传 buffer 会在
+        // 编译期报 "not assignable to parameter of type 'Uint8Array'"。
+        const gtText: string = new util.TextDecoder('utf-8').decode(gtBytes);
+        const lines: string[] = gtText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const ln: string = lines[i].trim();
+          if (ln.length === 0) {
+            continue;
+          }
+          const tab: number = ln.indexOf('\t');
+          if (tab <= 0) {
+            continue;
+          }
+          gtMap.set(ln.substring(0, tab), ln.substring(tab + 1));
+        }
+      } catch (e) {
+        const err = e as BusinessError;
+        this.appendNative('SCENE FAIL gt.tsv code=' + err.code + ' msg=' + err.message);
+        this.busy = false;
+        return;
+      }
+      this.appendNative('SCENE GT ' + gtMap.size.toString());
+      if (gtMap.size === 0) {
+        this.appendNative('SCENE FAIL gt.tsv 是空的');
+        this.busy = false;
+        return;
+      }
+
+      let names: string[] = [];
+      try {
+        names = await ctx.resourceManager.getRawFileList(sceneDir);
+      } catch (e) {
+        const err = e as BusinessError;
+        this.appendNative('SCENE FAIL listdir code=' + err.code + ' msg=' + err.message);
+        this.busy = false;
+        return;
+      }
+      names = names.filter((n: string) => n.toLowerCase().endsWith('.jpg')).sort();
+      if (names.length === 0) {
+        this.appendNative('SCENE FAIL 目录里没有 .jpg');
+        this.busy = false;
+        return;
+      }
+      this.appendNative('SCENE FILES ' + names.length.toString());
+
+      // 两个 det 落点；rec/cls 固定生产配置。
+      const detBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_DET);
+      const loadCpu: string =
+        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), 'cpu');
+      const loadNp: string =
+        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), 'nnrt');
+      const ci: Map<string, string> = parseKv(loadCpu);
+      const ni: Map<string, string> = parseKv(loadNp);
+      lpr.appendLine(logPath, 'SCENE LOAD det cpu ' + loadCpu);
+      lpr.appendLine(logPath, 'SCENE LOAD det nnrt ' + loadNp);
+      if (ci.get('ok') !== '1' || ni.get('ok') !== '1') {
+        this.appendNative('SCENE FAIL load cpu_ok=' + str(ci, 'ok') + ' np_ok=' + str(ni, 'ok'));
+        this.busy = false;
+        return;
+      }
+      const detCpuId: number = num(ci, 'id');
+      const detNpId: number = num(ni, 'id');
+      this.appendNative('SCENE SESSIONS det_cpu=' + detCpuId.toString() +
+        ' det_np=' + detNpId.toString() + ' rec=' + this.recId.toString() +
+        ' cls=' + this.clsId.toString());
+
+      let n: number = 0;
+      let agree: number = 0;
+      let okCpu: number = 0;
+      let okNp: number = 0;
+      let noPlateCpu: number = 0;
+      let noPlateNp: number = 0;
+      for (let i = 0; i < names.length; i++) {
+        const name: string = names[i];
+        const gt: string | undefined = gtMap.get(name);
+        if (gt === undefined || (gt.length !== 7 && gt.length !== 8)) {
+          lpr.appendLine(logPath, 'SCENE SKIP file=' + name + ' reason=no-gt');
+          continue;
+        }
+        let frame: RgbaFrame | null = null;
+        try {
+          frame = await this.decodeRgba(sceneDir + '/' + name);
+        } catch (e) {
+          const err = e as BusinessError;
+          lpr.appendLine(logPath, 'SCENE DECODEFAIL file=' + name + ' code=' + err.code);
+          continue;
+        }
+        if (frame === null) {
+          continue;
+        }
+        // 同一张整车图、同样的 rec/cls，只换 det 落点。
+        const rawCpu: string = await lpr.pipelineAsync(
+          frame.data, frame.width, frame.height, detCpuId, this.recId, this.clsId, 0);
+        const rawNp: string = await lpr.pipelineAsync(
+          frame.data, frame.width, frame.height, detNpId, this.recId, this.clsId, 0);
+        const kc: Map<string, string> = parseKv(rawCpu);
+        const kn: Map<string, string> = parseKv(rawNp);
+        const cc: string = str(kc, 'p0').split(',')[0];
+        const cn: string = str(kn, 'p0').split(',')[0];
+        const same: boolean = cc === cn;
+        n++;
+        if (same) {
+          agree++;
+        }
+        if (cc === gt) {
+          okCpu++;
+        }
+        if (cn === gt) {
+          okNp++;
+        }
+        // 检不出牌要单独计：det 换后端可能直接把牌弄丢了，那是比读错更严重的失效。
+        if (cc.length === 0) {
+          noPlateCpu++;
+        }
+        if (cn.length === 0) {
+          noPlateNp++;
+        }
+        lpr.appendLine(logPath, 'SCENE file=' + name + ' gt=' + gt +
+          ' code_cpu=' + cc + ' code_np=' + cn +
+          ' agree=' + (same ? '1' : '0') +
+          ' ok_cpu=' + (cc === gt ? '1' : '0') +
+          ' ok_np=' + (cn === gt ? '1' : '0') +
+          ' none_cpu=' + (cc.length === 0 ? '1' : '0') +
+          ' none_np=' + (cn.length === 0 ? '1' : '0'));
+        if (n % 50 === 0) {
+          this.appendNative('SCENE PROGRESS n=' + n.toString() +
+            ' agree=' + agree.toString() + ' ok_cpu=' + okCpu.toString() +
+            ' ok_np=' + okNp.toString());
+        }
+      }
+      this.appendNative('SCENE END n=' + n.toString() + ' agree=' + agree.toString() +
+        ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
+        ' none_cpu=' + noPlateCpu.toString() + ' none_np=' + noPlateNp.toString() +
+        ' log=' + logPath);
+    } finally {
+      this.busy = false;
+    }
+  }
+
   // ------------------------------------------------------------ ncnn 槽位探针
 
   /**
@@ -2245,6 +2419,19 @@ struct Index {
               // 跳过 det/rectify 直喂识别器，与 t6/A16（主机 onnxruntime）
               // 工况一致，因此准确率数字可直接对比。
               this.bareHeadAccuracy();
+            })
+          Button('整车场景 det A/B')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // CCPD2019-balance 分层抽 1000 张整车图（30 省，每省上限 100）。
+              // T10 那 6.8% 是裁剪图工况，不能外推到真实场景 —— 本探针补这一格。
+              this.ccpdSceneAB();
             })
           Button('算子对撞')
             .fontSize(13)
