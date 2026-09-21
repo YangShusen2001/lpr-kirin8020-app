@@ -1203,11 +1203,37 @@ bool LprRunPipeline(const RgbaImage& img, const LprSessions& s,
 // ---------------------------------------------------------------- 相机取帧转换
 
 /**
+ * 整数 BT.601 有限范围（相机预览的标准约定）：Y' 在 [16,235]，Cb/Cr 在 [16,240]。
+ * 用整数近似做定点运算，避免每像素一次浮点乘。
+ *
+ * 抽成独立函数，是为了让「朴素」与「分块」两条写出路径共用**同一份算术** ——
+ * 逐位相等由 tools/verify_nv21_to_rgba.py 守卫（15 组尺寸/stride/旋转角）。
+ */
+static inline void Nv21PixelToRgb(int Y, int U, int V, int& r, int& g, int& b) {
+  // C = Y-16, D = U-128, E = V-128
+  const int c = Y - 16;
+  const int d = U - 128;
+  const int e = V - 128;
+  r = (298 * c + 409 * e + 128) >> 8;
+  g = (298 * c - 100 * d - 208 * e + 128) >> 8;
+  b = (298 * c + 516 * d + 128) >> 8;
+  r = r < 0 ? 0 : (r > 255 ? 255 : r);
+  g = g < 0 ? 0 : (g > 255 ? 255 : g);
+  b = b < 0 ? 0 : (b > 255 ? 255 : b);
+}
+
+/**
  * NV21 -> RGBA，整数倍 90 度旋转在写入时一并完成（不额外搬一次内存）。
  *
- * BT.601 有限范围（相机预览的标准约定）：Y' 在 [16,235]，Cb/Cr 在 [16,240]。
- * 用整数近似做定点运算，避免每像素一次浮点乘 —— 640x480 是 30 万像素，
- * 在手机上这点差别是实打实的。
+ * **转置型旋转（90/270）走源空间分块。** 朴素写法内层循环走 x，而目标行号
+ * dy 随 x 每步 +1，于是每写 4 字节就换一条新缓存行（利用率 4/64）——
+ * 30 万像素 = 19.6 MB 无效写流量，而真实数据只有 1.2 MB。
+ * 按 16x16 源块分块后：固定 x 就固定了目标行，内层 y 只在 64 字节
+ * （= 正好一条缓存行）内移动；读侧的 16 行也被同一块内的 x 循环复用。
+ * 0/180 的内层写出本来就是行内连续的，保持原样。
+ *
+ * 端侧实测 conv 有 2.2~14.7 ms 的动态范围（docs/notes/camera-npu-headroom.md），
+ * 所以**必须用流水线口径 A/B**，不能拿隔离基准外推（纪律 7）。
  */
 bool LprNv21ToRgba(const uint8_t* nv21, size_t nv21Size, int width, int height, int stride,
                    int rotation, RgbaImage& out) {
@@ -1231,39 +1257,58 @@ bool LprNv21ToRgba(const uint8_t* nv21, size_t nv21Size, int width, int height, 
   out.height = swap ? width : height;
   out.data.assign(static_cast<size_t>(out.width) * out.height * 4, 255);
 
+  // 分块边长（像素）。16 像素 x 4 字节 = 64 字节 = 一条缓存行。
+  constexpr int kNv21Tile = 16;
+
+  if (rot == 90 || rot == 270) {
+    const int outStride = out.width * 4;
+    uint8_t* base = out.data.data();
+    for (int y0 = 0; y0 < height; y0 += kNv21Tile) {
+      const int y1 = (y0 + kNv21Tile < height) ? y0 + kNv21Tile : height;
+      for (int x0 = 0; x0 < width; x0 += kNv21Tile) {
+        const int x1 = (x0 + kNv21Tile < width) ? x0 + kNv21Tile : width;
+        for (int x = x0; x < x1; x++) {
+          const int dy = (rot == 90) ? x : (width - 1 - x);
+          const size_t uvIdx = static_cast<size_t>(x / 2) * 2;
+          uint8_t* oRow = base + static_cast<size_t>(dy) * outStride;
+          for (int y = y0; y < y1; y++) {
+            const int Y = nv21[static_cast<size_t>(y) * stride + x];
+            // VU 交错：每 2 行共用一个色度行，每 2 列共用一个色度对。
+            const uint8_t* uvRow = uv + static_cast<size_t>(y / 2) * stride;
+            const int V = uvRow[uvIdx];
+            const int U = uvRow[uvIdx + 1];
+            int r = 0, g = 0, b = 0;
+            Nv21PixelToRgb(Y, U, V, r, g, b);
+            const int dx = (rot == 90) ? (height - 1 - y) : y;
+            uint8_t* o = oRow + static_cast<size_t>(dx) * 4;
+            o[0] = static_cast<uint8_t>(r);
+            o[1] = static_cast<uint8_t>(g);
+            o[2] = static_cast<uint8_t>(b);
+            o[3] = 255;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
   for (int y = 0; y < height; y++) {
     const uint8_t* yRow = nv21 + static_cast<size_t>(y) * stride;
-    // VU 交错：每 2 行共用一个色度行，每 2 列共用一个色度对。
     const uint8_t* uvRow = uv + static_cast<size_t>(y / 2) * stride;
     for (int x = 0; x < width; x++) {
       const int Y = yRow[x];
       const size_t uvIdx = static_cast<size_t>(x / 2) * 2;
       const int V = uvRow[uvIdx];
       const int U = uvRow[uvIdx + 1];
-
-      // 整数 BT.601：C = Y-16, D = U-128, E = V-128
-      const int c = Y - 16;
-      const int d = U - 128;
-      const int e = V - 128;
-      int r = (298 * c + 409 * e + 128) >> 8;
-      int g = (298 * c - 100 * d - 208 * e + 128) >> 8;
-      int b = (298 * c + 516 * d + 128) >> 8;
-      r = r < 0 ? 0 : (r > 255 ? 255 : r);
-      g = g < 0 ? 0 : (g > 255 ? 255 : g);
-      b = b < 0 ? 0 : (b > 255 ? 255 : b);
+      int r = 0, g = 0, b = 0;
+      Nv21PixelToRgb(Y, U, V, r, g, b);
 
       // 目标坐标按旋转角算 —— 一次写成，省掉后续的 rotate()。
       int dx = 0;
       int dy = 0;
-      if (rot == 90) {
-        dx = height - 1 - y;
-        dy = x;
-      } else if (rot == 180) {
+      if (rot == 180) {
         dx = width - 1 - x;
         dy = height - 1 - y;
-      } else if (rot == 270) {
-        dx = y;
-        dy = width - 1 - x;
       } else {
         dx = x;
         dy = y;

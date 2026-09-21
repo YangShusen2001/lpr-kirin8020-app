@@ -103,15 +103,31 @@ function Approve-CameraPermission {
         $json = Get-Content $tmp -Raw -Encoding UTF8
         if ($json -notmatch '访问你的相机') { return $false }
         # 从 layout 里取含「允许」节点的 bounds 中心。
-        $m = [regex]::Match($json,
-            '"text"\s*:\s*"允许[^"]*"[\s\S]{0,400}?"bounds"\s*:\s*"\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
-        if ($m.Success) {
-            $cx = [int](([int]$m.Groups[1].Value + [int]$m.Groups[3].Value) / 2)
-            $cy = [int](([int]$m.Groups[2].Value + [int]$m.Groups[4].Value) / 2)
-            Write-Host "[perm] 点击「允许」($cx,$cy)"
-            Invoke-Hdc ("uitest uiInput click {0} {1}" -f $cx, $cy) | Out-Null
-            Start-Sleep -Seconds 3
-            return $true
+        #
+        # ⚠️ 正则不能贪心跨窗口匹配：实测 dumpLayout 里「允许」这个 Text 节点
+        # 前面还有一个标题节点，文案是「允许"车牌识别"访问你的相机？」。
+        # 用 `"允许` 前缀 + `[\s\S]{0,400}?bounds` 会先匹配到**标题**，
+        # 算出 (612,1315) —— 那个点落在对话框正文中部，点了没反应，
+        # 症状是 STREAM START 永不出现，跟「相机起不来」一模一样（二次踩坑）。
+        # 真正的按钮是独立节点：text 严格等于「允许」，bounds=[831,1567][937,1629]
+        # → 中心 (884,1598)。改为**整节点匹配**：先拿到含 允许 的完整节点对象，
+        # 再要求它的 "text" 严格是 允许（不是标题那种长句）。
+        $nodes = [regex]::Matches($json, '\{[^{}]*"text"\s*:\s*"[^"]*允许[^"]*"[^{}]*\}')
+        $btn = $null
+        foreach ($n in $nodes) {
+            $t = [regex]::Match($n.Value, '"text"\s*:\s*"([^"]*)"').Groups[1].Value
+            if ($t -eq '允许') { $btn = $n; break }
+        }
+        if ($btn) {
+            $m = [regex]::Match($btn.Value, '"bounds"\s*:\s*"\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
+            if ($m.Success) {
+                $cx = [int](([int]$m.Groups[1].Value + [int]$m.Groups[3].Value) / 2)
+                $cy = [int](([int]$m.Groups[2].Value + [int]$m.Groups[4].Value) / 2)
+                Write-Host "[perm] 点击「允许」($cx,$cy)"
+                Invoke-Hdc ("uitest uiInput click {0} {1}" -f $cx, $cy) | Out-Null
+                Start-Sleep -Seconds 3
+                return $true
+            }
         }
         Write-Host '[perm] 检测到权限弹窗但没找到「允许」坐标 —— 请手动授权后重跑'
         return $false
