@@ -8,14 +8,18 @@
       {
         "name": "default",
         "type": "HarmonyOS",
+        // CLI 可用的签名材料（明文口令），由 tools/make_signing_material.sh 生成。
+        // 相对路径：hvigor 以 LprDemo/ 为工作目录解析。
         "material": {
-          "certpath": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001AB74A8367362AE64EFD180294E816F7DDC06CD0E024321F46DCE1F131D3ABA100C3F73CE67B16",
-          "profile": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.p7b",
+          "certpath": "../.signing/lpr-app.cer",
+          "keyAlias": "lpr-app-key",
+          // hvigor 强制校验口令长度 ≥32（它假定 DevEco 加密格式），短口令会被拒：
+          //   00303116 Configuration Error: length of storePassword/keyPassword < 32
+          "keyPassword": "a1b2c3d4e5f60123456789abcdef0011",
+          "profile": "../.signing/lpr-debug-profile.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\26671\\.ohos\\config\\default_LprDemo_4-KxTwabmfaI1ewvk8KnhVET4lfBdGRShGJsTXnE3DA=.p12",
-          "storePassword": "0000001A3866D7366D8367D911ECAFA793BAA88224A6AD6E4FE297842B6A8302588FBF3C5CACC1E45FD9"
+          "storeFile": "../.signing/lpr-work.p12",
+          "storePassword": "a1b2c3d4e5f60123456789abcdef0011"
         }
       }
     ],

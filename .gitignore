@@ -16,11 +16,15 @@ LprDemo/entry/oh_modules/
 *.ncnn.bin
 *.ncnn.param
 
-# --- 签名材料（在 ~/.ohos/config，不入库）---
+# --- 签名材料（不入库）---
+# 由 tools/make_signing_material.sh 生成到 .signing/。
+# 注意 pw.txt 存的是**明文**密钥库口令（供 hap-sign-tool 使用），绝不能入库。
 *.p12
 *.cer
 *.p7b
 *.csr
+pw.txt
+/.signing/
 
 # --- DDK（匿名可下，含 >100MB 单文件）---
 ddk/

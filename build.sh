@@ -29,7 +29,80 @@ export DEVECO_SDK_HOME="${DEVECO_SDK_HOME:-$DEVECO_HOME/sdk}"
 export LPR_NODE_HOME="${LPR_NODE_HOME:-$DEVECO_HOME/tools/node}"
 export LPR_JAVA_HOME="${LPR_JAVA_HOME:-$DEVECO_HOME/jbr}"
 export JAVA_HOME="$LPR_JAVA_HOME"
-export PATH="$LPR_JAVA_HOME/bin:$PATH"
+
+# ⚠️ 2026-09-22 修（两次踩坑，记全）：
+#
+# 症状 A（JDK 太旧）：签名阶段报
+#     Failed :entry:default@SignHap...  ERROR: 11014003 Init keystore failed
+#     parseAlgParameters failed: ObjectIdentifier() -- data isn't an object ID (tag = 48)
+#   根因：本机 PATH 有 Windows 层 Oracle shim（`C:\Program Files (x86)\Common Files\
+#   Oracle\Java\javapath`），Git Bash 优先解析到它 ⇒ jbr/bin 被架空，`which java` 是 1.8。
+#   报错完全不提 JDK 版本，只看这句话会去查密钥库路径/密码，全是错方向。
+#
+# 症状 B（java 找不到）：我第一版修法是「把 Oracle 目录从 PATH 剔掉再 prepend」，
+#   结果 hvigor 用 **Windows 原生 spawn** 调裸 `java`，而我重建出来的 PATH 是
+#   MSYS 风格（`/d/IDE/...`），Windows 认不了 ⇒ `spawn java ENOENT`。
+#   ⇒ 修法必须**同时**满足两条：① 去掉 Oracle shim；② 给 Windows 一个能认的 java。
+#
+# 最终做法：保留原 PATH 不动（只剔 Oracle shim），并把 jbr/bin 以 **Windows 风格**
+# 放在最前 —— 让 MSYS 与原生 spawn 都能命中同一个 JDK21。
+_drop_oracle_shim() {
+  echo "$PATH" | tr ':' '\n' | grep -viE 'Oracle/Java/javapath' | paste -sd: -
+}
+PATH="$(_drop_oracle_shim)"
+export PATH
+# Windows 风格条目在前（原生 spawn 用），MSYS 风格在后（Bash 内用）
+export PATH="$LPR_JAVA_HOME/bin;$PATH"
+
+# 断言：必须是 JDK17+（PKCS12 密钥库的最低要求）。版本不对就立即停。
+_java_major="$("$LPR_JAVA_HOME/bin/java" -version 2>&1 | head -1 \
+               | sed -E 's/.*version "([0-9]+).*/\1/')"
+if [ -z "$_java_major" ] || [ "$_java_major" -lt 17 ] 2>/dev/null; then
+  echo "[build.sh] 签名需要 JDK17+，但 $LPR_JAVA_HOME 报的版本是：$_java_major" >&2
+  echo "           检查 LPR_JAVA_HOME 是否指向 DevEco 自带的 jbr。" >&2
+  exit 1
+fi
+echo "JAVA_HOME=$JAVA_HOME (java $_java_major)"
+
+# ---- 前期工作根目录（ncnn 头文件在那里）----
+#
+# 2026-09-22 加：CMakeLists.txt 里 ncnn 的 include 路径原先是脱敏留下的
+# 字面量 `<PRIOR_WORK>`，导致 `fatal error: 'gpu.h' file not found` ——
+# 报错指向 include 语句，看不出根因是路径。现在由这里导出同一个变量名，
+# CMake 侧读不到会 FATAL_ERROR（不再静默产坏路径）。
+#
+# 注意：tools/paths.py 的默认值是 `~/Desktop/Test`，但 `lpr-harmony`（真正装 ncnn 的
+# 那个仓库）在本机并不在 Test 下，而在 `~` 下。所以这里按「哪个真的含 lpr-harmony」
+# 依次探测，而不是照抄 paths.py 的默认值 —— 否则构建会失败在一个看似无关的地方。
+resolve_prior_work() {
+  local c
+  for c in "${LPR_PRIOR_WORK:-}" "$HOME/Desktop/Test" "$HOME"; do
+    [ -n "$c" ] || continue
+    if [ -d "$c/lpr-harmony/third_party/ncnn/src" ]; then
+      echo "$c"; return 0
+    fi
+  done
+  return 1
+}
+if _pw="$(resolve_prior_work)"; then
+  # ⚠️ 必须转成 Windows 风格（C:/...）。CMake 是 **Windows 原生程序**，认不了 MSYS
+  # 风格的 `/c/Users/...` —— 传进去它会在 `if(NOT EXISTS ...)` 处报「目录不存在」，
+  # 而目录其实存在。这个坑第一次就是这么踩的：守卫行为是对的，路径格式是错的。
+  if command -v cygpath >/dev/null 2>&1; then
+    export LPR_PRIOR_WORK="$(cygpath -m "$_pw")"      # -m = 混合风格 C:/a/b
+  else
+    # 没有 cygpath 时手工转换：/c/Users/x -> C:/Users/x
+    case "$_pw" in
+      /?/*) export LPR_PRIOR_WORK="$(echo "$_pw" | sed -E 's#^/([a-zA-Z])/#\U\1:/#')" ;;
+      *)    export LPR_PRIOR_WORK="$_pw" ;;
+    esac
+  fi
+else
+  echo "[build.sh] 找不到含 lpr-harmony/third_party/ncnn/src 的前期工作根。" >&2
+  echo "           请设置：export LPR_PRIOR_WORK=<前期工作根目录>" >&2
+  exit 1
+fi
+echo "LPR_PRIOR_WORK=$LPR_PRIOR_WORK"
 
 # 工程目录 = 本脚本所在目录 + /LprDemo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -57,6 +130,33 @@ echo "=== assembleHap ==="
   assembleHap --mode module -p product=default -p buildMode="$BUILD_MODE" --no-daemon "$@" 2>&1
 rc=$?
 echo "[hvigor rc=$rc]"
+
+# SignHap 在纯 CLI 下必然失败，这里显式说明原因并给出替代路径。
+#
+# 2026-09-22 结论（已读到 hvigor 源码确认）：hvigor 的
+#   tools/hvigor/hvigor-ohos-plugin/src/utils/decipher-util.js
+# 里 DecipherUtil.decryptPwd() 被 **无条件** 调用，它要求：
+#   (a) keystore 口令 ≥32 字符且为偶数长度；
+#   (b) keystore 同目录下存在 material/{ac,ce,fd} 三个材料目录；
+#   (c) 口令是 AES-128-GCM 密文的 hex 串，密钥由 material 经 PBKDF2 派生。
+# 也就是说 DevEco「自动签名」写的 84 字符 0000001A... 是加密串、不是明文，
+# **明文口令在 assembleHap 链路上无法使用**。典型报错依次为：
+#   11014003 Init keystore failed / parseAlgParameters failed  （口令是加密串时）
+#   00303116 ... length ... less than 32                        （口令太短时）
+#   00303117 ... is an even number                              （口令长度为奇数时）
+#   00308018 ENOENT ... stat '<dir>\material'                    （缺 material 目录时）
+# 正确做法：让 hvigor 只做打包，签名用 tools/sign_hap.sh 单独完成
+# （它直接调 hap-sign-tool.jar，接受明文口令）。
+if [ "$rc" -ne 0 ] && [ ! -f "$PROJ/entry/build/default/outputs/default/entry-default-signed.hap" ]; then
+  echo ""
+  echo "=== 签名说明 ==="
+  echo "若上面失败在 :entry:default@SignHap，这是 CLI 环境的已知限制（见本脚本注释）。"
+  echo "打包产物若已生成，用下面两条命令完成签名："
+  echo "  bash tools/make_signing_material.sh    # 只需跑一次"
+  echo "  bash tools/sign_hap.sh"
+  echo "也可改用 DevEco Studio 构建（它能解开自己的加密口令）。"
+fi
+
 echo "=== 产物 ==="
 ls -la "$PROJ/entry/build/default/outputs/default/" 2>&1 || echo "(无 outputs 目录)"
 exit $rc
