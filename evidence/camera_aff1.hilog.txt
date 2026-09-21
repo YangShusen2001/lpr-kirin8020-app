@@ -1,0 +1,4 @@
+﻿RATE arrive=16.78 fps done=16.78 fps dropped_in_win=0 cum_arrived=982 cum_done=981 cum_dropped=0 gear=0 hit_n=30 empty_n=30 rt_hit_p50=50.00 rt_empty_p50=39.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=2 battC=38.0�  _�|�jR6=%�   �   |�
+STAGE n=0 conv=3.1683 infer=295.9162 count=0 wh=480x640 rgbaSum=122228839 stages=-W  v�|�j /� V   �  �   � Rcom.shusen.lprdemo/LprCamera J%{public}sm FIRST FRAME kind=NV21 prep=1 round=352 rot=90�   �|�j&ܕ V   �  �     �com.shusen.lprdemo/B
+FIRST FRAME kind=NV21 prep=1 round=352 rot=90�   �|�j&ܕ V   �  �     �com.shusen.lprdemo/Bufferqueue *��� 7fPbuffer_queue.cpp>9l LogAndTraceAllBufferInBufferQueueCacheLocked` 171433619619840, Released: 0 Requested: 0 Flushed: 0 Acquired: 8A
+

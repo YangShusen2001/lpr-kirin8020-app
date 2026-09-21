@@ -220,6 +220,22 @@ const MODELS_NNRT_GPU: string[] = [
 const THREAD_BACKENDS: string[] = ['cpu_t1', 'cpu_t2', 'cpu_t4', 'cpu_t6', 'cpu_t8'];
 
 /**
+ * CPU **亲和**扫描档（2026-09-21，affinitySweep 用）。对应 ms_engine.cpp 的
+ * `cpu_a{N}` 分支（1=大核优先 / 2=小核优先）。
+ *
+ * 为什么加这个：跑完线程扫描后发现**同一份 det 模型、同一后端、同样 4 线程**，
+ * 隔离基准 7.4 ms 而相机流水线内 15.3–19.5 ms（**慢 2 倍**），且**更热的
+ * 那一轮反而更快** —— 所以主因不是热降频，而可能是 DVFS/核位调度。
+ * `OH_AI_ContextSetThreadAffinityMode` 此前**从未被调用过**，这是验证该假设
+ * 最便宜的一刀：不写任何算子代码，只钉核位。
+ * 详见 docs/notes/camera-npu-headroom.md §3.2c。
+ *
+ * 线程数固定 4 —— 已由 THREAD_BACKENDS 的扫描证明 t4 最优（7.42 ms，
+ * t6/t8 反而更差 9.9/9.3 ms），所以亲和实验只需在 t4 上做。
+ */
+const AFFINITY_BACKENDS: string[] = ['cpu_t4', 'cpu_a1', 'cpu_a2'];
+
+/**
  * 端到端后端矩阵：逐模型 × 逐后端都跑一遍完整流水线（补后端覆盖）。
  * 一次只替换一个模型，其余保持生产配置 → 任一行差异只能来自被替换者。
  * 判据：`LANDED=`（实际落点，不看请求值；MS 行另带 `req=`/`fallback=`，ncnn 行带
@@ -1203,6 +1219,35 @@ struct Index {
     }
   }
 
+  /**
+   * CPU 亲和扫描（2026-09-21）：MODELS_FULL × {cpu_t4, cpu_a1, cpu_a2}。
+   *
+   * 回答的问题：线程扫描发现「隔离 7.4 ms vs 流水线内 15.3–19.5 ms」的 2 倍差距，
+   * 且更热的一轮反而更快 ⇒ 主因**不是**热降频，怀疑是 DVFS/核位调度。
+   * 本扫描用 `OH_AI_ContextSetThreadAffinityMode` 钉核位，看能否改变 p50。
+   *
+   * 判据：与 cpu_t4（无绑定基线）比 p50。若 a1 明显更快 ⇒ 支持调度假设；
+   * 若三者相同 ⇒ 调度假设被削弱，应转向「流水线内另有开销」的解释。
+   * `L2` 三者必须逐位相同（同一模型、同一确定性输入），否则说明实验有串扰。
+   */
+  private async affinitySweep(): Promise<void> {
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.appendNative('AFFINITY SWEEP BEGIN models=' + MODELS_FULL.length.toString() +
+      ' tiers=' + AFFINITY_BACKENDS.join(','));
+    try {
+      for (let i = 0; i < MODELS_FULL.length; i++) {
+        for (let j = 0; j < AFFINITY_BACKENDS.length; j++) {
+          await this.probeOne(ctx, MODELS_FULL[i], AFFINITY_BACKENDS[j]);
+          await this.tick();
+        }
+      }
+      this.appendNative('AFFINITY SWEEP END');
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('AFFINITY SWEEP EXCEPTION ' + err.message);
+    }
+  }
+
   /** 加速器矩阵：逐模型 × 逐后端，每项 warmup 5 + 正式 30 次 p50。 */
   private async probeAll(): Promise<void> {
     if (this.busy) {
@@ -1764,6 +1809,17 @@ struct Index {
             .height(38)
             .onClick(() => {
               this.threadSweep();
+            })
+          Button('亲和扫描')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              this.affinitySweep();
             })
           Button('Vulkan 探针')
             .fontSize(13)

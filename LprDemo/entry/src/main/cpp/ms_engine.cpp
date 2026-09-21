@@ -161,6 +161,17 @@ struct Attempt {
   std::string nnrtName;  // only for OH_AI_DEVICETYPE_NNRT
   bool fp16;             // set OH_AI_DeviceInfoSetEnableFP16
   int threads = 0;       // CPU only; <=0 = leave the engine default (4)
+  /**
+   * CPU only：线程亲和。0=不设（引擎默认，无绑定）/ 1=大核优先 / 2=小核优先。
+   *
+   * 【2026-09-21 新增】动机：同一份 det 模型、同一后端、同样 4 线程，
+   * **隔离基准 7.4 ms，但相机流水线内 15.3–19.5 ms（慢 2 倍）**，且更热的
+   * 那一轮反而更快 —— 所以主因不是热降频，而**可能是 DVFS/核位调度**
+   * （详见 docs/notes/camera-npu-headroom.md §3.2c）。
+   * `OH_AI_ContextSetThreadAffinityMode` 此前**从未被调用过**。
+   * 这是验证该假设最便宜的一刀：不写任何算子代码，只钉核位。
+   */
+  int affinity = 0;
 };
 
 static std::vector<Attempt> PlanFor(const std::string& backend) {
@@ -193,6 +204,19 @@ static std::vector<Attempt> PlanFor(const std::string& backend) {
     if (okNum) {
       const int n = std::stoi(num);
       plan.push_back({OH_AI_DEVICETYPE_CPU, "CPU:t" + std::to_string(n), "", false, n});
+    } else {
+      plan.push_back({OH_AI_DEVICETYPE_CPU, "CPU", "", false, 0});
+    }
+  } else if (backend.rfind("cpu_a", 0) == 0) {
+    // 2026-09-21: CPU 亲和扫描档 cpu_a1（大核优先）/ cpu_a2（小核优先）。
+    // 动机见 Attempt::affinity 的注释 —— 用于验证「流水线内 det 慢 2 倍」
+    // 是否来自 DVFS/核位调度。线程数沿用 4（已由 cpu_t 扫描证明最优）。
+    const std::string num = backend.substr(5);
+    const bool okNum = !num.empty() && num.size() <= 2 &&
+                       num.find_first_not_of("0123456789") == std::string::npos;
+    if (okNum) {
+      const int n = std::stoi(num);
+      plan.push_back({OH_AI_DEVICETYPE_CPU, "CPU:t4a" + std::to_string(n), "", false, 4, n});
     } else {
       plan.push_back({OH_AI_DEVICETYPE_CPU, "CPU", "", false, 0});
     }
@@ -231,6 +255,10 @@ static bool TryBuild(MsSession* s, const Attempt& a, std::string& err) {
   if (a.type == OH_AI_DEVICETYPE_CPU) {
     // 2026-09-18: 榨干 CPU 性能 —— 设为高性能模式 + 线程数扫描
     OH_AI_ContextSetThreadNum(ctx, a.threads > 0 ? a.threads : 4);  // cpu_t{N} 档覆写，默认 4
+    // 2026-09-21: 线程亲和（cpu_a{N} 档）。0 表示不设，保持历史行为不变。
+    if (a.affinity > 0) {
+      OH_AI_ContextSetThreadAffinityMode(ctx, a.affinity);
+    }
     dev = OH_AI_DeviceInfoCreate(OH_AI_DEVICETYPE_CPU);
     // 关键：CPU 也要设高性能模式！之前漏了，导致 CPU 跑在节能档
     OH_AI_DeviceInfoSetPerformanceMode(dev, OH_AI_PERFORMANCE_HIGH);

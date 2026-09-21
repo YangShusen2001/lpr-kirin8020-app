@@ -220,6 +220,30 @@ const SKIP_PREVIEW_DISPLAY: boolean = false;
  *  生产档（det=CPU rec=NPU cls=CPU）在 30-30 下能跑到 25–27 fps。 */
 const FPS_TARGET: number = 30;
 
+/**
+ * 【实验开关】相机路径里 det 的 CPU 后端档。默认 `'cpu'`（不设亲和绑定）。
+ *
+ * 为什么需要这个开关：跑完 CPU 线程扫描与亲和扫描后发现 —— 同一份
+ * `y5fu_320x_head_fp32.ms`、同一后端、同样 4 线程：
+ *
+ *   | 条件 | p50 |
+ *   |---|---|
+ *   | 隔离基准，无绑定（紧循环） | **7.67 ms** |
+ *   | 隔离基准，`cpu_a1` 大核优先 | 11.36 ms |
+ *   | 隔离基准，`cpu_a2` 小核优先 | **19.45 ms** |
+ *   | **相机流水线内**（sweep2, 热档 3） | **19.51 ms** |
+ *
+ * 流水线内 19.51 与「小核优先」19.45 **几乎相同**，而比「无绑定」慢 2.5 倍。
+ * 这提示：流水线里的 det 很可能**实际跑在小核上**（或等效的低频状态），
+ * 而不是算子本身慢。设为 `'cpu_a1'` 就能**在真实产品条件下**直接验证这一点：
+ * 若 tInferMs 从 ~19 ms 掉到 ~11 ms，则「调度/核位」是主因，且**不写一行算子代码**。
+ *
+ * 注意 `cpu_a1` 在**隔离**基准里反而比无绑定慢（11.36 vs 7.67）——
+ * 所以这不是「无脑更快」的档，必须在流水线里实测。测完请改回 `'cpu'`。
+ * 详见 docs/notes/camera-npu-headroom.md §3.2c / §5.2。
+ */
+const DET_CPU_BACKEND: string = 'cpu';
+
 function parseKv(s: string): Map<string, string> {
   const m: Map<string, string> = new Map<string, string>();
   const parts: string[] = s.split(';');
@@ -578,7 +602,7 @@ struct CameraPage {
       return true;
     }
     try {
-      let detBe: string = 'cpu';
+      let detBe: string = DET_CPU_BACKEND;
       let recBe: string = 'nnrt';
       let clsBe: string = 'cpu';
       if (this.gear === GEAR_NPU) {

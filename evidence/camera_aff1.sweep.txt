@@ -1,0 +1,1 @@
+﻿gear=0 rate_windows_in_tail=40 hit_frames_in_tail=1200
