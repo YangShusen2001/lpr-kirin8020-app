@@ -15,7 +15,10 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-BASE = r"C:\Users\26671\Desktop\Test\lpr-showcase"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import PRIOR_SHOWCASE, SCRATCH  # noqa: E402
+
+BASE = PRIOR_SHOWCASE
 sys.path.insert(0, os.path.join(BASE, "tools"))
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -25,9 +28,9 @@ rec = H.sess("rpv3_mdict_160_r3.onnx")
 
 SETS = {
     "legacy_1000_anhui_skewed": os.path.join(BASE, "_dataset", "real", "crops"),
-    "balanced_326_26_provinces": r"C:\Users\26671\lpr-data\balanced\crops",
+    "balanced_326_26_provinces": os.path.join(SCRATCH, "balanced", "crops"),
 }
-OUT = r"C:\Users\26671\lpr-data\balanced\balanced_accuracy.json"
+OUT = os.path.join(SCRATCH, "balanced", "balanced_accuracy.json")
 
 
 def evaluate(crops_dir):

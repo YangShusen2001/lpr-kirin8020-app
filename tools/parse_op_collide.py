@@ -9,10 +9,14 @@
 import json
 import os
 import re
+import sys
 from collections import OrderedDict
 
-RAW = r"C:\Users\26671\lpr-data\op_collide.log"
-OUT_DIR = r"C:\Users\26671\lpr-data"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import SCRATCH  # noqa: E402
+
+RAW = os.path.join(SCRATCH, "op_collide.log")
+OUT_DIR = SCRATCH
 
 # 从日志行里抠出 `OPCOLLIDE op=<name> bytes=<n> <kv...>` 的 kv 部分
 RE_OP = re.compile(r"OPCOLLIDE op=(\S+) bytes=(\d+)\s*(.*)$")

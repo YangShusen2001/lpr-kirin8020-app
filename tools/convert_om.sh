@@ -3,7 +3,7 @@
 #
 # 【必须在 WSL Ubuntu 里跑，不能在 Git Bash / Windows 下跑】
 # omg 是 Linux ELF64 二进制，Git Bash 下报 "Exec format error"。
-#   用法: wsl -d Ubuntu -- bash /mnt/c/Users/26671/lpr-kirin8020-app/tools/convert_om.sh
+#   用法: wsl -d Ubuntu -- bash /mnt/c/<app-repo>/tools/convert_om.sh
 #
 # 路径统一用 /mnt/c 形式（WSL 认识；Git Bash 不适用）。
 #
@@ -30,9 +30,23 @@
 # 09-18 的成功日志里同样有这些行。
 set -u
 
-DDK="${DDK:-/mnt/c/Users/26671/lpr-harmony/omg_conv/ddk}"
-SRC="${SRC:-/mnt/c/Users/26671/lpr-harmony/omg_conv}"
-OUT="${1:-/mnt/c/Users/26671/lpr-kirin8020-app/models_om}"
+# ---- 路径从环境解析 ----
+#
+# 2026-09-21 改：原先硬编码本机 /mnt/c 路径，脱敏时被替换成占位符导致脚本失效。
+# 这里不能简单用 $HOME —— WSL 里的 $HOME 是 Linux 家目录，不是 Windows 家目录。
+# 做法：先试着用 cmd.exe 问出 Windows 的 USERPROFILE 并用 wslpath 转换；
+# 问不出来就要求显式设置 LPR_WIN_HOME。
+if [ -z "${LPR_WIN_HOME:-}" ]; then
+  _up="$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r\n')"
+  if [ -n "$_up" ]; then
+    LPR_WIN_HOME="$(wslpath "$_up" 2>/dev/null || true)"
+  fi
+fi
+: "${LPR_WIN_HOME:?无法确定 Windows 用户主目录，请设置 LPR_WIN_HOME（如 /mnt/c/Users/<你的用户名>）}"
+
+DDK="${DDK:-$LPR_WIN_HOME/Desktop/Test/lpr-harmony/omg_conv/ddk}"
+SRC="${SRC:-$LPR_WIN_HOME/Desktop/Test/lpr-harmony/omg_conv}"
+OUT="${1:-$LPR_WIN_HOME/lpr-kirin8020-app/models_om}"
 OMG="$DDK/tools/tools_omg/omg"          # <-- 包装脚本，不是 master/omg
 
 [[ -x "$OMG" ]] || { echo "FAIL: 找不到包装脚本 $OMG" >&2; exit 3; }

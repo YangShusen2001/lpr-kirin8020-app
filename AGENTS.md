@@ -12,7 +12,7 @@
 > Please modify the project path to ensure that it only contains letters, digits,
 > hyphens (-), underscores (_), periods (.), english parentheses (()), spaces, or the @ symbol
 
-文档仓库在 `C:\Users\26671\Desktop\车牌识别`（含中文），所以 DevEco 工程**必须**放在 ASCII 路径。已实测确认：
+文档仓库在 `<REPO>/lpr-kirin8020`（含中文），所以 DevEco 工程**必须**放在 ASCII 路径。已实测确认：
 
 - 直接用中文路径构建 → `00306003`
 - 用 junction 把中文路径映射到 ASCII 路径 → **无效**，hvigor 会解析回真实路径

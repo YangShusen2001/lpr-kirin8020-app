@@ -7,10 +7,15 @@
 #      FP16 位流（误差 7.78e18%）。本项目三个模型已在图尾插入 Cast 规避。
 #   3) 输入名与形状必须与 ONNX 图一致（y5fu=input / rpv3=data / cls=data）
 set -u
-MS="D:/Tools/mindspore-lite/mindspore-lite-2.6.0-win-x64/tools/converter/converter"
+# 路径从环境解析，不写死本机位置（与 tools/paths.py 同一套变量名）。
+# 2026-09-21 改：原先硬编码本机路径，脱敏时被替换成占位符导致脚本失效。
+MSLITE_DIR="${MSLITE_DIR:-D:/Tools/mindspore-lite}"
+PRIOR_WORK="${LPR_PRIOR_WORK:-$HOME/Desktop/Test}"
+APP_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MS="$MSLITE_DIR/mindspore-lite-2.6.0-win-x64/tools/converter/converter"
 CONV="$MS/converter_lite.exe"
-SRC="C:/Users/26671/lpr-harmony/models_ms"
-OUT="C:/Users/26671/lpr-kirin8020-app/models_ms"
+SRC="$PRIOR_WORK/lpr-harmony/models_ms"
+OUT="$APP_REPO/models_ms"
 mkdir -p "$OUT"
 
 export PATH="$MS/lib:$MS:$PATH"
@@ -38,7 +43,7 @@ run rpv3_mdict_160_r3  data  1,3,48,160
 run litemodel_cls_96x_r1 data 1,3,96,96
 
 echo "=== 与 App 内置 .ms 逐字节比对 ==="
-APPMS="C:/Users/26671/lpr-kirin8020-app/LprDemo/entry/src/main/resources/rawfile/models"
+APPMS="$APP_REPO/LprDemo/entry/src/main/resources/rawfile/models"
 for n in y5fu_320x_sim rpv3_mdict_160_r3 litemodel_cls_96x_r1; do
   if [ -f "$OUT/$n.ms" ] && [ -f "$APPMS/$n.ms" ]; then
     a=$(sha256sum "$OUT/$n.ms" | cut -d' ' -f1)

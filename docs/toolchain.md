@@ -54,7 +54,7 @@ DDK 附带的平台插件：**`kirin9020` / `kirinx90` / `kirin9030`**。
 ## 转换命令
 
 ```bash
-wsl -d Ubuntu -- bash /mnt/c/Users/26671/lpr-kirin8020-app/tools/convert_om.sh
+wsl -d Ubuntu -- bash /mnt/c<REPO>/lpr-kirin8020-app/tools/convert_om.sh
 ```
 
 脚本内已记录四个实测陷阱（包装脚本入口 / 非 ASCII 输出路径 / 不要 `--target=omc` /

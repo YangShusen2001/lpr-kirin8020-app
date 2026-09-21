@@ -3,13 +3,17 @@
 疑点：rec.l2 在同一次会话内出现多个值（4.0489 / 4.0956 / 3.0965），
 且 `used` 字段与 l2 同步翻转。先前登记为「输出逐位稳定」，需核实。
 """
+import os
 import re
 import sys
 from collections import Counter
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import SCRATCH  # noqa: E402
+
 sys.stdout.reconfigure(encoding="utf-8")
 
-LOG = r"C:\Users\26671\lpr-data\live_transition.log"
+LOG = os.path.join(SCRATCH, "live_transition.log")
 
 
 def open_log(path):

@@ -4,16 +4,25 @@
 # 目的：与 .ms（NNRT 侧）做**逐算子对撞**，回答「NPU 支持性是 模型 × 工具链 的联合属性」。
 #
 # 必须在 WSL 里跑（omg 是 Linux ELF64；Git Bash 下报 Exec format error）。
-#   用法: wsl -d Ubuntu -- bash /mnt/c/Users/26671/lpr-kirin8020-app/tools/convert_om_ops.sh
+#   用法: wsl -d Ubuntu -- bash /mnt/c/<app-repo>/tools/convert_om_ops.sh
 #
 # 四个 OMG 陷阱见 convert_om.sh 的注释（包装脚本入口 / 非 ASCII 输出路径 /
 # 不要 --target=omc / --hiai_version 而非 --omg_version）。
 set -u
 
-DDK=/mnt/c/Users/26671/lpr-harmony/omg_conv/ddk
+# ---- 路径从环境解析（见 convert_om.sh 的说明：WSL 的 $HOME 不是 Windows 家目录）----
+if [ -z "${LPR_WIN_HOME:-}" ]; then
+  _up="$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r\n')"
+  if [ -n "$_up" ]; then
+    LPR_WIN_HOME="$(wslpath "$_up" 2>/dev/null || true)"
+  fi
+fi
+: "${LPR_WIN_HOME:?无法确定 Windows 用户主目录，请设置 LPR_WIN_HOME（如 /mnt/c/Users/<你的用户名>）}"
+
+DDK="$LPR_WIN_HOME/Desktop/Test/lpr-harmony/omg_conv/ddk"
 OMG="$DDK/tools/tools_omg/omg"
-SRC=/mnt/c/Users/26671/Desktop/ShusenPaper/models/onnx/opbench
-OUT=/mnt/c/Users/26671/lpr-kirin8020-app/models_om_ops
+SRC="$LPR_WIN_HOME/Desktop/Test/ShusenPaper/models/onnx/opbench"
+OUT="$LPR_WIN_HOME/lpr-kirin8020-app/models_om_ops"
 LOGS="$OUT/logs"
 mkdir -p "$OUT" "$LOGS"
 

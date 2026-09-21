@@ -43,7 +43,24 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$Hdc = 'D:\IDE\DevEco_Studio\sdk\default\openharmony\toolchains\hdc.exe'
+
+# hdc 路径解析（2026-09-21 改：原先硬编码本机 SDK 路径，脱敏后失效）。
+# 顺序：环境变量 LPR_HDC → DevEco 默认安装位置 → PATH 上的 hdc。
+$Hdc = $env:LPR_HDC
+if (-not $Hdc) {
+    # 注意：不用 `??` —— 本机是 Windows PowerShell 5.1，不支持该运算符。
+    $sdk = $env:DEVECO_SDK_HOME
+    if (-not $sdk) { $sdk = 'D:\IDE\DevEco_Studio\sdk' }
+    $cand = Join-Path $sdk 'default\openharmony\toolchains\hdc.exe'
+    if (Test-Path $cand) { $Hdc = $cand }
+}
+if (-not $Hdc) {
+    $cmd = Get-Command hdc -ErrorAction SilentlyContinue
+    if ($cmd) { $Hdc = $cmd.Source }
+}
+if (-not $Hdc -or -not (Test-Path $Hdc)) {
+    throw "找不到 hdc。请设置环境变量 LPR_HDC 指向 hdc.exe（例如 DevEco 安装目录下的 sdk\default\openharmony\toolchains\hdc.exe）"
+}
 $Bundle = 'com.shusen.lprdemo'
 
 # ⚠️ 档位按钮的点击坐标**不再写死**。

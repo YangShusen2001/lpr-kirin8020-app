@@ -16,8 +16,8 @@ find_library(mindspore_lite_lib libmindspore_lite_ndk.so)
 # ---- ncnn（A 阶段第二步：Vulkan compute 的载体）
 # 库是用 OHOS NDK 交叉编译出来的 AArch64 .so，放在 entry/libs/<arch>/。
 # 头文件来自 ncnn 源码树 + 它的构建目录（platform.h / layer_registry.h 等是生成的）。
-set(NCNN_SRC "C:/Users/26671/lpr-harmony/third_party/ncnn/src")
-set(NCNN_GEN "C:/Users/26671/lpr-harmony/third_party/ncnn_build_ohos_vk/src")
+set(NCNN_SRC "<PRIOR_WORK>/lpr-harmony/third_party/ncnn/src")
+set(NCNN_GEN "<PRIOR_WORK>/lpr-harmony/third_party/ncnn_build_ohos_vk/src")
 set(NCNN_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}")
 add_library(ncnn SHARED IMPORTED)
 set_target_properties(ncnn PROPERTIES IMPORTED_LOCATION "${NCNN_LIBS}/libncnn.so")

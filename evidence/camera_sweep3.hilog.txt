@@ -1,0 +1,7 @@
+﻿STAGE n=2400 conv=1.9158 infer=17.7867 count=0 wh=480x640 rgbaSum=100381983 stages=-�  ��ưj cu LX  �    �  P! �CameraDaemon/SceneRecognitionDireAlgo :ݶ�3 g scene_recognition_dire_algo.cpp postProcess(248)::"[CV]::" "SceneRecognitionDireAlgo
+FRAME n=2400 fps=33.33 plate=（未检测到） split=0|0 rt_hit_p50=43.00 rt_empty_p50=29.00 hit_n=30 empty_n=30W  v�ưj��  LX   �  ��   � Rcom.shusen.lprdemo/LprStages v E2E preprocess begin ncnn=%{public}d vulkan=%{public}d  �  z�ưj��X LX  �   ��  �+
+RATE arrive=26.51 fps done=26.02 fps dropped_in_win=0 cum_arrived=1726 cum_done=1726 cum_dropped=0 gear=0 hit_n=30 empty_n=30 rt_hit_p50=43.00 rt_empty_p50=33.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0R  juưjxC�&3X  �   J
+STAGE n=510 conv=6.5400 infer=21.9153 count=0 wh=480x640 rgbaSum=105187220 stages=-V  f*ưj$/ 0�W  �   ��  �+ �CameraDaemon/IPS_CAPTURE "��#:� YFullZoomAiRawSnapshot.cpp,� WSetDualExpoSnapshotTyep�  f*ưj � 0�W  �   ��  �+ PCameraDaemon/IPS_C
+FRAME n=510 fps=33.33 plate=（未检测到） split=0|1 rt_hit_p50=172.00 rt_empty_p50=29.00 hit_n=20 empty_n=30# �Z*ưj .�-�W  �    �  �  �CameraDaemon/HDM[mdc] =��� '�  (�  �  �*ưj���-�W  �    �  �+ PCameraDaemon/CIEDirectProcessor } T:%{public}u %{p
+STAGE n=60 conv=2.5380 infer=26.6806 count=1 wh=480x640 rgbaSum=83563619 stages=20.3927|1.9402|17.8075|0.0366|0.2480|5.9381|0.0423|0.3411|17.4664C  o ưj��W(�W   �  ��   ! Rcom.shusen.lprdemo/MS_LITE f %s:%d "cpu's architecture is unknown."D
+

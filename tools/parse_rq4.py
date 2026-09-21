@@ -25,9 +25,22 @@ import re
 import statistics
 import sys
 
-# 日志路径可从命令行给：`parse_rq4.py <log> [outdir]`
-RAW = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\26671\lpr-data\rq4_final.log"
-OUT = sys.argv[2] if len(sys.argv) > 2 else r"C:\Users\26671\lpr-data"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import SCRATCH  # noqa: E402
+
+# 用法：`parse_rq4.py <log> [outdir] [--out-prefix NAME]`
+#
+# 2026-09-21 改：原先用 `sys.argv[2]` 直接当 outdir，一旦带 `--out-prefix`
+# 就会把选项名当成目录名。改为先摘掉带值的选项，剩下的按位置取。
+_args = list(sys.argv[1:])
+_out_prefix = None
+if "--out-prefix" in _args:
+    _i = _args.index("--out-prefix")
+    _out_prefix = _args[_i + 1] if _i + 1 < len(_args) else None
+    del _args[_i:_i + 2]
+
+RAW = _args[0] if len(_args) > 0 else os.path.join(SCRATCH, "rq4_final.log")
+OUT = _args[1] if len(_args) > 1 else SCRATCH
 
 
 def open_log(path):
@@ -221,10 +234,25 @@ for t in sorted(by_thermal):
     print(f"  thermal={t}: n={len(v)}  p50={statistics.median(v):.1f}  "
           f"min={min(v):.1f}  max={max(v):.1f}")
 
-with open(os.path.join(OUT, "rq4_thermal.json"), "w", encoding="utf-8") as fh:
+# 输出文件名的**前缀**。
+#
+# ⚠️ 2026-09-21 修：原先无条件写死 `rq4_thermal.csv` / `.json`，于是
+# **重新解析任何一份日志都会静默覆盖既有数据**。实际发生过一次：
+# 解析 80 轮新日志时把 T7 的 25 轮数据覆盖了（靠 `rq4_thermal_release.csv`
+# 那份副本才恢复出来）。
+#
+# 现在的规则：默认前缀由**输入日志的文件名**推导（去掉扩展名），
+# 于是 `--rq4_thermal_device_80r.log` → `rq4_thermal_device_80r.csv`，
+# 不同日志不会互相踩。要写进既有名字必须显式 `--out-prefix`。
+if _out_prefix:
+    PREFIX = _out_prefix
+else:
+    PREFIX = os.path.splitext(os.path.basename(RAW))[0]
+
+with open(os.path.join(OUT, PREFIX + ".json"), "w", encoding="utf-8") as fh:
     json.dump(seq, fh, ensure_ascii=False, indent=1)
 
-with open(os.path.join(OUT, "rq4_thermal.csv"), "w", encoding="utf-8") as fh:
+with open(os.path.join(OUT, PREFIX + ".csv"), "w", encoding="utf-8") as fh:
     fh.write("round,t_s,thermal,battC,soc,charging,load,totalMs,code,cropSum,"
              "det_landed,det_l2,rec_landed,rec_l2,"
              + ",".join(f"{s}_ms" for s in STAGES)
@@ -246,4 +274,4 @@ with open(os.path.join(OUT, "rq4_thermal.csv"), "w", encoding="utf-8") as fh:
                  f"{r.get('cropSum','')},{d.get('landed','')},{d.get('l2','')},"
                  f"{c.get('landed','')},{c.get('l2','')},{stage_cols},{side_cols}\n")
 print()
-print(f"-> {OUT}\\rq4_thermal.csv / .json")
+print(f"-> {OUT}\\{PREFIX}.csv / .json")

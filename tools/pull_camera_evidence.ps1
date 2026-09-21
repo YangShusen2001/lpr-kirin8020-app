@@ -42,7 +42,21 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot          # 仓库根
 $Evidence = Join-Path $Root 'evidence'
 $Scratch = Join-Path $Root '_scratch\hilog_pull'
-$Hdc = 'D:\IDE\DevEco_Studio\sdk\default\openharmony\toolchains\hdc.exe'
+$Hdc = $env:LPR_HDC
+if (-not $Hdc) {
+    # 不用 `??`（本机是 Windows PowerShell 5.1，不支持）。
+    $sdk = $env:DEVECO_SDK_HOME
+    if (-not $sdk) { $sdk = 'D:\IDE\DevEco_Studio\sdk' }
+    $cand = Join-Path $sdk 'default\openharmony\toolchains\hdc.exe'
+    if (Test-Path $cand) { $Hdc = $cand }
+}
+if (-not $Hdc) {
+    $cmd = Get-Command hdc -ErrorAction SilentlyContinue
+    if ($cmd) { $Hdc = $cmd.Source }
+}
+if (-not $Hdc -or -not (Test-Path $Hdc)) {
+    throw "找不到 hdc。请设置环境变量 LPR_HDC 指向 hdc.exe"
+}
 $Bundle = 'com.shusen.lprdemo'
 $AppFiles = "/data/app/el2/100/base/$Bundle/haps/entry/files"
 

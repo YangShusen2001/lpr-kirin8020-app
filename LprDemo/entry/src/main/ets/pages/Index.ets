@@ -325,7 +325,26 @@ const E2E_ROLES: E2eRole[] = E2E_ROLES_ALL;
  * `hdc shell uitest uiInput click` 驱动，不需要靠自检兜底；而且自检要跑几分钟，
  * 开着会让「打开 App → 点相机」这一步变成漫长的等待。要复跑矩阵时手动改回 true。
  */
-const AUTO_SELFTEST: boolean = true;
+const AUTO_SELFTEST: boolean = false;
+/**
+ * T7 · RQ4 补跑开关（2026-09-21 新增）。
+ *
+ * 原 T7 数据只有 **25 轮 / 6 分钟、thermal 恒为 1**，全程没跨过 thermal 2→3 的台阶
+ * （`t7-rq4-thermal.md` 的限制第一条自己记着这件事）。所以 RQ4 真正要回答的那个问题
+ * ——「持续负载下 NPU 收益能否维持」—— 实际上**从未被测到**。本次补跑到 20 分钟 / 80 轮。
+ *
+ * **为什么用开关而不是点按钮**：原生 ArkUI 按钮只能靠 `hdc shell uitest uiInput click`
+ * 驱动，而要拿到坐标就得先 `uitest dumpLayout`；后者会把 App 推到后台、随即被
+ * HarmonyOS 冻结（T13 §7 实测：`FROZEN_AFTER_ENTER_BG`）。一个 20 分钟的长跑
+ * 不该依赖这条脆弱的驱动路径。复跑时把这里改成 true。
+ *
+ * 与 AUTO_SELFTEST 的关系：两者互斥。跑 RQ4 时 SELFTEST 必须为 false，
+ * 否则那串探针（probeAll / threadSweep / cannProbe…）会先跑几分钟，
+ * 把热态和线程池状态带进 RQ4 的基线。
+ */
+const AUTO_RQ4: boolean = false;
+/** RQ4 补跑时长（分钟）。探针固定 15 s 一轮 → 20 分钟 = 80 轮。 */
+const AUTO_RQ4_MINUTES: number = 20;
 /** 自检用的样本（整车图，能同时验证检测 + 矫正 + 识别 + 分类）。 */
 const SELFTEST_SAMPLE: string = 'assets/samples/hlpr-test.jpg';
 /**
@@ -2050,6 +2069,15 @@ struct Index {
   aboutToAppear(): void {
     this.ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.requestCamera();
+    // T7 · RQ4 补跑：与自检互斥（见 AUTO_RQ4 注释）。等 UI 起来再跑，
+    // 免得与权限弹窗、首帧渲染抢线程、污染基线。
+    if (AUTO_RQ4) {
+      this.sleep(3000).then(() => {
+        this.loadNative().then(() => {
+          this.rq4SustainedProbe(AUTO_RQ4_MINUTES);
+        });
+      });
+    }
     // 自检：等 UI 起来（权限弹窗不阻塞）再跑，全部结果进 hilog。
     if (AUTO_SELFTEST) {
       this.sleep(1500).then(() => {
@@ -2478,6 +2506,20 @@ struct Index {
               // 此前所有真实场景结论只覆盖 7 字符，本探针补 8 字符这一格。
               // 变 rec 落点：识别器是唯一需要逐位解码的角色，8 字符对它的压力最大。
               this.ccpdSceneAB('rec', 'green');
+            })
+          Button('绿牌 det')
+            .fontSize(12)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // T13 §6.5 明确记下的缺口：绿牌只跑了 rec，det 未测。
+              // T14 已证明「后端本身是准确率变量」，所以不能假定 det 在 8 字符上
+              // 仍是 7 字符那样的 0.1% —— 要测。
+              this.ccpdSceneAB('det', 'green');
             })
           Button('算子对撞')
             .fontSize(13)

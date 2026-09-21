@@ -20,8 +20,11 @@ from collections import Counter, defaultdict
 
 import lmdb
 
-MDb = r"C:\Users\26671\lpr-data\balanced\train.mdb"
-OUT = r"C:\Users\26671\lpr-data\balanced"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import SCRATCH  # noqa: E402
+
+MDb = os.path.join(SCRATCH, "balanced", "train.mdb")
+OUT = os.path.join(SCRATCH, "balanced")
 CROPS = os.path.join(OUT, "crops")
 PER_PROV = 20
 # 皖是这份数据集的绝对多数（唯一车牌 3150 vs 其余 25 省合计 240），

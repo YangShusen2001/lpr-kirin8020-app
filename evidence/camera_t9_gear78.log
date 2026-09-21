@@ -1,0 +1,696 @@
+SESSION MODE gear=0 mode=NORMAL_PHOTO vout=0 fpsTarget=30
+CAMRUN BEGIN ts=1789974151127 gear=0 analyze=640x480 show=960x960 rotation=90 settleMs=45000 warmupFrames=10 window=30 detModel=models/y5fu_320x_head_fp32.ms recModel=models/rpv3_mdict_160_r3.ms analyzeTargetW=640 fpsTarget=30
+STREAM START show=960x960 analyze=640x480 rot=90 mode=NORMAL_PHOTO vout=0 fpsTarget=30
+STAGE n=0 conv=7.9758 infer=167.4528 count=0 wh=480x640 rgbaSum=156968076 stages=-
+STAGE n=0 conv=2.2461 infer=27.2166 count=0 wh=480x640 rgbaSum=144594429 stages=-
+STAGE n=30 conv=6.7077 infer=24.6600 count=0 wh=480x640 rgbaSum=147923531 stages=-
+STAGE n=60 conv=7.2889 infer=23.7797 count=0 wh=480x640 rgbaSum=148153341 stages=-
+STAGE n=90 conv=8.9792 infer=25.5941 count=0 wh=480x640 rgbaSum=147271516 stages=-
+STAGE n=120 conv=2.7530 infer=26.5113 count=0 wh=480x640 rgbaSum=147057621 stages=-
+STAGE n=150 conv=6.1916 infer=23.4642 count=0 wh=480x640 rgbaSum=146804769 stages=-
+STAGE n=180 conv=2.6959 infer=17.9797 count=0 wh=480x640 rgbaSum=146582200 stages=-
+STAGE n=210 conv=6.9398 infer=19.3545 count=0 wh=480x640 rgbaSum=147125248 stages=-
+STAGE n=240 conv=8.0208 infer=23.5294 count=0 wh=480x640 rgbaSum=146974811 stages=-
+STAGE n=270 conv=7.2811 infer=21.7934 count=0 wh=480x640 rgbaSum=147125204 stages=-
+STAGE n=300 conv=11.9534 infer=31.3338 count=0 wh=480x640 rgbaSum=146982758 stages=-
+STAGE n=330 conv=5.0084 infer=33.0436 count=0 wh=480x640 rgbaSum=146825456 stages=-
+STAGE n=360 conv=4.5367 infer=34.4973 count=0 wh=480x640 rgbaSum=147111674 stages=-
+STAGE n=390 conv=5.1453 infer=27.8372 count=0 wh=480x640 rgbaSum=147117536 stages=-
+STAGE n=420 conv=10.2358 infer=36.7656 count=0 wh=480x640 rgbaSum=146862708 stages=-
+STAGE n=450 conv=8.9891 infer=21.6541 count=0 wh=480x640 rgbaSum=146718428 stages=-
+STAGE n=480 conv=6.6067 infer=23.5984 count=0 wh=480x640 rgbaSum=146693314 stages=-
+STAGE n=510 conv=6.8891 infer=23.8855 count=0 wh=480x640 rgbaSum=146410374 stages=-
+STAGE n=540 conv=3.6884 infer=19.6981 count=0 wh=480x640 rgbaSum=146834950 stages=-
+STAGE n=570 conv=7.5783 infer=32.3139 count=0 wh=480x640 rgbaSum=147153286 stages=-
+STAGE n=600 conv=7.1133 infer=27.1236 count=0 wh=480x640 rgbaSum=146997094 stages=-
+STAGE n=630 conv=1.9523 infer=19.9091 count=0 wh=480x640 rgbaSum=146687958 stages=-
+STAGE n=660 conv=9.8169 infer=28.4602 count=0 wh=480x640 rgbaSum=147101937 stages=-
+STAGE n=690 conv=6.8222 infer=21.4756 count=0 wh=480x640 rgbaSum=146577351 stages=-
+STAGE n=720 conv=7.3498 infer=20.1125 count=0 wh=480x640 rgbaSum=147372522 stages=-
+STAGE n=750 conv=7.0439 infer=22.2703 count=0 wh=480x640 rgbaSum=146321065 stages=-
+GEAR SWITCH -> 7 (视频+推理(生产后端)：60fps 供给下测产能) settle restarts
+STAGE n=0 conv=6.9653 infer=32.4903 count=0 wh=480x640 rgbaSum=147005080 stages=-
+SESSION MODE gear=7 mode=NORMAL_VIDEO vout=1 fpsTarget=60
+STREAM START show=960x960 analyze=640x480 rot=90 mode=NORMAL_VIDEO vout=1 fpsTarget=60
+STAGE n=0 conv=5.9131 infer=20.7552 count=0 wh=480x640 rgbaSum=134641743 stages=-
+STAGE n=30 conv=4.5495 infer=26.1231 count=0 wh=480x640 rgbaSum=132486406 stages=-
+STAGE n=60 conv=2.7786 infer=18.8019 count=0 wh=480x640 rgbaSum=132219231 stages=-
+STAGE n=90 conv=2.9333 infer=19.1394 count=0 wh=480x640 rgbaSum=131953478 stages=-
+STAGE n=120 conv=2.6041 infer=18.9506 count=0 wh=480x640 rgbaSum=132169119 stages=-
+STAGE n=150 conv=3.3520 infer=20.8302 count=0 wh=480x640 rgbaSum=132367207 stages=-
+STAGE n=180 conv=2.4564 infer=19.3898 count=0 wh=480x640 rgbaSum=131998020 stages=-
+STAGE n=210 conv=3.1369 infer=17.5292 count=0 wh=480x640 rgbaSum=132589450 stages=-
+STAGE n=240 conv=6.2675 infer=21.5139 count=0 wh=480x640 rgbaSum=132050954 stages=-
+STAGE n=270 conv=2.5361 infer=15.1666 count=0 wh=480x640 rgbaSum=132320082 stages=-
+STAGE n=300 conv=9.8136 infer=27.0392 count=0 wh=480x640 rgbaSum=131900951 stages=-
+STAGE n=330 conv=3.1308 infer=26.0692 count=0 wh=480x640 rgbaSum=132043881 stages=-
+STAGE n=360 conv=3.2119 infer=21.0238 count=0 wh=480x640 rgbaSum=132265629 stages=-
+STAGE n=390 conv=2.5112 infer=19.0870 count=0 wh=480x640 rgbaSum=131891710 stages=-
+STAGE n=420 conv=2.6030 infer=19.3837 count=0 wh=480x640 rgbaSum=132143792 stages=-
+STAGE n=450 conv=2.6258 infer=21.3094 count=0 wh=480x640 rgbaSum=132063222 stages=-
+STAGE n=480 conv=2.8687 infer=19.0523 count=0 wh=480x640 rgbaSum=131752860 stages=-
+STAGE n=510 conv=3.0063 infer=20.9519 count=0 wh=480x640 rgbaSum=131838064 stages=-
+STAGE n=540 conv=2.6923 infer=16.3138 count=0 wh=480x640 rgbaSum=131985459 stages=-
+STAGE n=570 conv=6.8619 infer=28.7487 count=0 wh=480x640 rgbaSum=131678361 stages=-
+STAGE n=600 conv=6.4952 infer=20.2786 count=0 wh=480x640 rgbaSum=132415914 stages=-
+STAGE n=630 conv=2.6205 infer=21.9097 count=0 wh=480x640 rgbaSum=131872619 stages=-
+STAGE n=660 conv=5.5008 infer=21.6755 count=0 wh=480x640 rgbaSum=132453637 stages=-
+STAGE n=690 conv=3.0067 infer=18.4406 count=0 wh=480x640 rgbaSum=131762074 stages=-
+STAGE n=720 conv=6.7344 infer=22.2889 count=0 wh=480x640 rgbaSum=132310066 stages=-
+STAGE n=750 conv=2.7291 infer=21.5659 count=0 wh=480x640 rgbaSum=132170746 stages=-
+STAGE n=780 conv=2.7720 infer=20.2125 count=0 wh=480x640 rgbaSum=131852318 stages=-
+STAGE n=810 conv=2.4772 infer=19.4959 count=0 wh=480x640 rgbaSum=131815071 stages=-
+STAGE n=840 conv=2.7472 infer=17.9934 count=0 wh=480x640 rgbaSum=131900584 stages=-
+STAGE n=870 conv=3.0252 infer=19.8780 count=0 wh=480x640 rgbaSum=132267260 stages=-
+STAGE n=900 conv=2.5500 infer=21.1867 count=0 wh=480x640 rgbaSum=132380445 stages=-
+STAGE n=930 conv=3.8512 infer=19.9925 count=0 wh=480x640 rgbaSum=131826941 stages=-
+STAGE n=960 conv=3.2753 infer=23.6850 count=0 wh=480x640 rgbaSum=131786689 stages=-
+STAGE n=990 conv=3.2328 infer=20.1059 count=0 wh=480x640 rgbaSum=131942128 stages=-
+STAGE n=1020 conv=2.6812 infer=22.8106 count=0 wh=480x640 rgbaSum=131958865 stages=-
+STAGE n=1050 conv=2.5750 infer=19.6875 count=0 wh=480x640 rgbaSum=132030227 stages=-
+STAGE n=1080 conv=2.6178 infer=20.9022 count=0 wh=480x640 rgbaSum=132071033 stages=-
+STAGE n=1110 conv=2.9958 infer=17.4112 count=0 wh=480x640 rgbaSum=132116279 stages=-
+STAGE n=1140 conv=3.1389 infer=23.0580 count=0 wh=480x640 rgbaSum=132283020 stages=-
+STAGE n=1170 conv=3.3367 infer=19.6938 count=0 wh=480x640 rgbaSum=132095997 stages=-
+STAGE n=1200 conv=3.2323 infer=18.8084 count=0 wh=480x640 rgbaSum=127716570 stages=-
+STAGE n=1230 conv=2.8944 infer=24.8381 count=1 wh=480x640 rgbaSum=107841159 stages=20.4080|2.1519|17.5367|0.0261|0.2347|3.6709|0.1164|0.2812|17.2555
+STAGE n=1260 conv=3.1936 infer=24.5780 count=1 wh=480x640 rgbaSum=111110314 stages=20.2864|1.5150|17.9519|0.0292|0.2330|3.7069|0.1062|0.2941|17.6578
+STAGE n=1290 conv=10.1152 infer=35.8959 count=1 wh=480x640 rgbaSum=115419893 stages=30.3958|6.1912|23.3725|0.0331|0.2278|4.8933|0.0986|2.4869|20.8856
+STAGE n=1320 conv=3.1570 infer=24.2277 count=0 wh=480x640 rgbaSum=119409019 stages=-
+STAGE n=1350 conv=2.5697 infer=22.0889 count=0 wh=480x640 rgbaSum=118650157 stages=-
+STAGE n=1380 conv=2.5658 infer=18.1313 count=1 wh=480x640 rgbaSum=114816738 stages=14.1645|1.8322|11.5223|0.0328|0.2123|3.5870|0.0283|0.2939|11.2284
+STAGE n=1410 conv=2.5342 infer=28.8180 count=1 wh=480x640 rgbaSum=115030305 stages=21.0513|2.4881|16.8245|0.0345|0.2573|7.1116|0.1100|0.2928|16.5317
+STAGE n=1440 conv=3.2464 infer=24.7131 count=1 wh=480x640 rgbaSum=115128235 stages=20.1761|1.7542|17.6777|0.0295|0.1902|4.1677|0.0308|0.2941|17.3836
+SETTLE done after 45 s gear=7
+STAGE n=0 conv=7.1448 infer=32.5045 count=1 wh=480x640 rgbaSum=115043394 stages=26.9923|1.8931|21.9048|0.0913|0.8545|4.3311|0.0892|0.3319|21.5730
+STAGE n=30 conv=2.5367 infer=24.9436 count=1 wh=480x640 rgbaSum=115117316 stages=19.6000|1.8477|16.9911|0.0237|0.1886|3.2975|1.6564|0.3888|16.6023
+RATE win=1 arrive=27.39 done=27.39 dropped_in_win=0 cum_arrived=55 cum_done=55 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=31.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=60 conv=10.1205 infer=37.3042 count=1 wh=480x640 rgbaSum=115034083 stages=30.9778|5.4119|24.3680|0.0319|0.2959|5.7584|0.0520|0.5286|23.8394
+STAGE n=90 conv=3.3763 infer=28.1775 count=1 wh=480x640 rgbaSum=114955830 stages=20.7386|1.8008|18.0427|0.0319|0.2297|6.9595|0.0534|0.2873|17.7553
+RATE win=2 arrive=27.50 done=27.50 dropped_in_win=0 cum_arrived=111 cum_done=111 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=33.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=120 conv=9.6437 infer=25.7036 count=1 wh=480x640 rgbaSum=115068751 stages=21.6275|2.0289|18.3953|0.1375|0.3583|3.4645|0.0414|0.3848|18.0105
+STAGE n=150 conv=2.5375 infer=21.3650 count=1 wh=480x640 rgbaSum=114836722 stages=17.0203|1.7575|14.4572|0.0278|0.1792|3.9861|0.0356|0.2919|14.1653
+RATE win=3 arrive=22.92 done=22.92 dropped_in_win=0 cum_arrived=157 cum_done=157 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=36.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=180 conv=7.1067 infer=24.9331 count=1 wh=480x640 rgbaSum=114803601 stages=20.9406|1.8589|17.6030|0.0366|0.2023|3.5441|0.0514|0.3497|17.2533
+RATE win=4 arrive=23.89 done=23.89 dropped_in_win=0 cum_arrived=205 cum_done=205 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=38.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=210 conv=10.8702 infer=24.9653 count=1 wh=480x640 rgbaSum=114826694 stages=20.9888|3.2133|16.9252|0.0269|0.1648|3.5830|0.0427|0.3328|16.5923
+STAGE n=240 conv=8.4005 infer=33.8741 count=1 wh=480x640 rgbaSum=114739225 stages=28.6681|2.6272|22.5523|0.0919|0.6855|4.1617|0.0961|0.5295|22.0228
+RATE win=5 arrive=23.01 done=23.01 dropped_in_win=0 cum_arrived=252 cum_done=252 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=43.00 rt_empty_p50=-1.00 prep_hit_p50=2.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=270 conv=2.5444 infer=23.5241 count=1 wh=480x640 rgbaSum=114843600 stages=19.4320|1.6386|17.0737|0.0245|0.1966|3.7306|0.0298|0.2944|16.7794
+STAGE n=300 conv=9.6744 infer=32.7550 count=1 wh=480x640 rgbaSum=114578442 stages=28.5159|5.0125|22.6292|0.0312|0.2441|3.5453|0.0316|0.4564|22.1728
+RATE win=6 arrive=24.89 done=24.89 dropped_in_win=0 cum_arrived=302 cum_done=302 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=34.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=330 conv=10.1178 infer=28.1602 count=1 wh=480x640 rgbaSum=114805473 stages=23.4986|2.4275|20.0695|0.0325|0.2419|4.0814|0.1017|0.4039|19.6656
+RATE win=7 arrive=23.29 done=23.29 dropped_in_win=0 cum_arrived=349 cum_done=349 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=39.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=360 conv=2.5073 infer=24.2111 count=1 wh=480x640 rgbaSum=114861633 stages=20.1536|1.7931|17.5225|0.0317|0.2159|3.6919|0.0255|0.2956|17.2269
+STAGE n=390 conv=2.9169 infer=26.6712 count=1 wh=480x640 rgbaSum=115131178 stages=22.4112|1.7930|19.7792|0.0406|0.1664|3.8905|0.0378|0.3189|19.4603
+RATE win=8 arrive=28.78 done=28.78 dropped_in_win=0 cum_arrived=407 cum_done=407 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=32.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=420 conv=9.8386 infer=44.9988 count=1 wh=480x640 rgbaSum=114824212 stages=34.1300|6.0348|26.8213|0.0387|0.3139|9.9456|0.1077|2.1405|24.6808
+STAGE n=450 conv=9.4122 infer=24.2202 count=1 wh=480x640 rgbaSum=114653568 stages=19.4016|1.6484|17.0120|0.0286|0.2006|4.1148|0.1538|0.3438|16.6683
+RATE win=9 arrive=25.70 done=25.70 dropped_in_win=0 cum_arrived=459 cum_done=459 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=31.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=480 conv=3.8641 infer=24.8220 count=1 wh=480x640 rgbaSum=114788537 stages=21.0130|1.9531|18.2659|0.0248|0.2064|3.4369|0.0286|0.3759|17.8900
+RATE win=10 arrive=24.94 done=24.94 dropped_in_win=0 cum_arrived=509 cum_done=509 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=34.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=510 conv=4.5791 infer=23.8934 count=1 wh=480x640 rgbaSum=114543821 stages=19.7388|1.8111|17.1214|0.0231|0.2103|3.6056|0.0959|0.3256|16.7958
+STAGE n=540 conv=6.5050 infer=29.6909 count=1 wh=480x640 rgbaSum=113802340 stages=22.4786|1.9983|19.5759|0.0689|0.2138|6.7053|0.0517|0.3967|19.1792
+RATE win=11 arrive=28.29 done=28.29 dropped_in_win=0 cum_arrived=566 cum_done=566 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=29.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=570 conv=11.0358 infer=52.9570 count=1 wh=480x640 rgbaSum=113483510 stages=42.3536|3.4763|33.9986|0.0850|1.0770|9.0595|0.1278|0.8462|33.1523
+STAGE n=600 conv=2.8195 infer=26.5609 count=1 wh=480x640 rgbaSum=113767490 stages=22.5567|1.8084|19.7425|0.0308|0.2656|3.5545|0.0347|0.2933|19.4492
+RATE win=12 arrive=23.96 done=23.96 dropped_in_win=0 cum_arrived=614 cum_done=614 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=34.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=39.0
+STAGE n=630 conv=2.9877 infer=23.8381 count=1 wh=480x640 rgbaSum=113853803 stages=19.8564|1.7198|17.2975|0.0297|0.2100|3.6241|0.0300|0.3842|16.9133
+STAGE n=660 conv=8.5020 infer=39.1886 count=1 wh=480x640 rgbaSum=113858261 stages=31.0752|4.4258|22.7811|0.1086|0.9411|6.8933|0.0552|0.4395|22.3416
+RATE win=13 arrive=25.22 done=25.22 dropped_in_win=0 cum_arrived=665 cum_done=665 cum_dropped=0 gear=7 hit_n=30 empty_n=0 rt_hit_p50=32.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=2 battC=40.0
+STAGE n=690 conv=3.1966 infer=32.1736 count=1 wh=480x640 rgbaSum=113562584 stages=27.9589|3.1591|23.9772|0.0273|0.2230|3.8125|0.0383|0.3520|23.6252
+RATE win=14 arrive=26.93 done=26.93 dropped_in_win=0 cum_arrived=719 cum_done=719 cum_dropped=0 gear=7 hit_n=30 empty_n=8 rt_hit_p50=38.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=720 conv=2.5759 infer=16.9252 count=0 wh=480x640 rgbaSum=106212865 stages=-
+STAGE n=750 conv=2.8261 infer=19.1177 count=0 wh=480x640 rgbaSum=104685002 stages=-
+STAGE n=780 conv=8.9691 infer=33.5972 count=0 wh=480x640 rgbaSum=105936106 stages=-
+RATE win=15 arrive=34.53 done=34.53 dropped_in_win=0 cum_arrived=789 cum_done=789 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=810 conv=3.7459 infer=20.6825 count=0 wh=480x640 rgbaSum=105953517 stages=-
+STAGE n=840 conv=2.6100 infer=18.0609 count=0 wh=480x640 rgbaSum=105893787 stages=-
+RATE win=16 arrive=38.71 done=38.71 dropped_in_win=0 cum_arrived=867 cum_done=867 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=22.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=870 conv=11.1509 infer=39.4272 count=0 wh=480x640 rgbaSum=135964698 stages=-
+STAGE n=900 conv=6.7931 infer=38.5487 count=1 wh=480x640 rgbaSum=130450591 stages=30.6102|3.7330|25.9647|0.0259|0.5288|6.8145|0.1605|0.8005|25.1642
+RATE win=17 arrive=24.45 done=24.45 dropped_in_win=0 cum_arrived=916 cum_done=916 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=32.00 rt_empty_p50=22.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=930 conv=2.7045 infer=21.5502 count=1 wh=480x640 rgbaSum=130478454 stages=17.1792|1.7977|14.6302|0.0164|0.4136|3.7281|0.0583|0.3114|14.3188
+STAGE n=960 conv=2.8453 infer=24.9197 count=1 wh=480x640 rgbaSum=130240345 stages=20.4456|1.9191|17.7252|0.0242|0.4278|3.8600|0.0352|0.3328|17.3923
+RATE win=18 arrive=29.64 done=29.64 dropped_in_win=0 cum_arrived=976 cum_done=976 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=30.00 rt_empty_p50=22.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=990 conv=3.0205 infer=18.9864 count=0 wh=480x640 rgbaSum=135856288 stages=-
+STAGE n=1020 conv=4.8372 infer=17.2442 count=0 wh=480x640 rgbaSum=135940995 stages=-
+RATE win=19 arrive=27.90 done=27.90 dropped_in_win=0 cum_arrived=1032 cum_done=1032 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=30.00 rt_empty_p50=33.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1050 conv=9.3864 infer=27.9420 count=1 wh=480x640 rgbaSum=97494964 stages=19.3630|2.6123|15.8222|0.0511|0.2069|7.9816|0.0909|0.5570|15.2652
+STAGE n=1080 conv=3.2609 infer=21.5411 count=0 wh=480x640 rgbaSum=131091488 stages=-
+RATE win=20 arrive=31.87 done=31.87 dropped_in_win=0 cum_arrived=1096 cum_done=1096 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=30.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1110 conv=3.1281 infer=19.9761 count=0 wh=480x640 rgbaSum=131117583 stages=-
+STAGE n=1140 conv=2.7791 infer=26.9592 count=1 wh=480x640 rgbaSum=70594003 stages=22.5442|1.5387|19.9092|0.0236|0.1058|4.1375|0.0353|0.2977|19.6116
+RATE win=21 arrive=34.48 done=34.48 dropped_in_win=0 cum_arrived=1165 cum_done=1165 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=31.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1170 conv=2.9452 infer=27.7161 count=0 wh=480x640 rgbaSum=100151362 stages=-
+STAGE n=1200 conv=9.7156 infer=40.5352 count=1 wh=480x640 rgbaSum=135181205 stages=34.0687|3.7903|27.3770|0.0352|0.4502|5.5708|0.1336|0.3625|27.0145
+RATE win=22 arrive=25.95 done=25.95 dropped_in_win=0 cum_arrived=1217 cum_done=1217 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=41.00 rt_empty_p50=29.00 prep_hit_p50=2.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1230 conv=13.7194 infer=25.7450 count=1 wh=480x640 rgbaSum=81286197 stages=21.0527|2.3030|17.8113|0.0345|0.2155|4.2809|0.0316|0.4313|17.3800
+STAGE n=1260 conv=2.5677 infer=29.5056 count=1 wh=480x640 rgbaSum=108924215 stages=19.9511|1.7867|17.2603|0.0606|0.2522|9.0787|0.0462|0.2969|16.9634
+RATE win=23 arrive=28.47 done=28.97 dropped_in_win=0 cum_arrived=1274 cum_done=1275 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=30.00 rt_empty_p50=32.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1290 conv=3.3928 infer=31.6441 count=1 wh=480x640 rgbaSum=109065243 stages=25.8525|1.8372|20.3906|0.0814|0.7381|4.5813|0.1036|0.3261|20.0645
+STAGE n=1320 conv=8.8977 infer=27.5664 count=1 wh=480x640 rgbaSum=108965195 stages=22.0200|4.7866|15.7733|0.1152|0.3205|4.9906|0.0319|0.3516|15.4217
+RATE win=24 arrive=26.25 done=25.77 dropped_in_win=0 cum_arrived=1328 cum_done=1328 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=32.00 rt_empty_p50=32.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1350 conv=6.3653 infer=26.6161 count=1 wh=480x640 rgbaSum=108866122 stages=22.2681|1.8452|19.3128|0.0305|0.2614|3.7727|0.0886|0.3752|18.9377
+RATE win=25 arrive=23.81 done=23.81 dropped_in_win=0 cum_arrived=1376 cum_done=1376 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=34.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1380 conv=2.6805 infer=17.5241 count=0 wh=480x640 rgbaSum=138251588 stages=-
+STAGE n=1410 conv=2.6311 infer=20.3575 count=0 wh=480x640 rgbaSum=131499083 stages=-
+RATE win=26 arrive=31.75 done=31.75 dropped_in_win=0 cum_arrived=1440 cum_done=1440 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1440 conv=3.0392 infer=20.5044 count=0 wh=480x640 rgbaSum=130958899 stages=-
+STAGE n=1470 conv=2.5481 infer=18.9542 count=0 wh=480x640 rgbaSum=130876473 stages=-
+STAGE n=1500 conv=6.7362 infer=20.7780 count=0 wh=480x640 rgbaSum=131482317 stages=-
+RATE win=27 arrive=34.93 done=34.93 dropped_in_win=0 cum_arrived=1510 cum_done=1510 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1530 conv=2.5489 infer=16.7952 count=0 wh=480x640 rgbaSum=131469301 stages=-
+STAGE n=1560 conv=10.1036 infer=40.3170 count=0 wh=480x640 rgbaSum=131890931 stages=-
+RATE win=28 arrive=30.78 done=30.78 dropped_in_win=0 cum_arrived=1572 cum_done=1572 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1590 conv=2.9503 infer=16.6586 count=0 wh=480x640 rgbaSum=132046248 stages=-
+STAGE n=1620 conv=2.8933 infer=16.6297 count=0 wh=480x640 rgbaSum=131878047 stages=-
+RATE win=29 arrive=35.42 done=35.42 dropped_in_win=0 cum_arrived=1644 cum_done=1644 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1650 conv=9.2530 infer=29.8430 count=0 wh=480x640 rgbaSum=132076100 stages=-
+STAGE n=1680 conv=7.4606 infer=26.9459 count=0 wh=480x640 rgbaSum=132793889 stages=-
+RATE win=30 arrive=26.30 done=26.30 dropped_in_win=0 cum_arrived=1697 cum_done=1697 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=33.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1710 conv=2.7328 infer=18.9112 count=0 wh=480x640 rgbaSum=132761114 stages=-
+STAGE n=1740 conv=9.8397 infer=22.0030 count=0 wh=480x640 rgbaSum=132817721 stages=-
+RATE win=31 arrive=31.48 done=31.48 dropped_in_win=0 cum_arrived=1761 cum_done=1761 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=31.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=40.0
+STAGE n=1770 conv=2.9075 infer=19.1419 count=0 wh=480x640 rgbaSum=132675057 stages=-
+STAGE n=1800 conv=3.9725 infer=19.3684 count=0 wh=480x640 rgbaSum=132708973 stages=-
+RATE win=32 arrive=32.39 done=32.39 dropped_in_win=0 cum_arrived=1826 cum_done=1826 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1830 conv=2.5084 infer=19.3284 count=0 wh=480x640 rgbaSum=132771401 stages=-
+STAGE n=1860 conv=2.7425 infer=17.8739 count=0 wh=480x640 rgbaSum=133005214 stages=-
+STAGE n=1890 conv=6.8228 infer=21.2708 count=0 wh=480x640 rgbaSum=133047975 stages=-
+RATE win=33 arrive=32.48 done=32.48 dropped_in_win=0 cum_arrived=1891 cum_done=1891 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=29.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1920 conv=2.5828 infer=19.7505 count=0 wh=480x640 rgbaSum=133036773 stages=-
+STAGE n=1950 conv=2.5019 infer=18.5292 count=0 wh=480x640 rgbaSum=133054229 stages=-
+RATE win=34 arrive=35.71 done=35.71 dropped_in_win=0 cum_arrived=1963 cum_done=1963 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=1980 conv=8.8752 infer=25.1052 count=0 wh=480x640 rgbaSum=133034447 stages=-
+STAGE n=2010 conv=4.7023 infer=23.5512 count=0 wh=480x640 rgbaSum=133047702 stages=-
+RATE win=35 arrive=31.75 done=31.75 dropped_in_win=0 cum_arrived=2027 cum_done=2027 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=30.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=2040 conv=2.4495 infer=19.6770 count=0 wh=480x640 rgbaSum=133022475 stages=-
+STAGE n=2070 conv=2.8259 infer=18.8764 count=0 wh=480x640 rgbaSum=133006077 stages=-
+STAGE n=2100 conv=3.0473 infer=28.6294 count=0 wh=480x640 rgbaSum=132989654 stages=-
+RATE win=36 arrive=37.15 done=37.64 dropped_in_win=0 cum_arrived=2102 cum_done=2103 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=2130 conv=2.5681 infer=18.6642 count=0 wh=480x640 rgbaSum=132870824 stages=-
+STAGE n=2160 conv=2.6338 infer=21.2931 count=0 wh=480x640 rgbaSum=132978900 stages=-
+RATE win=37 arrive=35.64 done=35.15 dropped_in_win=0 cum_arrived=2174 cum_done=2174 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=2190 conv=3.0297 infer=17.9178 count=0 wh=480x640 rgbaSum=132972700 stages=-
+STAGE n=2220 conv=3.0075 infer=22.4756 count=0 wh=480x640 rgbaSum=132903709 stages=-
+RATE win=38 arrive=30.86 done=31.36 dropped_in_win=0 cum_arrived=2236 cum_done=2237 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=30.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=40.0
+STAGE n=2250 conv=4.2323 infer=21.3908 count=0 wh=480x640 rgbaSum=132991424 stages=-
+STAGE n=2280 conv=3.0314 infer=19.1847 count=0 wh=480x640 rgbaSum=133045710 stages=-
+STAGE n=2310 conv=2.6672 infer=20.1817 count=0 wh=480x640 rgbaSum=133030862 stages=-
+RATE win=39 arrive=36.93 done=36.93 dropped_in_win=0 cum_arrived=2310 cum_done=2311 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2340 conv=2.5375 infer=18.3239 count=0 wh=480x640 rgbaSum=133018656 stages=-
+STAGE n=2370 conv=4.3509 infer=17.4987 count=0 wh=480x640 rgbaSum=133071858 stages=-
+RATE win=40 arrive=30.45 done=29.96 dropped_in_win=0 cum_arrived=2371 cum_done=2371 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=29.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=41.0
+STAGE n=2400 conv=3.4652 infer=20.0553 count=0 wh=480x640 rgbaSum=132979835 stages=-
+STAGE n=2430 conv=2.6263 infer=24.0752 count=0 wh=480x640 rgbaSum=132928639 stages=-
+RATE win=41 arrive=32.23 done=32.23 dropped_in_win=0 cum_arrived=2437 cum_done=2437 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=28.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2460 conv=9.2808 infer=27.8630 count=0 wh=480x640 rgbaSum=132497177 stages=-
+STAGE n=2490 conv=3.1492 infer=21.6767 count=0 wh=480x640 rgbaSum=132559633 stages=-
+RATE win=42 arrive=30.30 done=30.30 dropped_in_win=0 cum_arrived=2498 cum_done=2498 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2520 conv=3.6775 infer=21.5956 count=0 wh=480x640 rgbaSum=132879292 stages=-
+STAGE n=2550 conv=2.5536 infer=22.5311 count=0 wh=480x640 rgbaSum=130852319 stages=-
+RATE win=43 arrive=33.90 done=33.90 dropped_in_win=0 cum_arrived=2566 cum_done=2566 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2580 conv=3.1064 infer=20.1241 count=0 wh=480x640 rgbaSum=132563685 stages=-
+STAGE n=2610 conv=3.7300 infer=19.3997 count=0 wh=480x640 rgbaSum=132629535 stages=-
+RATE win=44 arrive=36.09 done=36.09 dropped_in_win=0 cum_arrived=2639 cum_done=2639 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2640 conv=2.6945 infer=23.7673 count=0 wh=480x640 rgbaSum=132649846 stages=-
+STAGE n=2670 conv=2.4948 infer=17.4636 count=0 wh=480x640 rgbaSum=132537743 stages=-
+STAGE n=2700 conv=9.0709 infer=25.4802 count=0 wh=480x640 rgbaSum=132533957 stages=-
+RATE win=45 arrive=38.46 done=38.46 dropped_in_win=0 cum_arrived=2716 cum_done=2716 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2730 conv=3.0031 infer=19.1675 count=0 wh=480x640 rgbaSum=131475874 stages=-
+STAGE n=2760 conv=2.9781 infer=19.2200 count=0 wh=480x640 rgbaSum=131471405 stages=-
+STAGE n=2790 conv=3.5266 infer=24.5997 count=0 wh=480x640 rgbaSum=131427753 stages=-
+RATE win=46 arrive=38.48 done=38.48 dropped_in_win=0 cum_arrived=2793 cum_done=2793 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2820 conv=2.6170 infer=20.8089 count=0 wh=480x640 rgbaSum=131469787 stages=-
+STAGE n=2850 conv=3.1639 infer=20.6794 count=0 wh=480x640 rgbaSum=131515363 stages=-
+RATE win=47 arrive=36.12 done=36.12 dropped_in_win=0 cum_arrived=2866 cum_done=2866 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2880 conv=2.4995 infer=16.7883 count=0 wh=480x640 rgbaSum=94766052 stages=-
+STAGE n=2910 conv=2.7063 infer=20.4753 count=0 wh=480x640 rgbaSum=89600532 stages=-
+RATE win=48 arrive=34.91 done=34.91 dropped_in_win=0 cum_arrived=2937 cum_done=2937 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=2940 conv=5.0525 infer=27.4206 count=1 wh=480x640 rgbaSum=97849722 stages=17.5322|1.3466|15.3603|0.0494|0.0714|9.3870|0.1208|0.2580|15.1023
+STAGE n=2970 conv=7.6375 infer=33.7337 count=1 wh=480x640 rgbaSum=97432227 stages=25.4517|1.5488|23.0633|0.0384|0.1013|7.7853|0.0659|0.3655|22.6978
+RATE win=49 arrive=29.93 done=29.93 dropped_in_win=0 cum_arrived=2997 cum_done=2997 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3000 conv=11.2741 infer=28.5625 count=0 wh=480x640 rgbaSum=95600860 stages=-
+STAGE n=3030 conv=2.9445 infer=14.1869 count=0 wh=480x640 rgbaSum=92524309 stages=-
+STAGE n=3060 conv=2.6070 infer=18.3395 count=0 wh=480x640 rgbaSum=92880752 stages=-
+RATE win=50 arrive=36.29 done=36.29 dropped_in_win=0 cum_arrived=3071 cum_done=3071 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3090 conv=10.8177 infer=29.5605 count=1 wh=480x640 rgbaSum=93196136 stages=21.3900|2.9450|17.6222|0.0297|0.1123|7.8208|0.0459|0.3147|17.3075
+STAGE n=3120 conv=3.3642 infer=24.3269 count=1 wh=480x640 rgbaSum=93915615 stages=20.1205|1.3980|17.9333|0.0261|0.1091|3.9205|0.0358|0.3612|17.5720
+RATE win=51 arrive=27.74 done=27.74 dropped_in_win=0 cum_arrived=3128 cum_done=3128 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=33.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3150 conv=2.6784 infer=17.7344 count=0 wh=480x640 rgbaSum=96414794 stages=-
+STAGE n=3180 conv=6.3462 infer=18.9652 count=0 wh=480x640 rgbaSum=102992020 stages=-
+RATE win=52 arrive=30.30 done=30.30 dropped_in_win=0 cum_arrived=3189 cum_done=3189 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3210 conv=2.8659 infer=20.8388 count=0 wh=480x640 rgbaSum=102593303 stages=-
+STAGE n=3240 conv=2.4992 infer=18.0128 count=0 wh=480x640 rgbaSum=102478746 stages=-
+RATE win=53 arrive=34.99 done=35.49 dropped_in_win=0 cum_arrived=3260 cum_done=3261 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3270 conv=2.5433 infer=24.3389 count=0 wh=480x640 rgbaSum=91405992 stages=-
+STAGE n=3300 conv=2.9155 infer=16.2144 count=0 wh=480x640 rgbaSum=98242746 stages=-
+RATE win=54 arrive=34.60 done=34.11 dropped_in_win=0 cum_arrived=3330 cum_done=3330 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3330 conv=3.2233 infer=16.3502 count=0 wh=480x640 rgbaSum=99857441 stages=-
+STAGE n=3360 conv=3.1361 infer=18.8344 count=0 wh=480x640 rgbaSum=100317094 stages=-
+STAGE n=3390 conv=2.5703 infer=19.9945 count=0 wh=480x640 rgbaSum=100435902 stages=-
+RATE win=55 arrive=36.46 done=36.46 dropped_in_win=0 cum_arrived=3403 cum_done=3403 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3420 conv=3.9333 infer=20.5466 count=0 wh=480x640 rgbaSum=105565294 stages=-
+STAGE n=3450 conv=10.1089 infer=34.1673 count=0 wh=480x640 rgbaSum=103097938 stages=-
+RATE win=56 arrive=30.11 done=30.11 dropped_in_win=0 cum_arrived=3464 cum_done=3464 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=29.00 rt_empty_p50=29.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3480 conv=3.0923 infer=17.9902 count=0 wh=480x640 rgbaSum=103010634 stages=-
+STAGE n=3510 conv=10.7792 infer=32.0350 count=0 wh=480x640 rgbaSum=102442221 stages=-
+RATE win=57 arrive=26.59 done=26.59 dropped_in_win=0 cum_arrived=3518 cum_done=3518 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=32.00 rt_empty_p50=32.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=41.0
+STAGE n=3540 conv=3.2594 infer=23.6213 count=0 wh=480x640 rgbaSum=139634668 stages=-
+STAGE n=3570 conv=2.6484 infer=22.2455 count=0 wh=480x640 rgbaSum=131908001 stages=-
+RATE win=58 arrive=32.93 done=32.93 dropped_in_win=0 cum_arrived=3584 cum_done=3584 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=32.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3600 conv=9.9334 infer=25.7222 count=0 wh=480x640 rgbaSum=74042244 stages=-
+STAGE n=3630 conv=2.6286 infer=19.0070 count=0 wh=480x640 rgbaSum=120968370 stages=-
+RATE win=59 arrive=34.95 done=34.95 dropped_in_win=0 cum_arrived=3654 cum_done=3654 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=34.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3660 conv=2.7391 infer=23.9323 count=1 wh=480x640 rgbaSum=167483158 stages=19.8764|1.9139|16.9523|0.0302|0.5094|3.3639|0.0408|0.2956|16.6567
+STAGE n=3690 conv=2.6752 infer=18.0933 count=0 wh=480x640 rgbaSum=85125857 stages=-
+RATE win=60 arrive=31.50 done=31.50 dropped_in_win=0 cum_arrived=3717 cum_done=3717 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=33.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3720 conv=2.7912 infer=19.2647 count=0 wh=480x640 rgbaSum=92909688 stages=-
+STAGE n=3750 conv=2.7337 infer=27.3172 count=1 wh=480x640 rgbaSum=109504599 stages=20.3394|1.6719|17.9259|0.0283|0.1530|6.6400|0.0356|0.3181|17.6078
+RATE win=61 arrive=27.30 done=27.30 dropped_in_win=0 cum_arrived=3772 cum_done=3772 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3780 conv=2.4898 infer=24.9905 count=1 wh=480x640 rgbaSum=107685509 stages=20.2625|2.2277|16.8400|0.0395|0.1850|3.9892|0.0908|0.3238|16.5163
+STAGE n=3810 conv=4.6872 infer=26.5955 count=1 wh=480x640 rgbaSum=108087006 stages=22.6413|1.8419|19.9620|0.0316|0.2091|3.5922|0.0342|0.3331|19.6289
+RATE win=62 arrive=27.99 done=27.99 dropped_in_win=0 cum_arrived=3828 cum_done=3828 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=34.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3840 conv=10.3441 infer=38.8316 count=1 wh=480x640 rgbaSum=108124981 stages=32.9408|4.8811|24.0287|0.0987|0.8019|4.6966|0.1027|0.3522|23.6766
+STAGE n=3870 conv=7.9294 infer=23.6858 count=1 wh=480x640 rgbaSum=109892697 stages=19.6314|2.0241|16.7669|0.0239|0.1742|3.7078|0.0394|0.3347|16.4322
+RATE win=63 arrive=24.50 done=24.50 dropped_in_win=0 cum_arrived=3877 cum_done=3877 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=32.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=41.0
+STAGE n=3900 conv=4.2258 infer=24.4050 count=1 wh=480x640 rgbaSum=108062350 stages=20.0319|1.9530|17.2166|0.0375|0.2389|3.9309|0.0330|0.3933|16.8233
+STAGE n=3930 conv=4.2402 infer=33.4438 count=1 wh=480x640 rgbaSum=107947146 stages=28.0508|1.8255|22.4967|0.0792|0.5461|4.4977|0.0989|0.3628|22.1339
+RATE win=64 arrive=30.50 done=30.50 dropped_in_win=0 cum_arrived=3939 cum_done=3939 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=30.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=3960 conv=2.9900 infer=24.3173 count=1 wh=480x640 rgbaSum=109911011 stages=20.4005|1.8963|17.7270|0.0230|0.1939|3.5527|0.0347|0.3739|17.3531
+STAGE n=3990 conv=2.5164 infer=24.3637 count=1 wh=480x640 rgbaSum=109456037 stages=20.0750|1.7791|17.5338|0.0361|0.0998|3.9816|0.0547|0.2937|17.2400
+RATE win=65 arrive=28.67 done=28.67 dropped_in_win=0 cum_arrived=3997 cum_done=3997 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=34.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4020 conv=3.4259 infer=22.7927 count=1 wh=480x640 rgbaSum=109565812 stages=18.7467|1.6891|16.2134|0.0222|0.2086|3.6500|0.0414|0.3284|15.8850
+STAGE n=4050 conv=3.4564 infer=23.8264 count=0 wh=480x640 rgbaSum=107477835 stages=-
+RATE win=66 arrive=28.61 done=28.61 dropped_in_win=0 cum_arrived=4055 cum_done=4055 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4080 conv=2.9402 infer=30.5013 count=1 wh=480x640 rgbaSum=113945249 stages=24.2261|1.8600|21.6350|0.0309|0.1834|5.7959|0.0614|0.4392|21.1958
+RATE win=67 arrive=25.96 done=25.96 dropped_in_win=0 cum_arrived=4107 cum_done=4107 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4110 conv=4.4402 infer=32.3428 count=1 wh=480x640 rgbaSum=113638290 stages=23.2942|2.9564|19.3472|0.0416|0.1456|8.6800|0.0623|0.3242|19.0230
+STAGE n=4140 conv=3.2047 infer=57.0850 count=1 wh=480x640 rgbaSum=113106932 stages=50.8042|7.8375|42.2003|0.0392|0.1395|5.9163|0.0872|0.1809|42.0194
+RATE win=68 arrive=18.08 done=18.08 dropped_in_win=0 cum_arrived=4144 cum_done=4144 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=50.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4170 conv=9.9048 infer=32.5600 count=0 wh=480x640 rgbaSum=143036626 stages=-
+RATE win=69 arrive=24.15 done=24.15 dropped_in_win=0 cum_arrived=4193 cum_done=4193 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=34.00 prep_hit_p50=2.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4200 conv=9.1053 infer=24.4094 count=1 wh=480x640 rgbaSum=133315463 stages=20.1450|1.6695|17.7222|0.0334|0.1217|3.9809|0.0333|0.2984|17.4237
+STAGE n=4230 conv=3.0314 infer=20.4816 count=0 wh=480x640 rgbaSum=147540067 stages=-
+RATE win=70 arrive=31.47 done=31.47 dropped_in_win=0 cum_arrived=4256 cum_done=4256 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4260 conv=2.9480 infer=23.8500 count=0 wh=480x640 rgbaSum=153006182 stages=-
+STAGE n=4290 conv=3.6117 infer=23.4725 count=0 wh=480x640 rgbaSum=154502895 stages=-
+STAGE n=4320 conv=2.4919 infer=19.3038 count=0 wh=480x640 rgbaSum=151789618 stages=-
+RATE win=71 arrive=32.16 done=32.66 dropped_in_win=0 cum_arrived=4321 cum_done=4322 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4350 conv=3.4930 infer=20.2378 count=0 wh=480x640 rgbaSum=150261028 stages=-
+STAGE n=4380 conv=2.7995 infer=20.4955 count=0 wh=480x640 rgbaSum=150900750 stages=-
+RATE win=72 arrive=35.31 done=34.81 dropped_in_win=0 cum_arrived=4392 cum_done=4392 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4410 conv=3.3205 infer=18.7405 count=0 wh=480x640 rgbaSum=150986163 stages=-
+STAGE n=4440 conv=2.6783 infer=26.0481 count=0 wh=480x640 rgbaSum=151663694 stages=-
+RATE win=73 arrive=35.43 done=35.43 dropped_in_win=0 cum_arrived=4463 cum_done=4463 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4470 conv=2.5173 infer=23.4947 count=0 wh=480x640 rgbaSum=151552626 stages=-
+STAGE n=4500 conv=10.5958 infer=21.3991 count=0 wh=480x640 rgbaSum=150183462 stages=-
+STAGE n=4530 conv=7.7263 infer=20.0311 count=0 wh=480x640 rgbaSum=150071398 stages=-
+RATE win=74 arrive=33.61 done=33.61 dropped_in_win=0 cum_arrived=4531 cum_done=4531 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4560 conv=5.0161 infer=33.0083 count=0 wh=480x640 rgbaSum=150215333 stages=-
+STAGE n=4590 conv=3.1091 infer=21.8770 count=0 wh=480x640 rgbaSum=150383742 stages=-
+RATE win=75 arrive=33.38 done=33.38 dropped_in_win=0 cum_arrived=4598 cum_done=4598 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4620 conv=3.0114 infer=14.9583 count=0 wh=480x640 rgbaSum=151843393 stages=-
+STAGE n=4650 conv=2.4653 infer=18.8333 count=0 wh=480x640 rgbaSum=152509457 stages=-
+RATE win=76 arrive=37.35 done=37.35 dropped_in_win=0 cum_arrived=4673 cum_done=4673 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4680 conv=3.3369 infer=22.1438 count=0 wh=480x640 rgbaSum=152659941 stages=-
+STAGE n=4710 conv=2.6228 infer=20.6828 count=0 wh=480x640 rgbaSum=151124993 stages=-
+STAGE n=4740 conv=3.7081 infer=18.0342 count=0 wh=480x640 rgbaSum=150894688 stages=-
+RATE win=77 arrive=40.32 done=40.32 dropped_in_win=0 cum_arrived=4754 cum_done=4754 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4770 conv=2.8783 infer=24.9141 count=0 wh=480x640 rgbaSum=150975808 stages=-
+STAGE n=4800 conv=2.6670 infer=22.1945 count=0 wh=480x640 rgbaSum=152789478 stages=-
+RATE win=78 arrive=28.77 done=28.77 dropped_in_win=0 cum_arrived=4812 cum_done=4812 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=30.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=42.0
+STAGE n=4830 conv=10.9439 infer=28.2677 count=0 wh=480x640 rgbaSum=152605631 stages=-
+STAGE n=4860 conv=3.5163 infer=18.6386 count=0 wh=480x640 rgbaSum=152412765 stages=-
+RATE win=79 arrive=27.03 done=27.03 dropped_in_win=0 cum_arrived=4867 cum_done=4867 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=33.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=42.0
+STAGE n=4890 conv=9.6156 infer=22.4525 count=0 wh=480x640 rgbaSum=150139510 stages=-
+STAGE n=4920 conv=3.7989 infer=29.8931 count=0 wh=480x640 rgbaSum=150316691 stages=-
+RATE win=80 arrive=27.05 done=27.05 dropped_in_win=0 cum_arrived=4922 cum_done=4922 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=31.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=42.0
+STAGE n=4950 conv=4.0623 infer=40.5888 count=0 wh=480x640 rgbaSum=149461447 stages=-
+RATE win=81 arrive=16.49 done=16.49 dropped_in_win=0 cum_arrived=4956 cum_done=4956 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=40.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=4980 conv=2.8395 infer=20.4755 count=0 wh=480x640 rgbaSum=148154751 stages=-
+STAGE n=5010 conv=3.3038 infer=18.5848 count=0 wh=480x640 rgbaSum=148620519 stages=-
+RATE win=82 arrive=31.90 done=31.90 dropped_in_win=0 cum_arrived=5020 cum_done=5020 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=30.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=5040 conv=3.0033 infer=16.6706 count=0 wh=480x640 rgbaSum=149701396 stages=-
+STAGE n=5070 conv=2.5580 infer=20.5894 count=0 wh=480x640 rgbaSum=148974849 stages=-
+RATE win=83 arrive=30.15 done=30.15 dropped_in_win=0 cum_arrived=5081 cum_done=5081 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=31.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=5100 conv=3.4206 infer=22.5194 count=0 wh=480x640 rgbaSum=148951567 stages=-
+STAGE n=5130 conv=10.2308 infer=25.7153 count=0 wh=480x640 rgbaSum=149299675 stages=-
+RATE win=84 arrive=30.51 done=30.51 dropped_in_win=0 cum_arrived=5143 cum_done=5143 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=30.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=42.0
+STAGE n=5160 conv=3.4269 infer=22.4531 count=0 wh=480x640 rgbaSum=149385096 stages=-
+STAGE n=5190 conv=2.5309 infer=33.9995 count=0 wh=480x640 rgbaSum=148995191 stages=-
+RATE win=85 arrive=32.15 done=32.15 dropped_in_win=0 cum_arrived=5208 cum_done=5208 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=27.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5220 conv=3.5064 infer=23.1223 count=0 wh=480x640 rgbaSum=150365241 stages=-
+STAGE n=5250 conv=5.9269 infer=23.1413 count=0 wh=480x640 rgbaSum=151163831 stages=-
+RATE win=86 arrive=33.35 done=33.35 dropped_in_win=0 cum_arrived=5275 cum_done=5275 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=28.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5280 conv=2.5242 infer=19.2328 count=0 wh=480x640 rgbaSum=156092120 stages=-
+STAGE n=5310 conv=2.7244 infer=18.8989 count=0 wh=480x640 rgbaSum=142962839 stages=-
+STAGE n=5340 conv=2.6567 infer=18.9925 count=0 wh=480x640 rgbaSum=134212503 stages=-
+RATE win=87 arrive=35.87 done=35.87 dropped_in_win=0 cum_arrived=5347 cum_done=5347 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5370 conv=3.4384 infer=20.2192 count=0 wh=480x640 rgbaSum=132619290 stages=-
+STAGE n=5400 conv=2.9373 infer=22.9895 count=0 wh=480x640 rgbaSum=132738572 stages=-
+RATE win=88 arrive=39.32 done=39.32 dropped_in_win=0 cum_arrived=5426 cum_done=5426 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5430 conv=2.5372 infer=18.7598 count=0 wh=480x640 rgbaSum=132754367 stages=-
+STAGE n=5460 conv=3.3972 infer=24.7208 count=0 wh=480x640 rgbaSum=132714608 stages=-
+STAGE n=5490 conv=2.9031 infer=19.3655 count=0 wh=480x640 rgbaSum=132747707 stages=-
+RATE win=89 arrive=38.21 done=38.71 dropped_in_win=0 cum_arrived=5503 cum_done=5504 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=24.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5520 conv=2.5669 infer=16.9833 count=0 wh=480x640 rgbaSum=132517936 stages=-
+STAGE n=5550 conv=3.0800 infer=20.6795 count=0 wh=480x640 rgbaSum=132703957 stages=-
+RATE win=90 arrive=37.06 done=36.56 dropped_in_win=0 cum_arrived=5578 cum_done=5578 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=26.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5580 conv=2.7327 infer=24.3509 count=0 wh=480x640 rgbaSum=132700405 stages=-
+STAGE n=5610 conv=3.0166 infer=19.4767 count=0 wh=480x640 rgbaSum=132638263 stages=-
+STAGE n=5640 conv=3.0063 infer=19.0000 count=0 wh=480x640 rgbaSum=132589804 stages=-
+RATE win=91 arrive=34.74 done=34.74 dropped_in_win=0 cum_arrived=5648 cum_done=5648 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5670 conv=3.4136 infer=26.2217 count=0 wh=480x640 rgbaSum=132547377 stages=-
+STAGE n=5700 conv=10.6747 infer=22.2123 count=0 wh=480x640 rgbaSum=132561409 stages=-
+RATE win=92 arrive=33.50 done=33.50 dropped_in_win=0 cum_arrived=5715 cum_done=5715 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=36.00 rt_empty_p50=28.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=3 battC=43.0
+STAGE n=5730 conv=2.5669 infer=15.8958 count=0 wh=480x640 rgbaSum=132575734 stages=-
+STAGE n=5760 conv=3.2452 infer=20.6084 count=0 wh=480x640 rgbaSum=132424960 stages=-
+RATE win=93 arrive=35.32 done=35.32 dropped_in_win=0 cum_arrived=5786 cum_done=5786 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=35.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=3 battC=43.0
+STAGE n=5790 conv=4.2700 infer=28.2755 count=1 wh=480x640 rgbaSum=118753695 stages=24.0206|2.3005|20.8956|0.0245|0.1155|3.7550|0.0987|0.4072|20.4884
+STAGE n=5820 conv=9.4441 infer=33.0181 count=1 wh=480x640 rgbaSum=109680932 stages=26.7275|5.7381|19.9523|0.0291|0.2738|5.6011|0.1073|0.3659|19.5864
+RATE win=94 arrive=21.14 done=21.14 dropped_in_win=0 cum_arrived=5829 cum_done=5829 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=43.00 rt_empty_p50=25.00 prep_hit_p50=2.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5850 conv=2.7112 infer=24.7536 count=1 wh=480x640 rgbaSum=109760904 stages=18.5409|1.6856|15.7555|0.0327|0.2489|5.7436|0.0484|0.3131|15.4423
+RATE win=95 arrive=22.02 done=22.02 dropped_in_win=0 cum_arrived=5874 cum_done=5874 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=41.00 rt_empty_p50=25.00 prep_hit_p50=2.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5880 conv=9.5072 infer=35.1822 count=1 wh=480x640 rgbaSum=109811733 stages=28.9661|5.8914|22.1691|0.0278|0.2353|5.4905|0.1353|0.5902|21.5789
+STAGE n=5910 conv=3.1039 infer=28.4166 count=1 wh=480x640 rgbaSum=111085198 stages=22.1908|2.5134|18.8264|0.0259|0.1470|5.8594|0.0522|0.3406|18.4858
+RATE win=96 arrive=22.89 done=22.89 dropped_in_win=0 cum_arrived=5920 cum_done=5920 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=38.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5940 conv=6.6734 infer=29.9041 count=1 wh=480x640 rgbaSum=111064029 stages=20.3397|2.0811|17.3441|0.0575|0.2630|9.0309|0.0786|0.3328|17.0112
+RATE win=97 arrive=24.46 done=24.46 dropped_in_win=0 cum_arrived=5969 cum_done=5969 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=37.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5970 conv=2.9589 infer=25.1531 count=1 wh=480x640 rgbaSum=110938390 stages=19.4541|2.0105|16.6003|0.0278|0.2317|5.2562|0.0438|0.3372|16.2631
+STAGE n=6000 conv=2.5891 infer=35.2841 count=1 wh=480x640 rgbaSum=109604962 stages=27.1606|2.0338|24.3992|0.0272|0.2070|7.7233|0.0342|0.4567|23.9425
+RATE win=98 arrive=21.90 done=21.90 dropped_in_win=0 cum_arrived=6013 cum_done=6013 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=39.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=6030 conv=3.3798 infer=41.6637 count=1 wh=480x640 rgbaSum=109963453 stages=35.0072|2.8012|31.4294|0.0291|0.2050|6.2348|0.0517|0.4039|31.0255
+RATE win=99 arrive=22.91 done=22.91 dropped_in_win=0 cum_arrived=6059 cum_done=6059 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=34.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=6060 conv=2.8033 infer=32.1072 count=1 wh=480x640 rgbaSum=110291866 stages=24.3992|2.4858|21.1709|0.0286|0.2236|7.2712|0.0617|0.3517|20.8192
+STAGE n=6090 conv=3.3623 infer=30.4195 count=1 wh=480x640 rgbaSum=110225072 stages=23.4402|3.1298|19.5603|0.0508|0.2277|6.5570|0.0359|0.2938|19.2666
+RATE win=100 arrive=29.56 done=29.56 dropped_in_win=0 cum_arrived=6119 cum_done=6119 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=33.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=6120 conv=3.8013 infer=40.6873 count=1 wh=480x640 rgbaSum=110138051 stages=31.6619|2.5536|27.9205|0.0512|0.2748|8.5322|0.0516|0.3303|27.5902
+STAGE n=6150 conv=2.8948 infer=26.7078 count=1 wh=480x640 rgbaSum=110361786 stages=21.1045|1.9736|18.4159|0.0227|0.1820|5.2120|0.0411|0.1791|18.2369
+RATE win=101 arrive=26.76 done=26.76 dropped_in_win=0 cum_arrived=6173 cum_done=6173 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=33.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=6180 conv=3.8612 infer=26.9316 count=1 wh=480x640 rgbaSum=110397664 stages=20.4736|1.6230|18.1262|0.0288|0.1677|6.1038|0.0397|0.2809|17.8453
+STAGE n=6210 conv=3.4311 infer=26.2827 count=1 wh=480x640 rgbaSum=110098056 stages=19.2484|1.7327|16.6700|0.0316|0.2725|6.2070|0.1680|0.2881|16.3819
+RATE win=102 arrive=21.47 done=21.47 dropped_in_win=0 cum_arrived=6216 cum_done=6216 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=44.00 rt_empty_p50=25.00 prep_hit_p50=2.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=6240 conv=2.5731 infer=26.5664 count=1 wh=480x640 rgbaSum=110478599 stages=20.8353|1.7841|18.1964|0.0269|0.1883|5.3645|0.0384|0.2942|17.9022
+RATE win=103 arrive=22.34 done=22.34 dropped_in_win=0 cum_arrived=6261 cum_done=6261 cum_dropped=0 gear=7 hit_n=30 empty_n=30 rt_hit_p50=41.00 rt_empty_p50=25.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+GEAR SWITCH -> 8 (视频+推理(全 NPU)：60fps 供给下测产能) settle restarts
+STAGE n=0 conv=7.6470 infer=38.4248 count=1 wh=480x640 rgbaSum=110717204 stages=32.0816|3.3673|27.5794|0.0505|0.3427|5.8112|0.0400|0.3733|27.2061
+STAGE n=0 conv=5.1459 infer=19.0863 count=1 wh=480x640 rgbaSum=110588439 stages=11.8906|1.8633|9.1127|0.0269|0.2766|6.6850|0.0552|0.1573|8.9553
+STAGE n=30 conv=4.8302 infer=21.1811 count=1 wh=480x640 rgbaSum=110738410 stages=14.8964|2.8733|10.6364|0.0464|0.4339|5.6528|0.0450|0.3006|10.3358
+STAGE n=60 conv=4.9836 infer=22.0761 count=1 wh=480x640 rgbaSum=110627484 stages=13.5956|1.6417|10.4867|0.0639|0.2927|7.9639|0.0544|0.2870|10.1997
+STAGE n=90 conv=3.0017 infer=21.9608 count=1 wh=480x640 rgbaSum=110607930 stages=15.8267|2.4798|12.4889|0.0294|0.2364|5.6838|0.0511|0.4033|12.0856
+STAGE n=120 conv=7.2527 infer=24.4598 count=1 wh=480x640 rgbaSum=110944272 stages=16.6566|4.7547|10.5017|0.0433|0.3469|7.1677|0.0650|2.1386|8.3631
+STAGE n=150 conv=5.4092 infer=20.9270 count=1 wh=480x640 rgbaSum=110963958 stages=14.4284|2.4170|10.6784|0.0384|0.2291|5.9980|0.0544|0.4902|10.1883
+STAGE n=180 conv=5.0567 infer=24.8775 count=1 wh=480x640 rgbaSum=110935712 stages=15.0177|3.0786|10.2631|0.0775|0.3862|9.2381|0.0431|0.8564|9.4067
+STAGE n=210 conv=4.4847 infer=29.2638 count=1 wh=480x640 rgbaSum=110852334 stages=22.3672|3.6748|17.3506|0.0391|0.3505|6.0284|0.1088|0.2906|17.0600
+STAGE n=240 conv=4.9620 infer=22.3059 count=1 wh=480x640 rgbaSum=110822535 stages=15.6455|2.6414|11.9213|0.0402|0.3552|5.9200|0.1217|0.4850|11.4362
+STAGE n=270 conv=6.0419 infer=13.0419 count=0 wh=480x640 rgbaSum=165841095 stages=-
+STAGE n=300 conv=4.4323 infer=13.1648 count=0 wh=480x640 rgbaSum=138616644 stages=-
+STAGE n=330 conv=3.7628 infer=12.5248 count=0 wh=480x640 rgbaSum=138045224 stages=-
+STAGE n=360 conv=2.8025 infer=11.7428 count=0 wh=480x640 rgbaSum=137675826 stages=-
+STAGE n=390 conv=3.3045 infer=13.8327 count=0 wh=480x640 rgbaSum=137680370 stages=-
+STAGE n=420 conv=4.6425 infer=13.0623 count=0 wh=480x640 rgbaSum=137113294 stages=-
+STAGE n=450 conv=9.6775 infer=16.8931 count=0 wh=480x640 rgbaSum=137047014 stages=-
+STAGE n=480 conv=5.0580 infer=13.5478 count=0 wh=480x640 rgbaSum=137106582 stages=-
+STAGE n=510 conv=3.4681 infer=19.7108 count=0 wh=480x640 rgbaSum=136758448 stages=-
+STAGE n=540 conv=3.7936 infer=10.7800 count=0 wh=480x640 rgbaSum=136662195 stages=-
+STAGE n=570 conv=2.8692 infer=13.9205 count=0 wh=480x640 rgbaSum=137004936 stages=-
+STAGE n=600 conv=4.9212 infer=13.8314 count=0 wh=480x640 rgbaSum=136944128 stages=-
+STAGE n=630 conv=4.9003 infer=14.3234 count=0 wh=480x640 rgbaSum=136551483 stages=-
+STAGE n=660 conv=3.0975 infer=11.4631 count=0 wh=480x640 rgbaSum=136572925 stages=-
+STAGE n=690 conv=5.4533 infer=13.7309 count=0 wh=480x640 rgbaSum=117443014 stages=-
+STAGE n=720 conv=3.3209 infer=18.9405 count=0 wh=480x640 rgbaSum=128375538 stages=-
+STAGE n=750 conv=6.0620 infer=13.0028 count=0 wh=480x640 rgbaSum=130762021 stages=-
+STAGE n=780 conv=2.9045 infer=12.8761 count=0 wh=480x640 rgbaSum=126995686 stages=-
+STAGE n=810 conv=3.2033 infer=16.6725 count=0 wh=480x640 rgbaSum=126075187 stages=-
+STAGE n=840 conv=3.4791 infer=10.3927 count=0 wh=480x640 rgbaSum=125970572 stages=-
+STAGE n=870 conv=4.3256 infer=10.9150 count=0 wh=480x640 rgbaSum=125887687 stages=-
+STAGE n=900 conv=3.5639 infer=10.9691 count=0 wh=480x640 rgbaSum=125855975 stages=-
+STAGE n=930 conv=3.7370 infer=13.0105 count=0 wh=480x640 rgbaSum=126012838 stages=-
+STAGE n=960 conv=8.6722 infer=29.5502 count=1 wh=480x640 rgbaSum=123175203 stages=23.5344|2.8394|17.3648|0.1784|0.2361|5.3623|0.1667|0.5339|16.8309
+STAGE n=990 conv=4.6567 infer=26.2350 count=1 wh=480x640 rgbaSum=116328312 stages=20.8272|2.7183|16.9355|0.0359|0.0869|4.9617|0.0834|0.5303|16.4052
+STAGE n=1020 conv=3.8128 infer=20.9870 count=1 wh=480x640 rgbaSum=119576853 stages=14.0420|2.8998|9.9720|0.0361|0.4384|6.1522|0.0792|0.5295|9.4425
+STAGE n=1050 conv=3.7208 infer=24.5617 count=1 wh=480x640 rgbaSum=118874687 stages=14.7770|2.9703|10.4891|0.0591|0.3670|9.1613|0.0591|0.5836|9.9055
+STAGE n=1080 conv=3.4383 infer=20.7953 count=1 wh=480x640 rgbaSum=117905065 stages=12.9581|2.1705|9.0430|0.0517|0.5739|6.8728|0.1084|0.5647|8.4783
+STAGE n=1110 conv=3.7030 infer=18.3653 count=1 wh=480x640 rgbaSum=118980317 stages=12.1173|2.4562|8.5294|0.0327|0.3555|5.6591|0.0420|0.4450|8.0844
+STAGE n=1140 conv=7.6717 infer=17.8500 count=1 wh=480x640 rgbaSum=118648105 stages=12.2417|2.5953|8.2384|0.0406|0.3041|5.0548|0.0550|0.5308|7.7077
+STAGE n=1170 conv=10.8102 infer=19.8442 count=1 wh=480x640 rgbaSum=118135992 stages=13.3900|3.3545|8.8214|0.0648|0.5187|5.6784|0.0511|0.4891|8.3323
+STAGE n=1200 conv=8.8614 infer=19.8300 count=1 wh=480x640 rgbaSum=118114166 stages=13.6214|3.2209|9.1456|0.0317|0.4091|5.5472|0.0477|0.6794|8.4663
+STAGE n=1230 conv=8.3239 infer=17.8931 count=1 wh=480x640 rgbaSum=117994519 stages=11.9828|2.6186|8.5441|0.0325|0.1820|5.5158|0.0514|0.6584|7.8856
+STAGE n=1260 conv=4.0173 infer=20.8947 count=1 wh=480x640 rgbaSum=118063186 stages=15.3225|1.6236|12.4216|0.0592|0.3292|5.0442|0.0434|0.2912|12.1303
+STAGE n=1290 conv=3.8336 infer=25.2781 count=1 wh=480x640 rgbaSum=118082702 stages=14.6034|2.2442|11.2475|0.0406|0.3233|10.1006|0.0709|0.4380|10.8095
+STAGE n=1320 conv=3.2917 infer=18.1659 count=1 wh=480x640 rgbaSum=117977708 stages=12.4602|2.4247|8.6142|0.0405|0.4311|5.0058|0.0573|0.5925|8.0217
+STAGE n=1350 conv=3.9075 infer=16.7770 count=1 wh=480x640 rgbaSum=117988866 stages=11.4864|2.3095|7.6578|0.0483|0.3539|4.7309|0.0491|0.4405|7.2173
+STAGE n=1380 conv=4.1311 infer=17.1917 count=1 wh=480x640 rgbaSum=117824262 stages=11.8877|2.6912|8.2533|0.0322|0.1920|4.8761|0.0464|0.5880|7.6653
+STAGE n=1410 conv=5.2780 infer=19.8275 count=1 wh=480x640 rgbaSum=118031290 stages=11.2483|2.6383|7.6009|0.0392|0.8581|7.4769|0.0488|0.4408|7.1602
+STAGE n=1440 conv=4.3177 infer=17.6614 count=1 wh=480x640 rgbaSum=118224979 stages=11.0428|2.0363|8.1452|0.0348|0.2492|6.1589|0.0411|0.3517|7.7934
+STAGE n=1470 conv=5.3433 infer=18.9822 count=1 wh=480x640 rgbaSum=117765860 stages=12.9578|2.5570|9.2230|0.0405|0.2463|5.5517|0.0489|0.5167|8.7063
+STAGE n=1500 conv=9.9923 infer=20.1561 count=1 wh=480x640 rgbaSum=111795340 stages=14.4352|4.6602|8.1561|0.0423|0.4866|4.9303|0.0616|0.6644|7.4917
+STAGE n=1530 conv=5.9180 infer=21.7472 count=1 wh=480x640 rgbaSum=114154773 stages=15.9783|3.0594|10.9275|0.0541|0.3473|5.2128|0.0427|0.5912|10.3363
+STAGE n=1560 conv=5.3677 infer=19.1262 count=1 wh=480x640 rgbaSum=115651261 stages=12.4353|2.9808|8.2070|0.0545|0.3803|6.0027|0.0886|0.6597|7.5473
+STAGE n=1590 conv=9.8975 infer=17.6833 count=1 wh=480x640 rgbaSum=115764130 stages=11.9009|1.9984|9.0047|0.0306|0.2952|5.2122|0.0383|0.3780|8.6267
+SETTLE done after 45 s gear=8
+STAGE n=0 conv=8.8278 infer=25.8222 count=1 wh=480x640 rgbaSum=115715557 stages=15.2859|2.4398|11.3294|0.0434|0.4786|9.8147|0.0494|0.4058|10.9236
+STAGE n=30 conv=5.0328 infer=18.4100 count=1 wh=480x640 rgbaSum=115513997 stages=12.2847|2.2984|8.8277|0.0364|0.3645|5.5444|0.0469|0.4878|8.3398
+STAGE n=60 conv=4.6827 infer=24.7217 count=1 wh=480x640 rgbaSum=115321313 stages=14.8438|2.1333|11.5356|0.0398|0.3750|9.2744|0.0528|0.4881|11.0475
+RATE win=104 arrive=32.66 done=32.66 dropped_in_win=0 cum_arrived=66 cum_done=66 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=26.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=90 conv=3.4484 infer=18.4652 count=1 wh=480x640 rgbaSum=114274447 stages=12.2686|1.7763|8.9261|0.0350|0.3717|5.5813|0.0653|0.3745|8.5516
+STAGE n=120 conv=4.4263 infer=17.4469 count=1 wh=480x640 rgbaSum=114191978 stages=12.0495|3.2775|7.6250|0.0287|0.3655|4.7698|0.0642|0.5297|7.0953
+RATE win=105 arrive=32.42 done=32.42 dropped_in_win=0 cum_arrived=131 cum_done=131 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=28.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=150 conv=4.3648 infer=16.4408 count=1 wh=480x640 rgbaSum=115192475 stages=11.0459|2.3608|7.5717|0.0306|0.3766|4.7914|0.0475|0.4545|7.1172
+STAGE n=180 conv=4.5041 infer=18.5848 count=1 wh=480x640 rgbaSum=114297727 stages=12.5902|2.8464|8.7417|0.0286|0.2752|5.4717|0.0472|0.5387|8.2030
+RATE win=106 arrive=32.42 done=32.42 dropped_in_win=0 cum_arrived=196 cum_done=196 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=26.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=210 conv=3.7583 infer=16.1805 count=1 wh=480x640 rgbaSum=114334520 stages=11.0750|2.4262|7.7569|0.0234|0.2530|4.6475|0.0411|0.6933|7.0636
+STAGE n=240 conv=4.4658 infer=18.2775 count=1 wh=480x640 rgbaSum=114371219 stages=10.7284|1.7942|7.5613|0.0375|0.4042|6.9064|0.0511|0.2892|7.2720
+RATE win=107 arrive=35.03 done=35.03 dropped_in_win=0 cum_arrived=267 cum_done=267 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=26.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=270 conv=4.4183 infer=17.3009 count=1 wh=480x640 rgbaSum=114287308 stages=10.9652|2.1886|7.4558|0.0400|0.4359|5.6494|0.0605|0.4441|7.0117
+STAGE n=300 conv=3.4205 infer=19.7838 count=1 wh=480x640 rgbaSum=114344973 stages=12.9462|1.9939|9.6584|0.0370|0.2838|6.3289|0.0447|0.3759|9.2825
+STAGE n=330 conv=4.3344 infer=19.3270 count=1 wh=480x640 rgbaSum=115363529 stages=12.8650|2.0828|8.8672|0.0552|0.6019|5.6644|0.0495|0.4405|8.4267
+RATE win=108 arrive=35.27 done=35.27 dropped_in_win=0 cum_arrived=338 cum_done=338 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=25.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=360 conv=3.4658 infer=15.6459 count=1 wh=480x640 rgbaSum=114127153 stages=10.5242|2.1100|7.5622|0.0258|0.3111|4.5975|0.0430|0.4058|7.1564
+STAGE n=390 conv=9.1305 infer=27.4036 count=1 wh=480x640 rgbaSum=114170011 stages=20.9941|4.2280|15.5205|0.0316|0.2927|5.7525|0.0859|0.3761|15.1444
+RATE win=109 arrive=33.35 done=33.35 dropped_in_win=0 cum_arrived=405 cum_done=405 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=27.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=420 conv=7.2505 infer=22.2944 count=1 wh=480x640 rgbaSum=114354249 stages=15.7837|3.1380|9.5584|0.0734|0.8859|5.1894|0.1098|0.8244|8.7341
+STAGE n=450 conv=8.7514 infer=19.0689 count=1 wh=480x640 rgbaSum=114289592 stages=13.3742|3.0270|9.3733|0.0358|0.3886|4.9361|0.1011|1.3103|8.0630
+RATE win=110 arrive=33.27 done=33.27 dropped_in_win=0 cum_arrived=472 cum_done=472 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=26.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=480 conv=3.2163 infer=16.6225 count=1 wh=480x640 rgbaSum=114321497 stages=11.5984|2.9997|7.4395|0.0469|0.2953|4.5028|0.0467|0.3777|7.0619
+STAGE n=510 conv=11.0231 infer=25.0225 count=1 wh=480x640 rgbaSum=114144992 stages=18.4491|6.0673|9.0097|0.0684|0.7375|5.5278|0.0597|0.8306|8.1791
+STAGE n=540 conv=6.7145 infer=20.3317 count=1 wh=480x640 rgbaSum=114345633 stages=13.3552|3.4075|8.5995|0.0416|0.4442|6.2869|0.0553|0.6653|7.9342
+RATE win=111 arrive=34.48 done=34.48 dropped_in_win=0 cum_arrived=541 cum_done=541 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=26.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=570 conv=4.2189 infer=30.5758 count=1 wh=480x640 rgbaSum=114239562 stages=13.0791|2.5523|9.3789|0.0631|0.3578|16.8848|0.0520|0.4419|8.9370
+STAGE n=600 conv=3.6636 infer=16.3055 count=1 wh=480x640 rgbaSum=114220262 stages=11.2959|1.8719|8.5109|0.0241|0.2711|4.5067|0.0597|0.2864|8.2245
+RATE win=112 arrive=37.07 done=37.07 dropped_in_win=0 cum_arrived=616 cum_done=616 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=23.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=630 conv=11.2392 infer=20.4792 count=1 wh=480x640 rgbaSum=114385486 stages=15.5847|3.0116|10.6642|0.0417|0.3381|4.3325|0.0409|2.0080|8.6562
+STAGE n=660 conv=3.0461 infer=17.0658 count=1 wh=480x640 rgbaSum=114177002 stages=11.1978|2.0142|8.1766|0.0341|0.3067|5.3200|0.0523|0.5870|7.5895
+RATE win=113 arrive=33.32 done=33.32 dropped_in_win=0 cum_arrived=683 cum_done=683 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=23.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=690 conv=10.8431 infer=23.3692 count=1 wh=480x640 rgbaSum=115266736 stages=17.9916|6.5138|10.1820|0.0286|0.3939|4.7433|0.0478|1.8316|8.3505
+STAGE n=720 conv=3.8173 infer=16.7016 count=1 wh=480x640 rgbaSum=115713296 stages=11.4664|2.6211|7.9944|0.0277|0.1792|4.8497|0.0372|0.3527|7.6417
+STAGE n=750 conv=3.6802 infer=17.5875 count=1 wh=480x640 rgbaSum=114263165 stages=10.8303|2.3039|7.4947|0.0309|0.2500|6.2795|0.0412|0.4402|7.0545
+RATE win=114 arrive=34.58 done=35.08 dropped_in_win=0 cum_arrived=753 cum_done=754 cum_dropped=0 gear=8 hit_n=30 empty_n=0 rt_hit_p50=28.00 rt_empty_p50=-1.00 prep_hit_p50=1.00 prep_empty_p50=-1.00 thermal=4 battC=43.0
+STAGE n=780 conv=2.9845 infer=16.5039 count=1 wh=480x640 rgbaSum=114475273 stages=11.0084|2.0448|7.6281|0.0358|0.3745|4.9278|0.0416|0.3514|7.2767
+STAGE n=810 conv=4.5758 infer=30.4244 count=1 wh=480x640 rgbaSum=114715605 stages=17.1614|2.5217|13.2156|0.0430|0.3267|12.5458|0.1208|0.5325|12.6831
+RATE win=115 arrive=37.70 done=37.70 dropped_in_win=0 cum_arrived=829 cum_done=830 cum_dropped=0 gear=8 hit_n=30 empty_n=15 rt_hit_p50=25.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=840 conv=3.9709 infer=10.5042 count=0 wh=480x640 rgbaSum=124707523 stages=-
+STAGE n=870 conv=5.6166 infer=18.8378 count=1 wh=480x640 rgbaSum=112170175 stages=12.3325|2.5145|8.3398|0.0578|0.4947|5.6236|0.1422|0.7111|7.6287
+STAGE n=900 conv=3.9067 infer=17.0527 count=1 wh=480x640 rgbaSum=116136976 stages=11.4769|2.4342|7.7139|0.0664|0.5320|4.8019|0.0516|0.4897|7.2242
+RATE win=116 arrive=38.61 done=38.12 dropped_in_win=0 cum_arrived=907 cum_done=907 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=930 conv=4.4670 infer=24.0533 count=1 wh=480x640 rgbaSum=116014006 stages=14.8981|4.4173|9.6344|0.0308|0.2725|8.5705|0.0602|0.3059|9.3284
+STAGE n=960 conv=4.3391 infer=11.6420 count=0 wh=480x640 rgbaSum=123984467 stages=-
+RATE win=117 arrive=38.92 done=38.92 dropped_in_win=0 cum_arrived=985 cum_done=985 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=990 conv=4.8664 infer=9.9002 count=0 wh=480x640 rgbaSum=123662139 stages=-
+STAGE n=1020 conv=4.4811 infer=12.6150 count=0 wh=480x640 rgbaSum=123447714 stages=-
+STAGE n=1050 conv=2.8289 infer=10.5441 count=0 wh=480x640 rgbaSum=123634741 stages=-
+RATE win=118 arrive=45.89 done=45.89 dropped_in_win=0 cum_arrived=1077 cum_done=1077 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1080 conv=5.9489 infer=11.3963 count=0 wh=480x640 rgbaSum=123737441 stages=-
+STAGE n=1110 conv=4.2847 infer=11.2230 count=0 wh=480x640 rgbaSum=123712766 stages=-
+STAGE n=1140 conv=5.9811 infer=11.7053 count=0 wh=480x640 rgbaSum=124263569 stages=-
+RATE win=119 arrive=42.25 done=42.25 dropped_in_win=0 cum_arrived=1162 cum_done=1162 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1170 conv=4.5383 infer=13.5431 count=0 wh=480x640 rgbaSum=124495314 stages=-
+STAGE n=1200 conv=3.2442 infer=18.9209 count=0 wh=480x640 rgbaSum=124222043 stages=-
+STAGE n=1230 conv=3.5600 infer=11.5530 count=0 wh=480x640 rgbaSum=123858621 stages=-
+RATE win=120 arrive=46.00 done=46.50 dropped_in_win=0 cum_arrived=1254 cum_done=1255 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1260 conv=4.2259 infer=14.1505 count=0 wh=480x640 rgbaSum=126107463 stages=-
+STAGE n=1290 conv=4.1117 infer=11.9302 count=0 wh=480x640 rgbaSum=126697053 stages=-
+STAGE n=1320 conv=3.7677 infer=10.9988 count=0 wh=480x640 rgbaSum=126436871 stages=-
+RATE win=121 arrive=38.65 done=38.16 dropped_in_win=0 cum_arrived=1332 cum_done=1332 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=1350 conv=4.3016 infer=11.4022 count=0 wh=480x640 rgbaSum=126712971 stages=-
+STAGE n=1380 conv=2.8539 infer=11.8203 count=0 wh=480x640 rgbaSum=126742147 stages=-
+STAGE n=1410 conv=3.0481 infer=10.7748 count=0 wh=480x640 rgbaSum=126544683 stages=-
+RATE win=122 arrive=44.32 done=44.32 dropped_in_win=0 cum_arrived=1421 cum_done=1421 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1440 conv=3.9642 infer=12.0438 count=0 wh=480x640 rgbaSum=126555201 stages=-
+STAGE n=1470 conv=3.2280 infer=10.3334 count=0 wh=480x640 rgbaSum=119133766 stages=-
+STAGE n=1500 conv=3.7958 infer=17.5664 count=0 wh=480x640 rgbaSum=118857389 stages=-
+RATE win=123 arrive=42.57 done=43.07 dropped_in_win=0 cum_arrived=1507 cum_done=1508 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1530 conv=3.5294 infer=9.3295 count=0 wh=480x640 rgbaSum=118451196 stages=-
+STAGE n=1560 conv=5.0213 infer=11.2311 count=0 wh=480x640 rgbaSum=118219652 stages=-
+STAGE n=1590 conv=4.0141 infer=10.4031 count=0 wh=480x640 rgbaSum=122687731 stages=-
+RATE win=124 arrive=49.58 done=49.58 dropped_in_win=0 cum_arrived=1607 cum_done=1608 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=15.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1620 conv=4.3519 infer=12.8861 count=0 wh=480x640 rgbaSum=121485361 stages=-
+STAGE n=1650 conv=4.5684 infer=9.6205 count=0 wh=480x640 rgbaSum=128014653 stages=-
+STAGE n=1680 conv=2.8775 infer=10.6400 count=0 wh=480x640 rgbaSum=127125172 stages=-
+RATE win=125 arrive=51.07 done=50.57 dropped_in_win=0 cum_arrived=1710 cum_done=1710 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=15.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1710 conv=4.6745 infer=8.7977 count=0 wh=480x640 rgbaSum=125420184 stages=-
+STAGE n=1740 conv=4.0770 infer=10.7713 count=0 wh=480x640 rgbaSum=126730306 stages=-
+STAGE n=1770 conv=4.2891 infer=9.9550 count=0 wh=480x640 rgbaSum=125453162 stages=-
+STAGE n=1800 conv=4.8134 infer=15.3700 count=0 wh=480x640 rgbaSum=125505764 stages=-
+RATE win=126 arrive=51.61 done=52.11 dropped_in_win=0 cum_arrived=1814 cum_done=1815 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1830 conv=4.6877 infer=11.3525 count=0 wh=480x640 rgbaSum=125435701 stages=-
+STAGE n=1860 conv=5.5631 infer=21.4239 count=0 wh=480x640 rgbaSum=125460965 stages=-
+STAGE n=1890 conv=4.8637 infer=11.0395 count=0 wh=480x640 rgbaSum=126781950 stages=-
+RATE win=127 arrive=49.20 done=48.71 dropped_in_win=0 cum_arrived=1913 cum_done=1913 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=1920 conv=3.2323 infer=9.4327 count=0 wh=480x640 rgbaSum=126905834 stages=-
+STAGE n=1950 conv=4.2736 infer=12.0956 count=0 wh=480x640 rgbaSum=126802491 stages=-
+STAGE n=1980 conv=4.9223 infer=9.4594 count=0 wh=480x640 rgbaSum=126874469 stages=-
+RATE win=128 arrive=42.55 done=42.55 dropped_in_win=0 cum_arrived=1999 cum_done=1999 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2010 conv=4.2398 infer=11.6786 count=0 wh=480x640 rgbaSum=126809030 stages=-
+STAGE n=2040 conv=2.6070 infer=8.9219 count=0 wh=480x640 rgbaSum=126881671 stages=-
+STAGE n=2070 conv=4.6994 infer=13.3753 count=0 wh=480x640 rgbaSum=125126485 stages=-
+RATE win=129 arrive=39.42 done=39.42 dropped_in_win=0 cum_arrived=2078 cum_done=2078 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2100 conv=4.4170 infer=11.0175 count=0 wh=480x640 rgbaSum=125366292 stages=-
+STAGE n=2130 conv=3.6181 infer=9.2214 count=0 wh=480x640 rgbaSum=125121513 stages=-
+STAGE n=2160 conv=4.6036 infer=16.9605 count=0 wh=480x640 rgbaSum=126757584 stages=-
+RATE win=130 arrive=41.11 done=41.11 dropped_in_win=0 cum_arrived=2161 cum_done=2161 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2190 conv=5.3386 infer=10.7789 count=0 wh=480x640 rgbaSum=126773031 stages=-
+STAGE n=2220 conv=3.2000 infer=9.6345 count=0 wh=480x640 rgbaSum=126784785 stages=-
+RATE win=131 arrive=40.86 done=40.86 dropped_in_win=0 cum_arrived=2243 cum_done=2243 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2250 conv=4.7467 infer=13.9891 count=0 wh=480x640 rgbaSum=126848299 stages=-
+STAGE n=2280 conv=4.5494 infer=14.4130 count=0 wh=480x640 rgbaSum=126782750 stages=-
+STAGE n=2310 conv=4.3839 infer=14.4834 count=0 wh=480x640 rgbaSum=126757664 stages=-
+RATE win=132 arrive=35.13 done=35.13 dropped_in_win=0 cum_arrived=2314 cum_done=2314 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2340 conv=3.7244 infer=12.6652 count=0 wh=480x640 rgbaSum=126821485 stages=-
+STAGE n=2370 conv=7.1034 infer=12.4038 count=0 wh=480x640 rgbaSum=126760251 stages=-
+RATE win=133 arrive=35.86 done=36.35 dropped_in_win=0 cum_arrived=2386 cum_done=2387 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=21.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2400 conv=7.0277 infer=13.4477 count=0 wh=480x640 rgbaSum=126937957 stages=-
+STAGE n=2430 conv=5.4572 infer=12.1777 count=0 wh=480x640 rgbaSum=126874295 stages=-
+STAGE n=2460 conv=4.7770 infer=21.2891 count=0 wh=480x640 rgbaSum=126897474 stages=-
+RATE win=134 arrive=38.71 done=38.21 dropped_in_win=0 cum_arrived=2464 cum_done=2464 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=21.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2490 conv=3.3850 infer=12.4016 count=0 wh=480x640 rgbaSum=126875353 stages=-
+STAGE n=2520 conv=5.7645 infer=16.6459 count=0 wh=480x640 rgbaSum=126838760 stages=-
+RATE win=135 arrive=41.65 done=41.65 dropped_in_win=0 cum_arrived=2548 cum_done=2548 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=23.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2550 conv=4.9689 infer=15.6384 count=0 wh=480x640 rgbaSum=127015226 stages=-
+STAGE n=2580 conv=6.5039 infer=22.6581 count=0 wh=480x640 rgbaSum=127046200 stages=-
+STAGE n=2610 conv=4.5430 infer=12.3959 count=0 wh=480x640 rgbaSum=127145330 stages=-
+RATE win=136 arrive=39.86 done=39.86 dropped_in_win=0 cum_arrived=2628 cum_done=2628 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=2640 conv=4.7606 infer=11.8091 count=0 wh=480x640 rgbaSum=126923041 stages=-
+STAGE n=2670 conv=4.6855 infer=14.5870 count=0 wh=480x640 rgbaSum=126896127 stages=-
+STAGE n=2700 conv=4.6120 infer=14.1286 count=0 wh=480x640 rgbaSum=127069310 stages=-
+RATE win=137 arrive=41.11 done=41.60 dropped_in_win=0 cum_arrived=2711 cum_done=2712 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2730 conv=4.5663 infer=11.3648 count=0 wh=480x640 rgbaSum=126897663 stages=-
+STAGE n=2760 conv=3.4319 infer=11.7289 count=0 wh=480x640 rgbaSum=127036908 stages=-
+STAGE n=2790 conv=4.5031 infer=11.6709 count=0 wh=480x640 rgbaSum=126998359 stages=-
+RATE win=138 arrive=40.96 done=40.46 dropped_in_win=0 cum_arrived=2793 cum_done=2793 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2820 conv=4.4014 infer=11.4642 count=0 wh=480x640 rgbaSum=127063662 stages=-
+STAGE n=2850 conv=3.4266 infer=13.5053 count=0 wh=480x640 rgbaSum=126955156 stages=-
+STAGE n=2880 conv=5.3280 infer=11.5369 count=0 wh=480x640 rgbaSum=126983725 stages=-
+RATE win=139 arrive=44.00 done=44.00 dropped_in_win=0 cum_arrived=2881 cum_done=2881 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2910 conv=3.6327 infer=14.8042 count=0 wh=480x640 rgbaSum=126836652 stages=-
+STAGE n=2940 conv=5.1375 infer=13.4539 count=0 wh=480x640 rgbaSum=126921217 stages=-
+RATE win=140 arrive=42.28 done=42.28 dropped_in_win=0 cum_arrived=2967 cum_done=2967 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=21.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=2970 conv=4.6967 infer=16.4555 count=0 wh=480x640 rgbaSum=126950479 stages=-
+STAGE n=3000 conv=2.9914 infer=20.3483 count=0 wh=480x640 rgbaSum=126964009 stages=-
+STAGE n=3030 conv=5.8369 infer=21.1453 count=0 wh=480x640 rgbaSum=126814229 stages=-
+RATE win=141 arrive=44.96 done=44.96 dropped_in_win=0 cum_arrived=3058 cum_done=3058 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=3060 conv=7.0231 infer=18.3928 count=0 wh=480x640 rgbaSum=126865221 stages=-
+STAGE n=3090 conv=3.9519 infer=12.6898 count=0 wh=480x640 rgbaSum=126951911 stages=-
+STAGE n=3120 conv=4.3186 infer=11.4572 count=0 wh=480x640 rgbaSum=127007699 stages=-
+RATE win=142 arrive=45.18 done=45.68 dropped_in_win=0 cum_arrived=3149 cum_done=3150 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=3150 conv=6.2203 infer=12.3084 count=0 wh=480x640 rgbaSum=127159762 stages=-
+STAGE n=3180 conv=5.7434 infer=15.0681 count=0 wh=480x640 rgbaSum=127050181 stages=-
+STAGE n=3210 conv=4.3422 infer=11.7561 count=0 wh=480x640 rgbaSum=127038535 stages=-
+RATE win=143 arrive=43.13 done=43.13 dropped_in_win=0 cum_arrived=3236 cum_done=3237 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=3240 conv=4.7497 infer=19.6175 count=0 wh=480x640 rgbaSum=127114378 stages=-
+STAGE n=3270 conv=4.3506 infer=12.1366 count=0 wh=480x640 rgbaSum=127084524 stages=-
+STAGE n=3300 conv=3.4895 infer=10.0462 count=0 wh=480x640 rgbaSum=127007375 stages=-
+RATE win=144 arrive=42.10 done=42.10 dropped_in_win=0 cum_arrived=3321 cum_done=3322 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=3330 conv=3.6769 infer=10.7769 count=0 wh=480x640 rgbaSum=127068120 stages=-
+STAGE n=3360 conv=3.2013 infer=13.5300 count=0 wh=480x640 rgbaSum=127015926 stages=-
+STAGE n=3390 conv=3.7370 infer=11.6984 count=0 wh=480x640 rgbaSum=127066986 stages=-
+RATE win=145 arrive=38.18 done=37.68 dropped_in_win=0 cum_arrived=3398 cum_done=3398 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3420 conv=3.6762 infer=10.7486 count=0 wh=480x640 rgbaSum=127249321 stages=-
+STAGE n=3450 conv=5.2448 infer=12.3675 count=0 wh=480x640 rgbaSum=127255941 stages=-
+RATE win=146 arrive=36.83 done=37.33 dropped_in_win=0 cum_arrived=3472 cum_done=3473 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3480 conv=4.3591 infer=21.3489 count=0 wh=480x640 rgbaSum=125594976 stages=-
+STAGE n=3510 conv=3.8098 infer=11.6723 count=0 wh=480x640 rgbaSum=127279526 stages=-
+STAGE n=3540 conv=4.2622 infer=10.2078 count=0 wh=480x640 rgbaSum=126992547 stages=-
+RATE win=147 arrive=45.93 done=45.43 dropped_in_win=0 cum_arrived=3564 cum_done=3564 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=3570 conv=5.1473 infer=11.5286 count=0 wh=480x640 rgbaSum=126801678 stages=-
+STAGE n=3600 conv=4.1438 infer=28.2241 count=0 wh=480x640 rgbaSum=127101986 stages=-
+STAGE n=3630 conv=4.3544 infer=11.6581 count=0 wh=480x640 rgbaSum=127088493 stages=-
+RATE win=148 arrive=39.74 done=40.24 dropped_in_win=0 cum_arrived=3644 cum_done=3645 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3660 conv=3.2958 infer=20.3053 count=0 wh=480x640 rgbaSum=127239908 stages=-
+STAGE n=3690 conv=4.3469 infer=13.3656 count=0 wh=480x640 rgbaSum=127014405 stages=-
+STAGE n=3720 conv=3.5383 infer=11.0688 count=0 wh=480x640 rgbaSum=126975578 stages=-
+RATE win=149 arrive=40.46 done=39.96 dropped_in_win=0 cum_arrived=3725 cum_done=3725 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3750 conv=4.2725 infer=12.5914 count=0 wh=480x640 rgbaSum=127003479 stages=-
+STAGE n=3780 conv=5.3138 infer=16.4288 count=0 wh=480x640 rgbaSum=131679455 stages=-
+RATE win=150 arrive=39.90 done=39.90 dropped_in_win=0 cum_arrived=3806 cum_done=3806 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3810 conv=3.1297 infer=10.1278 count=0 wh=480x640 rgbaSum=121927405 stages=-
+STAGE n=3840 conv=3.7656 infer=11.4206 count=0 wh=480x640 rgbaSum=125255313 stages=-
+STAGE n=3870 conv=4.2166 infer=12.6039 count=0 wh=480x640 rgbaSum=125218595 stages=-
+RATE win=151 arrive=34.79 done=35.29 dropped_in_win=0 cum_arrived=3876 cum_done=3877 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=21.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3900 conv=4.5595 infer=12.9344 count=0 wh=480x640 rgbaSum=125158368 stages=-
+STAGE n=3930 conv=3.1961 infer=11.1413 count=0 wh=480x640 rgbaSum=125199539 stages=-
+RATE win=152 arrive=39.05 done=38.56 dropped_in_win=0 cum_arrived=3955 cum_done=3955 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=3960 conv=4.8027 infer=11.6850 count=0 wh=480x640 rgbaSum=125209620 stages=-
+STAGE n=3990 conv=3.6391 infer=11.1747 count=0 wh=480x640 rgbaSum=125104630 stages=-
+STAGE n=4020 conv=5.9239 infer=12.6052 count=0 wh=480x640 rgbaSum=125105202 stages=-
+RATE win=153 arrive=40.84 done=40.84 dropped_in_win=0 cum_arrived=4037 cum_done=4037 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4050 conv=2.7392 infer=10.7962 count=0 wh=480x640 rgbaSum=125162597 stages=-
+STAGE n=4080 conv=3.9084 infer=8.5330 count=0 wh=480x640 rgbaSum=125154819 stages=-
+STAGE n=4110 conv=3.2675 infer=11.3255 count=0 wh=480x640 rgbaSum=125102454 stages=-
+RATE win=154 arrive=46.45 done=46.95 dropped_in_win=0 cum_arrived=4130 cum_done=4131 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4140 conv=2.8861 infer=9.6023 count=0 wh=480x640 rgbaSum=125208237 stages=-
+STAGE n=4170 conv=4.7800 infer=16.5284 count=0 wh=480x640 rgbaSum=125201068 stages=-
+STAGE n=4200 conv=3.0442 infer=8.4367 count=0 wh=480x640 rgbaSum=125199513 stages=-
+RATE win=155 arrive=48.35 done=47.86 dropped_in_win=0 cum_arrived=4227 cum_done=4227 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4230 conv=2.9003 infer=8.9328 count=0 wh=480x640 rgbaSum=125292331 stages=-
+STAGE n=4260 conv=4.0459 infer=8.9152 count=0 wh=480x640 rgbaSum=125352819 stages=-
+STAGE n=4290 conv=3.7028 infer=10.9936 count=0 wh=480x640 rgbaSum=125450189 stages=-
+RATE win=156 arrive=42.23 done=42.72 dropped_in_win=0 cum_arrived=4312 cum_done=4313 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4320 conv=3.8187 infer=9.9542 count=0 wh=480x640 rgbaSum=125407157 stages=-
+STAGE n=4350 conv=5.5745 infer=15.9419 count=0 wh=480x640 rgbaSum=125323074 stages=-
+STAGE n=4380 conv=2.6933 infer=11.4306 count=0 wh=480x640 rgbaSum=125485106 stages=-
+RATE win=157 arrive=40.35 done=39.86 dropped_in_win=0 cum_arrived=4394 cum_done=4394 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4410 conv=3.7745 infer=10.3347 count=0 wh=480x640 rgbaSum=125496127 stages=-
+STAGE n=4440 conv=4.2378 infer=11.3920 count=0 wh=480x640 rgbaSum=125486352 stages=-
+STAGE n=4470 conv=3.7437 infer=12.0689 count=0 wh=480x640 rgbaSum=125357277 stages=-
+RATE win=158 arrive=43.13 done=43.13 dropped_in_win=0 cum_arrived=4481 cum_done=4481 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4500 conv=3.1114 infer=9.3103 count=0 wh=480x640 rgbaSum=125243142 stages=-
+STAGE n=4530 conv=10.7966 infer=11.6477 count=0 wh=480x640 rgbaSum=125318265 stages=-
+STAGE n=4560 conv=4.3255 infer=10.4675 count=0 wh=480x640 rgbaSum=125281829 stages=-
+RATE win=159 arrive=45.18 done=45.18 dropped_in_win=0 cum_arrived=4572 cum_done=4572 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=17.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4590 conv=4.1087 infer=8.6500 count=0 wh=480x640 rgbaSum=125337074 stages=-
+STAGE n=4620 conv=3.4283 infer=12.4955 count=0 wh=480x640 rgbaSum=125268843 stages=-
+STAGE n=4650 conv=4.6408 infer=9.5241 count=0 wh=480x640 rgbaSum=125087285 stages=-
+RATE win=160 arrive=50.25 done=50.25 dropped_in_win=0 cum_arrived=4673 cum_done=4673 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4680 conv=4.6742 infer=10.1430 count=0 wh=480x640 rgbaSum=125152745 stages=-
+STAGE n=4710 conv=3.7083 infer=20.3172 count=0 wh=480x640 rgbaSum=125203362 stages=-
+STAGE n=4740 conv=4.4420 infer=13.1531 count=0 wh=480x640 rgbaSum=125252813 stages=-
+RATE win=161 arrive=44.75 done=45.25 dropped_in_win=0 cum_arrived=4763 cum_done=4764 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4770 conv=4.6475 infer=13.1858 count=0 wh=480x640 rgbaSum=125223090 stages=-
+STAGE n=4800 conv=3.5994 infer=10.4950 count=0 wh=480x640 rgbaSum=125381679 stages=-
+STAGE n=4830 conv=3.1062 infer=9.4984 count=0 wh=480x640 rgbaSum=125333127 stages=-
+RATE win=162 arrive=43.87 done=43.87 dropped_in_win=0 cum_arrived=4851 cum_done=4852 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4860 conv=4.2642 infer=10.9991 count=0 wh=480x640 rgbaSum=125327193 stages=-
+STAGE n=4890 conv=3.0464 infer=10.3919 count=0 wh=480x640 rgbaSum=125299497 stages=-
+STAGE n=4920 conv=3.8677 infer=15.6544 count=0 wh=480x640 rgbaSum=125270557 stages=-
+RATE win=163 arrive=43.85 done=43.35 dropped_in_win=0 cum_arrived=4939 cum_done=4939 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=4950 conv=3.3266 infer=11.6620 count=0 wh=480x640 rgbaSum=125290166 stages=-
+STAGE n=4980 conv=5.3019 infer=16.0605 count=0 wh=480x640 rgbaSum=125409405 stages=-
+STAGE n=5010 conv=5.4064 infer=13.0530 count=0 wh=480x640 rgbaSum=125413053 stages=-
+RATE win=164 arrive=42.10 done=42.10 dropped_in_win=0 cum_arrived=5024 cum_done=5024 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=20.00 prep_hit_p50=1.00 prep_empty_p50=2.00 thermal=4 battC=43.0
+STAGE n=5040 conv=3.8777 infer=14.5812 count=0 wh=480x640 rgbaSum=125437360 stages=-
+STAGE n=5070 conv=4.1591 infer=9.7119 count=0 wh=480x640 rgbaSum=125424810 stages=-
+STAGE n=5100 conv=3.9495 infer=12.3942 count=0 wh=480x640 rgbaSum=125360935 stages=-
+RATE win=165 arrive=42.31 done=42.31 dropped_in_win=0 cum_arrived=5109 cum_done=5109 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=18.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5130 conv=4.3111 infer=12.1689 count=0 wh=480x640 rgbaSum=125338902 stages=-
+STAGE n=5160 conv=3.8639 infer=13.9655 count=0 wh=480x640 rgbaSum=125291716 stages=-
+STAGE n=5190 conv=3.8777 infer=9.5778 count=0 wh=480x640 rgbaSum=125180663 stages=-
+RATE win=166 arrive=42.64 done=42.64 dropped_in_win=0 cum_arrived=5195 cum_done=5195 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=19.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5220 conv=3.5234 infer=14.5820 count=0 wh=480x640 rgbaSum=125078982 stages=-
+STAGE n=5250 conv=3.3102 infer=9.7942 count=0 wh=480x640 rgbaSum=125257498 stages=-
+STAGE n=5280 conv=3.0786 infer=11.8536 count=0 wh=480x640 rgbaSum=125399831 stages=-
+RATE win=167 arrive=50.17 done=50.17 dropped_in_win=0 cum_arrived=5296 cum_done=5296 cum_dropped=0 gear=8 hit_n=30 empty_n=30 rt_hit_p50=24.00 rt_empty_p50=16.00 prep_hit_p50=1.00 prep_empty_p50=1.00 thermal=4 battC=43.0
+STAGE n=5310 conv=2.8895 infer=9.6809 count=0 wh=480x640 rgbaSum=125421129 stages=-
+STAGE n=5340 conv=3.9598 infer=9.7753 count=0 wh=480x640 rgbaSum=125394556 stages=-
