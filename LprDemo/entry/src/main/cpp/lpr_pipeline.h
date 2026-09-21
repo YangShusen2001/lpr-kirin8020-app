@@ -117,6 +117,31 @@ struct LprSessions {
 bool LprRunPipeline(const RgbaImage& img, const LprSessions& s,
                     std::vector<PlateResult>& out, std::string& err);
 
+/**
+ * Bare-head recognition: crop in, plate string out. **No detect, no rectify.**
+ *
+ * Why this exists: every accuracy number this project has quoted so far
+ * (t6's 90.6%, A16's 90.6%) was measured **on the host** with onnxruntime,
+ * never on the device. The one on-device number we do have (T10's 60.8%) ran
+ * crops through the *full* pipeline, where det has to re-find the plate inside
+ * an already-cropped 94x24 image — a工况 that both distorts the input
+ * (length-error rate 25.8% vs A16's measured 1.0% for rpv3) and conflates
+ * detector error with recogniser error.
+ *
+ * This entry point skips det/rectify and feeds the crop straight to the
+ * recogniser, which is exactly what t6/A16 measured. That makes the on-device
+ * number directly comparable to the host number and isolates the recogniser's
+ * own accuracy from the detector's.
+ *
+ * `recSlot >= 0` routes through the ncnn slot (GPU path); otherwise `rec`
+ * (MindSpore Lite) is used. Returns false only on hard failure; a crop that
+ * decodes to an empty string is a successful run.
+ */
+bool LprRecogniseCrop(const RgbaImage& crop, MsSession* rec, int recSlot,
+                      std::string& code, float& conf,
+                      std::vector<std::string>& chars, std::vector<float>& probs,
+                      std::string& err);
+
 // ---------------------------------------------------------------- test surface
 // Exposed so the port can be diffed against pipeline.js function by function
 // instead of only end to end. See tools/harmony/ for the diff harness.

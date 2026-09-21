@@ -1303,6 +1303,77 @@ static napi_value NcnnLoadAsync(napi_env env, napi_callback_info info) {
   return QueueJob(env, job, "lpr.ncnnLoadAsync");
 }
 
+/**
+ * Bare-head recognition probe (T11): crop in, plate string out.
+ *
+ * Skips detect + rectify entirely — see LprRecogniseCrop's doc comment for why
+ * that matters. Every accuracy number quoted before T11 was either host-side
+ * onnxruntime (t6's 90.6%) or on-device-but-through-the-full-pipeline (T10's
+ * 60.8%, where det re-finds the plate inside an already-cropped image).
+ *
+ * Args: (rgba, width, height, recId, [recSlot])
+ *   recSlot >= 0 routes through the ncnn slot; otherwise the MS session.
+ * Returns: ok=1;code=...;conf=...;recMs=...;backend=...  or  ok=0;error=...
+ */
+static napi_value RecogniseRun(napi_env env, napi_callback_info info) {
+  size_t argc = 5;
+  napi_value args[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  if (argc < 4) {
+    return MakeString(env, "ok=0;error=recognise needs (rgba, width, height, recId)");
+  }
+  std::vector<uint8_t> rgba;
+  if (!ReadArrayBufferArgU8(env, args[0], rgba)) {
+    return MakeString(env, "ok=0;error=rgba ArrayBuffer is empty");
+  }
+  int w = 0;
+  int h = 0;
+  int recId = -1;
+  int recSlot = -1;
+  napi_get_value_int32(env, args[1], &w);
+  napi_get_value_int32(env, args[2], &h);
+  napi_get_value_int32(env, args[3], &recId);
+  if (argc >= 5) napi_get_value_int32(env, args[4], &recSlot);
+
+  MsSession* rec = nullptr;
+  std::string backend;
+  {
+    std::lock_guard<std::mutex> lk(g_regMutex);
+    if (recId < 0 || recId >= (int)g_sessions.size()) {
+      return MakeString(env, "ok=0;error=bad rec session id");
+    }
+    rec = g_sessions[recId].s;
+    backend = rec->backend;
+  }
+  if (rec == nullptr) {
+    return MakeString(env, "ok=0;error=null rec session");
+  }
+
+  RgbaImage crop;
+  crop.width = w;
+  crop.height = h;
+  crop.data = std::move(rgba);
+  if (!crop.Valid()) {
+    return MakeString(env, "ok=0;error=rgba size != w*h*4");
+  }
+
+  std::string code;
+  std::string err;
+  float conf = 0;
+  std::vector<std::string> chars;
+  std::vector<float> probs;
+  const double t0 = NowMs();
+  const bool ok = LprRecogniseCrop(crop, rec, recSlot, code, conf, chars, probs, err);
+  const double recMs = NowMs() - t0;
+  if (!ok) {
+    LOGE("recognise failed: %{public}s", err.c_str());
+    return MakeString(env, "ok=0;error=" + KvSanitize(err));
+  }
+  LOGI("recognise -> code=%{public}s conf=%{public}f ms=%{public}f", code.c_str(), conf, recMs);
+  return MakeString(env, "ok=1;code=" + KvSanitize(code) + ";conf=" + std::to_string(conf) +
+                             ";recMs=" + std::to_string(recMs) + ";backend=" + KvSanitize(backend));
+}
+
 // ============================================================ module
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
@@ -1325,6 +1396,9 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"run", nullptr, RunModel, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"bench", nullptr, BenchModel, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"pipeline", nullptr, PipelineRun, nullptr, nullptr, nullptr, napi_default, nullptr},
+      // T11 bare-head：跳过 det/rectify 直喂识别器，用于测识别器**真实**准确率
+      // （此前所有准确率要么是主机 onnxruntime，要么是端侧但走完整流水线）。
+      {"recognise", nullptr, RecogniseRun, nullptr, nullptr, nullptr, napi_default, nullptr},
       // 工具
       {"listNnrtDevices", nullptr, ListNnrt, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"vulkanProbe", nullptr, VulkanProbe, nullptr, nullptr, nullptr, napi_default, nullptr},

@@ -1036,6 +1036,146 @@ struct Index {
     }
   }
 
+  // ------------------------------------------------------------ 识别器裸测准确率（T11）
+
+  /**
+   * 【T11】识别器**真实**准确率：跳过 det/rectify，把裁剪图直喂识别器。
+   *
+   * 为什么需要它：此前所有准确率数字都有口径问题 ——
+   *   - t6 / A16 的 90.6%：**主机** onnxruntime 测的，从没在端侧验过；
+   *   - T10 的 60.8%：端侧，但走**完整流水线**，det 要在一张 94x24 的
+   *     已裁剪小图上重新找牌，输入被劣化（长度错误率 25.8% vs A16 实测
+   *     rpv3 的 1.0%），且把检测器误差和识别器误差混在一起。
+   *
+   * 本探针用新增的 napi `recognise`（跳过 det/rectify 直喂 rec），
+   * 与 t6/A16 的工况**一致**，因此数字可直接对比。
+   *
+   * 同时跑两个落点（cpu / nnrt）：既给各自准确率，也给一致率。
+   * 判据：逐张记 code_cpu / code_np / agree / ok_*，落盘 crop_bare.log。
+   */
+  private async bareHeadAccuracy(): Promise<void> {
+    const ctx = this.ctx;
+    if (ctx === undefined) {
+      this.appendNative('BARE FAIL no context');
+      return;
+    }
+    this.busy = true;
+    const logPath: string = ctx.filesDir + '/crop_bare.log';
+    const cropDir: string = 'assets/crops';
+    this.appendNative('BARE BEGIN dir=' + cropDir + ' log=' + logPath);
+    try {
+      let names: string[] = [];
+      try {
+        names = await ctx.resourceManager.getRawFileList(cropDir);
+      } catch (e) {
+        const err = e as BusinessError;
+        this.appendNative('BARE FAIL listdir code=' + err.code + ' msg=' + err.message);
+        this.busy = false;
+        return;
+      }
+      names = names.filter((n: string) => n.toLowerCase().endsWith('.jpg')).sort();
+      if (names.length === 0) {
+        this.appendNative('BARE FAIL 目录里没有 .jpg');
+        this.busy = false;
+        return;
+      }
+      this.appendNative('BARE FILES ' + names.length.toString());
+
+      // 两个 rec 会话：cpu / nnrt。det/cls 完全不参与。
+      const recBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_REC);
+      const loadCpu: string =
+        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'cpu');
+      const loadNp: string =
+        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'nnrt');
+      const ci: Map<string, string> = parseKv(loadCpu);
+      const ni: Map<string, string> = parseKv(loadNp);
+      lpr.appendLine(logPath, 'BARE LOAD cpu ' + loadCpu);
+      lpr.appendLine(logPath, 'BARE LOAD nnrt ' + loadNp);
+      if (ci.get('ok') !== '1' || ni.get('ok') !== '1') {
+        this.appendNative('BARE FAIL load cpu_ok=' + str(ci, 'ok') + ' np_ok=' + str(ni, 'ok'));
+        this.busy = false;
+        return;
+      }
+      const recCpuId: number = num(ci, 'id');
+      const recNpId: number = num(ni, 'id');
+      this.appendNative('BARE SESSIONS rec_cpu=' + recCpuId.toString() +
+        ' rec_np=' + recNpId.toString());
+
+      let n: number = 0;
+      let agree: number = 0;
+      let badGt: number = 0;
+      let okCpu: number = 0;
+      let okNp: number = 0;
+      let lenCpu: number = 0;
+      let lenNp: number = 0;
+      for (let i = 0; i < names.length; i++) {
+        const name: string = names[i];
+        const gt: string = name.replace(/\.jpg$/i, '').split('_')[0];
+        if (gt.length !== 7 && gt.length !== 8) {
+          badGt++;
+          lpr.appendLine(logPath, 'BARE SKIP file=' + name + ' gt_len=' + gt.length.toString());
+          continue;
+        }
+        const path: string = cropDir + '/' + name;
+        let frame: RgbaFrame | null = null;
+        try {
+          frame = await this.decodeRgba(path);
+        } catch (e) {
+          const err = e as BusinessError;
+          lpr.appendLine(logPath, 'BARE DECODEFAIL file=' + name + ' code=' + err.code);
+          continue;
+        }
+        if (frame === null) {
+          continue;
+        }
+        // 同一张裁剪图，只换 rec 落点；**不走 pipeline，直喂识别器**。
+        const rawCpu: string = lpr.recognise(frame.data, frame.width, frame.height, recCpuId, -1);
+        const rawNp: string = lpr.recognise(frame.data, frame.width, frame.height, recNpId, -1);
+        const kc: Map<string, string> = parseKv(rawCpu);
+        const kn: Map<string, string> = parseKv(rawNp);
+        const cc: string = str(kc, 'code');
+        const cn: string = str(kn, 'code');
+        const same: boolean = cc === cn;
+        n++;
+        if (same) {
+          agree++;
+        }
+        if (cc === gt) {
+          okCpu++;
+        }
+        if (cn === gt) {
+          okNp++;
+        }
+        // 长度错误单独计：A16 用这个指标对比过 LPRNet 与 rpv3，是识别器
+        // 退化的最敏感信号（比总准确率更早动）。
+        if (cc.length !== gt.length) {
+          lenCpu++;
+        }
+        if (cn.length !== gt.length) {
+          lenNp++;
+        }
+        lpr.appendLine(logPath, 'BARE file=' + name + ' gt=' + gt +
+          ' code_cpu=' + cc + ' code_np=' + cn +
+          ' agree=' + (same ? '1' : '0') +
+          ' ok_cpu=' + (cc === gt ? '1' : '0') +
+          ' ok_np=' + (cn === gt ? '1' : '0') +
+          ' ms_cpu=' + str(kc, 'recMs') + ' ms_np=' + str(kn, 'recMs'));
+        if (n % 100 === 0) {
+          this.appendNative('BARE PROGRESS n=' + n.toString() +
+            ' agree=' + agree.toString() + ' ok_cpu=' + okCpu.toString() +
+            ' ok_np=' + okNp.toString() + ' lenerr_cpu=' + lenCpu.toString() +
+            ' lenerr_np=' + lenNp.toString());
+        }
+      }
+      this.appendNative('BARE END n=' + n.toString() + ' agree=' + agree.toString() +
+        ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
+        ' lenerr_cpu=' + lenCpu.toString() + ' lenerr_np=' + lenNp.toString() +
+        ' bad_gt=' + badGt.toString() + ' log=' + logPath);
+    } finally {
+      this.busy = false;
+    }
+  }
+
   // ------------------------------------------------------------ ncnn 槽位探针
 
   /**
@@ -2092,6 +2232,19 @@ struct Index {
               // ⚠️ 输入是 94x24 裁剪图而非整车图，det 的工况与真实场景不同，
               // 结论只能与同输入的 rec 结果并列，不能直接外推到整车场景。
               this.cropBackendAB('det');
+            })
+          Button('识别器裸测准确率')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // 跳过 det/rectify 直喂识别器，与 t6/A16（主机 onnxruntime）
+              // 工况一致，因此准确率数字可直接对比。
+              this.bareHeadAccuracy();
             })
           Button('算子对撞')
             .fontSize(13)

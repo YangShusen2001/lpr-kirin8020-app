@@ -495,6 +495,28 @@ bool Recognise(MsSession* rec, int recSlot, const RgbaImage& crop, std::string& 
 
 // ---------------------------------------------------------------- public API
 
+bool LprRecogniseCrop(const RgbaImage& crop, MsSession* rec, int recSlot,
+                      std::string& code, float& conf,
+                      std::vector<std::string>& chars, std::vector<float>& probs,
+                      std::string& err) {
+  if (rec == nullptr && recSlot < 0) {
+    err = "missing rec session";
+    return false;
+  }
+  if (!crop.Valid()) {
+    err = "invalid crop";
+    return false;
+  }
+  // Scratch is per-call and small (a few index vectors + one resize dest).
+  // A batch caller that cares about the allocation can keep its own and call
+  // the internal Recognise directly; this entry point is for the probe path
+  // where clarity beats the last microsecond.
+  ResizeScratch sc;
+  std::vector<float> enc;
+  std::vector<float> logits;
+  return Recognise(rec, recSlot, crop, code, conf, chars, probs, err, enc, logits, sc);
+}
+
 const std::vector<std::string>& LprToken() {
   // Must stay index-aligned with TOKEN in assets/js/pipeline.js. Index 0 is the
   // CTC blank; indices 1..44 are the 44 real classes.

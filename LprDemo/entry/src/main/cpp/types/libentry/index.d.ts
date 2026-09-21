@@ -96,6 +96,21 @@ export const pipeline: (
   detId: number, recId: number, clsId: number, detMode?: number) => string;
 
 /**
+ * T11 裸识别（bare-head）：**跳过 det/rectify**，把裁剪图直喂识别器。
+ *
+ * 为什么单独一条入口：此前所有准确率数字都有口径问题 —— t6/A16 的 90.6% 是
+ * **主机** onnxruntime 测的；T10 的 60.8% 是端侧但走完整流水线，det 要在一张
+ * 已裁剪小图上重新找牌，输入被劣化且混入检测器误差。本入口与 t6/A16 工况一致，
+ * 数字可直接对比。
+ *
+ * Args: (rgba, width, height, recId, [recSlot])   recSlot >= 0 走 ncnn 槽位。
+ * Returns: ok=1;code=...;conf=...;recMs=...;backend=...  或  ok=0;error=...
+ */
+export const recognise: (
+  rgba: ArrayBuffer, width: number, height: number,
+  recId: number, recSlot?: number) => string;
+
+/**
  * GPU 终审探针（vulkan_probe.cpp）：dlopen Vulkan loader → vkCreateInstance →
  * vkEnumeratePhysicalDevices → queue families。返回 JSON，verdict 字段四选一。
  * 只打日志用，ArkTS 侧不解析（JSON 里有引号/逗号，KvSanitize 语法装不下）。
