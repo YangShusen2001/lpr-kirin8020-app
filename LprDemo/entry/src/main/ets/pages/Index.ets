@@ -889,9 +889,15 @@ struct Index {
    * 凭空制造 29 条长度错误」的坑，这里必须先验真值本身干不干净。
    *
    * 判据：逐张记 `code_cpu` / `code_np` / `agree` / 两个后端各自的 `ok_cpu` `ok_np`，
-   * 全部落盘到 `filesDir/crop_ab.log`，最后由主机侧脚本汇总。
+   * 全部落盘到 `filesDir/crop_ab_<role>.log`，最后由主机侧脚本汇总。
+   *
+   * @param role 变哪个角色的落点：`'rec'`（识别器）或 `'det'`（检测器）。
+   *   其余两个角色固定为生产配置。T10 已跑 rec（0.3% 不一致）；
+   *   `det` 是同一问题的检测器版本，用来与 `det-backend-alters-result.md` 的
+   *   n=1 结论对上——**注意样本量仍不可比**（那边是 n=1，这边是 n=1000，
+   *   且输入是裁剪图而非整车图，判det的工况不同）。
    */
-  private async cropBackendAB(): Promise<void> {
+  private async cropBackendAB(role: string): Promise<void> {
     const ctx = this.ctx;
     if (ctx === undefined) {
       this.appendNative('CROPAB FAIL no context');
@@ -905,10 +911,10 @@ struct Index {
       }
     }
     this.busy = true;
-    const logPath: string = ctx.filesDir + '/crop_ab.log';
+    const logPath: string = ctx.filesDir + '/crop_ab_' + role + '.log';
     // rawfile 里的目录（相对 rawfile 根，不带前导斜杠）。
     const cropDir: string = 'assets/crops';
-    this.appendNative('CROPAB BEGIN dir=' + cropDir + ' log=' + logPath);
+    this.appendNative('CROPAB BEGIN role=' + role + ' dir=' + cropDir + ' log=' + logPath);
     try {
       // 列出数据集。目录不存在要说清楚，而不是静默跑 0 张。
       // ⚠️ getRawFileList 在本 API 版本同样返回 **Promise<string[]>**（不是同步）——
@@ -931,26 +937,30 @@ struct Index {
       }
       this.appendNative('CROPAB FILES ' + names.length.toString());
 
-      // 载入 rec 的两个落点。det/cls 用生产会话（不变），保证唯一变量是 rec。
-      const recBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_REC);
+      // 载入**可变角色**的两个落点；其余两个角色用生产会话（不变），
+      // 保证唯一变量就是 role 的落点。
+      const roleFile: string = role === 'det' ? MODEL_DET : MODEL_REC;
+      const roleBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(roleFile);
       const loadCpu: string =
-        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'cpu');
+        await lpr.loadModelAsync(roleFile, this.toArrayBuffer(roleBytes), 'cpu');
       const loadNp: string =
-        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'nnrt');
+        await lpr.loadModelAsync(roleFile, this.toArrayBuffer(roleBytes), 'nnrt');
       const ci: Map<string, string> = parseKv(loadCpu);
       const ni: Map<string, string> = parseKv(loadNp);
-      lpr.appendLine(logPath, 'CROPAB LOAD rec cpu ' + loadCpu);
-      lpr.appendLine(logPath, 'CROPAB LOAD rec nnrt ' + loadNp);
+      lpr.appendLine(logPath, 'CROPAB LOAD ' + role + ' cpu ' + loadCpu);
+      lpr.appendLine(logPath, 'CROPAB LOAD ' + role + ' nnrt ' + loadNp);
       if (ci.get('ok') !== '1' || ni.get('ok') !== '1') {
-        this.appendNative('CROPAB FAIL rec load cpu_ok=' + str(ci, 'ok') + ' np_ok=' + str(ni, 'ok'));
+        this.appendNative('CROPAB FAIL ' + role + ' load cpu_ok=' + str(ci, 'ok') +
+          ' np_ok=' + str(ni, 'ok'));
         this.busy = false;
         return;
       }
-      const recCpuId: number = num(ci, 'id');
-      const recNpId: number = num(ni, 'id');
-      this.appendNative('CROPAB SESSIONS det=' + this.detId.toString() +
-        ' rec_cpu=' + recCpuId.toString() + ' rec_np=' + recNpId.toString() +
-        ' cls=' + this.clsId.toString());
+      const cpuId: number = num(ci, 'id');
+      const npId: number = num(ni, 'id');
+      this.appendNative('CROPAB SESSIONS role=' + role +
+        ' det=' + this.detId.toString() + ' rec=' + this.recId.toString() +
+        ' cls=' + this.clsId.toString() + ' cpu_id=' + cpuId.toString() +
+        ' np_id=' + npId.toString());
 
       let n: number = 0;
       let agree: number = 0;
@@ -980,11 +990,16 @@ struct Index {
         if (frame === null) {
           continue;
         }
-        // 同一张图、同一 det/cls，只换 rec 落点。
+        // 同一张图、同样的其余两个角色，只换 role 的落点。
+        // 用局部变量而不是三元塞进实参列表：塞进去可读性差，且容易传错顺序。
+        const dCpu: number = role === 'det' ? cpuId : this.detId;
+        const dNp: number = role === 'det' ? npId : this.detId;
+        const rCpu: number = role === 'rec' ? cpuId : this.recId;
+        const rNp: number = role === 'rec' ? npId : this.recId;
         const rawCpu: string = await lpr.pipelineAsync(
-          frame.data, frame.width, frame.height, this.detId, recCpuId, this.clsId, 0);
+          frame.data, frame.width, frame.height, dCpu, rCpu, this.clsId, 0);
         const rawNp: string = await lpr.pipelineAsync(
-          frame.data, frame.width, frame.height, this.detId, recNpId, this.clsId, 0);
+          frame.data, frame.width, frame.height, dNp, rNp, this.clsId, 0);
         const kc: Map<string, string> = parseKv(rawCpu);
         const kn: Map<string, string> = parseKv(rawNp);
         const cc: string = str(kc, 'p0').split(',')[0];
@@ -1000,7 +1015,7 @@ struct Index {
         if (cn === gt) {
           okNp++;
         }
-        lpr.appendLine(logPath, 'CROPAB file=' + name + ' gt=' + gt +
+        lpr.appendLine(logPath, 'CROPAB role=' + role + ' file=' + name + ' gt=' + gt +
           ' code_cpu=' + cc + ' code_np=' + cn +
           ' agree=' + (same ? '1' : '0') +
           ' ok_cpu=' + (cc === gt ? '1' : '0') +
@@ -1012,7 +1027,8 @@ struct Index {
             ' ok_np=' + okNp.toString());
         }
       }
-      this.appendNative('CROPAB END n=' + n.toString() + ' agree=' + agree.toString() +
+      this.appendNative('CROPAB END role=' + role + ' n=' + n.toString() +
+        ' agree=' + agree.toString() +
         ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
         ' bad_gt=' + badGt.toString() + ' log=' + logPath);
     } finally {
@@ -2050,7 +2066,7 @@ struct Index {
             .onClick(() => {
               this.cannProbe();
             })
-          Button('识别器后端 A/B')
+          Button('识别器落点 A/B')
             .fontSize(13)
             .fontColor(IOS_BLUE)
             .backgroundColor(IOS_BLUE_SOFT)
@@ -2060,9 +2076,22 @@ struct Index {
             .height(38)
             .onClick(() => {
               // 数据集已打进 rawfile（assets/crops，1000 张 94x24 裁剪图）。
-              // 曾试过 hdc file send 推 filesDir，被 App 沙箱挡住（shell uid 无写权限），
-              // 详见 commit b316640 的说明。
-              this.cropBackendAB();
+              // 变 rec 落点，其余两个角色固定生产配置。
+              this.cropBackendAB('rec');
+            })
+          Button('检测器落点 A/B')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // 同一数据集、同一探针，改变 det 落点。
+              // ⚠️ 输入是 94x24 裁剪图而非整车图，det 的工况与真实场景不同，
+              // 结论只能与同输入的 rec 结果并列，不能直接外推到整车场景。
+              this.cropBackendAB('det');
             })
           Button('算子对撞')
             .fontSize(13)
