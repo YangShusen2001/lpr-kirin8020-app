@@ -32,6 +32,8 @@ import lpr from 'libentry.so';
 import { thermal } from '@kit.BasicServicesKit';
 import { batteryInfo } from '@kit.BasicServicesKit';
 import { systemLoad } from '@kit.BasicServicesKit';
+// T10 批量数据集探针要从 filesDir 读图（hdc file send 推上来），不走 rawfile。
+import { fileIo } from '@kit.CoreFileKit';
 
 const TAG = 'LprMatrix';
 const NATIVE_TAG = 'LprNativeUI';
@@ -861,6 +863,194 @@ struct Index {
       this.appendNative('E2EMATRIX EXCEPTION ' + err.message);
     }
     this.busy = false;
+  }
+
+  // ------------------------------------------------------------ 识别器后端 A/B（批量）
+
+  /**
+   * 【T10】真实数据集 × 识别器落点 A/B。
+   *
+   * 要回答的问题：`det-backend-alters-result.md` 证明了「det 落点会改变识别输出」，
+   * 但那是 **n=1**（只有参考图一张），笔记自己把「多图统计」列为待办 1。
+   * 本探针把样本量提到整个真实数据集，测的是**同一问题的识别器版本**：
+   * rec 从 NPU 换到 CPU，输出改变的比例是多少、各后端准确率是多少。
+   *
+   * 为什么用裁剪图：`_dataset/real/crops` 是 1000 张 94x24 的**已裁剪**车牌小图
+   * （`t6-balanced-evaluation.md` 附带限制已声明「不含检测环节」），
+   * 正好是识别器的输入形态。det/cls 固定为生产配置，**唯一变量是 rec 的落点**。
+   *
+   * 为什么读 filesDir 而不是 rawfile：1000 张小图打进 rawfile 会把 HAP 撑大、
+   * 拖慢 hvigor 资源扫描，且换数据集要重打包。用 `hdc file send` 推到 filesDir
+   * 则两者都避开 —— 这也正是 T9 已识别的「离线路径只读 rawfile」这个缺口。
+   *
+   * 真值口径：**文件名即真值**（CONTEXT.md：只有 `_dataset/real/crops/` 的文件名
+   * 是真值）。长度非 7/8 的直接跳过并计数 —— t6 踩过「文件名被工具改过、
+   * 凭空制造 29 条长度错误」的坑，这里必须先验真值本身干不干净。
+   *
+   * 判据：逐张记 `code_cpu` / `code_np` / `agree` / 两个后端各自的 `ok_cpu` `ok_np`，
+   * 全部落盘到 `filesDir/crop_ab.log`，最后由主机侧脚本汇总。
+   */
+  private async cropBackendAB(): Promise<void> {
+    const ctx = this.ctx;
+    if (ctx === undefined) {
+      this.appendNative('CROPAB FAIL no context');
+      return;
+    }
+    if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
+      await this.loadNative();
+      if (this.detId < 0) {
+        this.appendNative('CROPAB FAIL missing sessions');
+        return;
+      }
+    }
+    this.busy = true;
+    const logPath: string = ctx.filesDir + '/crop_ab.log';
+    const cropDir: string = ctx.filesDir + '/crops';
+    this.appendNative('CROPAB BEGIN dir=' + cropDir + ' log=' + logPath);
+    try {
+      // 列出数据集。目录不存在要说清楚，而不是静默跑 0 张。
+      // ⚠️ listFile 在本 API 版本返回 **Promise<string[]>**（不是同步 string[]）——
+      // 直接当数组用会在编译期报「missing length/pop/push」。
+      let names: string[] = [];
+      try {
+        names = await fileIo.listFile(cropDir);
+      } catch (e) {
+        const err = e as BusinessError;
+        this.appendNative('CROPAB FAIL listdir code=' + err.code + ' msg=' + err.message +
+          ' —— 先用 hdc file send 把 _dataset/real/crops 推到 ' + cropDir);
+        this.busy = false;
+        return;
+      }
+      names = names.filter((n: string) => n.toLowerCase().endsWith('.jpg')).sort();
+      if (names.length === 0) {
+        this.appendNative('CROPAB FAIL 目录里没有 .jpg —— 推错目录了？');
+        this.busy = false;
+        return;
+      }
+      this.appendNative('CROPAB FILES ' + names.length.toString());
+
+      // 载入 rec 的两个落点。det/cls 用生产会话（不变），保证唯一变量是 rec。
+      const recBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_REC);
+      const loadCpu: string =
+        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'cpu');
+      const loadNp: string =
+        await lpr.loadModelAsync(MODEL_REC, this.toArrayBuffer(recBytes), 'nnrt');
+      const ci: Map<string, string> = parseKv(loadCpu);
+      const ni: Map<string, string> = parseKv(loadNp);
+      lpr.appendLine(logPath, 'CROPAB LOAD rec cpu ' + loadCpu);
+      lpr.appendLine(logPath, 'CROPAB LOAD rec nnrt ' + loadNp);
+      if (ci.get('ok') !== '1' || ni.get('ok') !== '1') {
+        this.appendNative('CROPAB FAIL rec load cpu_ok=' + str(ci, 'ok') + ' np_ok=' + str(ni, 'ok'));
+        this.busy = false;
+        return;
+      }
+      const recCpuId: number = num(ci, 'id');
+      const recNpId: number = num(ni, 'id');
+      this.appendNative('CROPAB SESSIONS det=' + this.detId.toString() +
+        ' rec_cpu=' + recCpuId.toString() + ' rec_np=' + recNpId.toString() +
+        ' cls=' + this.clsId.toString());
+
+      let n: number = 0;
+      let agree: number = 0;
+      let badGt: number = 0;
+      let okCpu: number = 0;
+      let okNp: number = 0;
+      for (let i = 0; i < names.length; i++) {
+        const name: string = names[i];
+        // 真值 = 文件名去扩展名；带 `_1234` 下标后缀的（t6 首轮抽取产物）也剥掉。
+        const gt: string = name.replace(/\.jpg$/i, '').split('_')[0];
+        if (gt.length !== 7 && gt.length !== 8) {
+          // 真值本身不干净 —— 跳过并计数，绝不静默计错。
+          badGt++;
+          lpr.appendLine(logPath, 'CROPAB SKIP file=' + name + ' gt_len=' + gt.length.toString());
+          continue;
+        }
+        const path: string = cropDir + '/' + name;
+        let frame: RgbaFrame | null = null;
+        try {
+          frame = await this.decodeRgbaFromPath(path);
+        } catch (e) {
+          const err = e as BusinessError;
+          lpr.appendLine(logPath, 'CROPAB DECODEFAIL file=' + name + ' code=' + err.code);
+          continue;
+        }
+        if (frame === null) {
+          continue;
+        }
+        // 同一张图、同一 det/cls，只换 rec 落点。
+        const rawCpu: string = await lpr.pipelineAsync(
+          frame.data, frame.width, frame.height, this.detId, recCpuId, this.clsId, 0);
+        const rawNp: string = await lpr.pipelineAsync(
+          frame.data, frame.width, frame.height, this.detId, recNpId, this.clsId, 0);
+        const kc: Map<string, string> = parseKv(rawCpu);
+        const kn: Map<string, string> = parseKv(rawNp);
+        const cc: string = str(kc, 'p0').split(',')[0];
+        const cn: string = str(kn, 'p0').split(',')[0];
+        const same: boolean = cc === cn;
+        n++;
+        if (same) {
+          agree++;
+        }
+        if (cc === gt) {
+          okCpu++;
+        }
+        if (cn === gt) {
+          okNp++;
+        }
+        lpr.appendLine(logPath, 'CROPAB file=' + name + ' gt=' + gt +
+          ' code_cpu=' + cc + ' code_np=' + cn +
+          ' agree=' + (same ? '1' : '0') +
+          ' ok_cpu=' + (cc === gt ? '1' : '0') +
+          ' ok_np=' + (cn === gt ? '1' : '0'));
+        // 每 100 张报一次进度：长跑没反馈看不出是卡了还是在算。
+        if (n % 100 === 0) {
+          this.appendNative('CROPAB PROGRESS n=' + n.toString() +
+            ' agree=' + agree.toString() + ' ok_cpu=' + okCpu.toString() +
+            ' ok_np=' + okNp.toString());
+        }
+      }
+      this.appendNative('CROPAB END n=' + n.toString() + ' agree=' + agree.toString() +
+        ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
+        ' bad_gt=' + badGt.toString() + ' log=' + logPath);
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /**
+   * 从**设备文件路径**（不是 rawfile）解一张 JPEG 成 RGBA。
+   *
+   * 与 `decodeRgba` 的差别只在取字节那一步：那个走 `getRawFileContentSync`，
+   * 这个走 `fileIo`。剩下的 ImageSource → PixelMap → readPixelsToBuffer 完全相同。
+   *
+   * 为什么需要它：离线路径原先只能读 rawfile（T9 已把这条记为缺口）。
+   * 批量数据集用 `hdc file send` 推到 filesDir 更实际 —— 不撑大 HAP、
+   * 不需要重打包就能换数据集。
+   */
+  private async decodeRgbaFromPath(path: string): Promise<RgbaFrame | null> {
+    const stat: fileIo.Stat = fileIo.statSync(path);
+    const buf: ArrayBuffer = new ArrayBuffer(stat.size);
+    const f: fileIo.File = fileIo.openSync(path, fileIo.OpenMode.READ_ONLY);
+    let read: number = 0;
+    try {
+      read = fileIo.readSync(f.fd, buf);
+    } finally {
+      fileIo.closeSync(f.fd);
+    }
+    if (read <= 0) {
+      return null;
+    }
+    const bytes: Uint8Array = new Uint8Array(buf.slice(0, read));
+    const src: image.ImageSource = image.createImageSource(this.toArrayBuffer(bytes));
+    const pm: image.PixelMap = await src.createPixelMap();
+    const info: image.ImageInfo = await pm.getImageInfo();
+    const w: number = info.size.width;
+    const h: number = info.size.height;
+    const rgba: ArrayBuffer = new ArrayBuffer(w * h * 4);
+    await pm.readPixelsToBuffer(rgba);
+    await pm.release();
+    await src.release();
+    return { data: rgba, width: w, height: h };
   }
 
   // ------------------------------------------------------------ ncnn 槽位探针
@@ -1892,6 +2082,20 @@ struct Index {
             .height(38)
             .onClick(() => {
               this.cannProbe();
+            })
+          Button('识别器后端 A/B')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // 数据集要先推到 filesDir/crops：
+              //   hdc file send <本地 _dataset/real/crops> /data/app/el2/100/base/
+              //     com.shusen.lprdemo/haps/entry/files/crops
+              this.cropBackendAB();
             })
           Button('算子对撞')
             .fontSize(13)
