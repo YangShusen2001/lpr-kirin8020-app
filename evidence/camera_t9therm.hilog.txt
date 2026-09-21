@@ -1,0 +1,8 @@
+﻿STAGE n=1350 conv=3.6177 infer=13.2545 count=0 wh=480x640 rgbaSum=127890224 stages=-�  � �j��) �u  �   ��  �+ PCameraDaemon/MotionDetectionImpl x T:%{public}u %{public}s:%{public}d GetData HAL_PRIVATE_ALGOSTAT_TRACKING_INFO_PACK fail."�� UG
+FRAME n=1350 fps=47.62 plate=（未检测到） split=1|1 rt_hit_p50=38.00 rt_empty_p50=19.00 hit_n=4 empty_n=304  f �jX � �u  �   ��  �+ XCameraDaemon/Antibanding n %{public}s(), flk : type = %{public}d, freq = %{public}d, m_f = %{public}d, res = %{pu
+STAGE n=1590 conv=4.4528 infer=13.3180 count=0 wh=480x640 rgbaSum=130615113 stages=-R  j��j"� !�u  �   ��  �+ XCameraDaemon/MotionDetect v fastWarp matrix [%f, %f, %f],[%f, %f, %f],[%f, %f, %f]W  v��j�[!�u  }�  T�   � Rcom.shusen.lprdemo/Lp
+FRAME n=1590 fps=43.48 plate=（未检测到） split=1|1 rt_hit_p50=-1.00 rt_empty_p50=21.00 hit_n=0 empty_n=30�  ���jZ�� �u  �   ��  �+ PCameraDaemon/MotionDetectionImpl x T:%{public}u %{public}s:%{public}d GetData HAL_PRIVATE_ALGOSTAT_TRACKING_INFO_
+FRAME n=2010 fps=21.74 plate=（未检测到） split=1|0 rt_hit_p50=42.00 rt_empty_p50=43.00 hit_n=25 empty_n=30# �Z��j8Z� lu  �   ��  �  �CameraDaemon/HDM[mdc] =��� '�  6�  7  z��j�Պ lu  �   �      �resource_schedule_service/CGS \��:���         4���4
+STAGE n=660 conv=2.8213 infer=20.1586 count=0 wh=480x640 rgbaSum=129331913 stages=-�  _��j�!~	Gu  �    �  �+ PCameraDaemon/IPSFilter v T:%{public}u %{public}s:%{public}d %{public}s is true!;�� XAttachMscXStyleOutBuffer.P]mscXStyleOutBuffer
+FRAME n=660 fps=38.46 plate=（未检测到） split=6|0 rt_hit_p50=-1.00 rt_empty_p50=24.00 hit_n=0 empty_n=30�  ���j �� Gu  �   ��  �+ PCameraDaemon/MotionDetectionImpl x T:%{public}u %{public}s:%{public}d GetData HAL_PRIVATE_ALGOSTAT_TRACKING_INFO_P
+

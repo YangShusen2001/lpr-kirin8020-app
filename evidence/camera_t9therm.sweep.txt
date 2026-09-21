@@ -1,0 +1,4 @@
+﻿gear=7 rate_windows_in_tail=37 hit_frames_in_tail=146 empty_frames_in_tail=1110
+gear=8 rate_windows_in_tail=38 hit_frames_in_tail=298 empty_frames_in_tail=1140
+gear=7 rate_windows_in_tail=38 hit_frames_in_tail=222 empty_frames_in_tail=1140
+gear=8 rate_windows_in_tail=39 hit_frames_in_tail=253 empty_frames_in_tail=1170
