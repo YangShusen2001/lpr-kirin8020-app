@@ -1192,18 +1192,23 @@ struct Index {
    * 真值来自 CCPD 文件名编码（`tools/ccpd_gt.py` 解出，与本探针同源），
    * 随包的 `gt.tsv` 是唯一真值源，ArkTS 侧不重解。
    *
-   * 设计同 T10：唯一变量是 det 落点，rec/cls 固定生产配置。
+   * 设计同 T10/T12：唯一变量是被测角色的落点，其余两个角色固定生产配置。
+   *
+   * @param role 变哪个角色：`'det'`（检测器）或 `'rec'`（识别器）。
+   *   **必须两个都跑**：T12 已证明 det 在真实场景下分歧率只有 0.1%，
+   *   而 rec 的 4.9% 是在**裁剪图裸喂**下测的（T11）—— 跨工况不可比。
+   *   只有同输入、同工况的 det vs rec 才能回答「真实场景下哪个角色更敏感」。
    */
-  private async ccpdSceneAB(): Promise<void> {
+  private async ccpdSceneAB(role: string): Promise<void> {
     const ctx = this.ctx;
     if (ctx === undefined) {
       this.appendNative('SCENE FAIL no context');
       return;
     }
     this.busy = true;
-    const logPath: string = ctx.filesDir + '/ccpd_scene.log';
+    const logPath: string = ctx.filesDir + '/ccpd_scene_' + role + '.log';
     const sceneDir: string = 'assets/ccpd';
-    this.appendNative('SCENE BEGIN dir=' + sceneDir + ' log=' + logPath);
+    this.appendNative('SCENE BEGIN role=' + role + ' dir=' + sceneDir + ' log=' + logPath);
     try {
       // 真值表：从随包的 gt.tsv 读，**不重解文件名** —— 两处解译就会有两条真值源。
       let gtMap: Map<string, string> = new Map();
@@ -1256,26 +1261,29 @@ struct Index {
       }
       this.appendNative('SCENE FILES ' + names.length.toString());
 
-      // 两个 det 落点；rec/cls 固定生产配置。
-      const detBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_DET);
+      // 载入**可变角色**的两个落点；其余两个角色用生产会话（不变）。
+      const roleFile: string = role === 'det' ? MODEL_DET : MODEL_REC;
+      const roleBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(roleFile);
       const loadCpu: string =
-        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), 'cpu');
+        await lpr.loadModelAsync(roleFile, this.toArrayBuffer(roleBytes), 'cpu');
       const loadNp: string =
-        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), 'nnrt');
+        await lpr.loadModelAsync(roleFile, this.toArrayBuffer(roleBytes), 'nnrt');
       const ci: Map<string, string> = parseKv(loadCpu);
       const ni: Map<string, string> = parseKv(loadNp);
-      lpr.appendLine(logPath, 'SCENE LOAD det cpu ' + loadCpu);
-      lpr.appendLine(logPath, 'SCENE LOAD det nnrt ' + loadNp);
+      lpr.appendLine(logPath, 'SCENE LOAD ' + role + ' cpu ' + loadCpu);
+      lpr.appendLine(logPath, 'SCENE LOAD ' + role + ' nnrt ' + loadNp);
       if (ci.get('ok') !== '1' || ni.get('ok') !== '1') {
-        this.appendNative('SCENE FAIL load cpu_ok=' + str(ci, 'ok') + ' np_ok=' + str(ni, 'ok'));
+        this.appendNative('SCENE FAIL ' + role + ' load cpu_ok=' + str(ci, 'ok') +
+          ' np_ok=' + str(ni, 'ok'));
         this.busy = false;
         return;
       }
-      const detCpuId: number = num(ci, 'id');
-      const detNpId: number = num(ni, 'id');
-      this.appendNative('SCENE SESSIONS det_cpu=' + detCpuId.toString() +
-        ' det_np=' + detNpId.toString() + ' rec=' + this.recId.toString() +
-        ' cls=' + this.clsId.toString());
+      const cpuId: number = num(ci, 'id');
+      const npId: number = num(ni, 'id');
+      this.appendNative('SCENE SESSIONS role=' + role +
+        ' det=' + this.detId.toString() + ' rec=' + this.recId.toString() +
+        ' cls=' + this.clsId.toString() + ' cpu_id=' + cpuId.toString() +
+        ' np_id=' + npId.toString());
 
       let n: number = 0;
       let agree: number = 0;
@@ -1301,11 +1309,16 @@ struct Index {
         if (frame === null) {
           continue;
         }
-        // 同一张整车图、同样的 rec/cls，只换 det 落点。
+        // 同一张整车图、同样的其余两个角色，只换 role 的落点。
+        // 局部变量而不是三元塞实参：可读性差且容易传错顺序。
+        const dCpu: number = role === 'det' ? cpuId : this.detId;
+        const dNp: number = role === 'det' ? npId : this.detId;
+        const rCpu: number = role === 'rec' ? cpuId : this.recId;
+        const rNp: number = role === 'rec' ? npId : this.recId;
         const rawCpu: string = await lpr.pipelineAsync(
-          frame.data, frame.width, frame.height, detCpuId, this.recId, this.clsId, 0);
+          frame.data, frame.width, frame.height, dCpu, rCpu, this.clsId, 0);
         const rawNp: string = await lpr.pipelineAsync(
-          frame.data, frame.width, frame.height, detNpId, this.recId, this.clsId, 0);
+          frame.data, frame.width, frame.height, dNp, rNp, this.clsId, 0);
         const kc: Map<string, string> = parseKv(rawCpu);
         const kn: Map<string, string> = parseKv(rawNp);
         const cc: string = str(kc, 'p0').split(',')[0];
@@ -1328,7 +1341,7 @@ struct Index {
         if (cn.length === 0) {
           noPlateNp++;
         }
-        lpr.appendLine(logPath, 'SCENE file=' + name + ' gt=' + gt +
+        lpr.appendLine(logPath, 'SCENE role=' + role + ' file=' + name + ' gt=' + gt +
           ' code_cpu=' + cc + ' code_np=' + cn +
           ' agree=' + (same ? '1' : '0') +
           ' ok_cpu=' + (cc === gt ? '1' : '0') +
@@ -1341,7 +1354,8 @@ struct Index {
             ' ok_np=' + okNp.toString());
         }
       }
-      this.appendNative('SCENE END n=' + n.toString() + ' agree=' + agree.toString() +
+      this.appendNative('SCENE END role=' + role + ' n=' + n.toString() +
+        ' agree=' + agree.toString() +
         ' ok_cpu=' + okCpu.toString() + ' ok_np=' + okNp.toString() +
         ' none_cpu=' + noPlateCpu.toString() + ' none_np=' + noPlateNp.toString() +
         ' log=' + logPath);
@@ -2421,7 +2435,7 @@ struct Index {
               this.bareHeadAccuracy();
             })
           Button('整车场景 det A/B')
-            .fontSize(13)
+            .fontSize(12)
             .fontColor(IOS_BLUE)
             .backgroundColor(IOS_BLUE_SOFT)
             .type(ButtonType.Normal)
@@ -2431,7 +2445,21 @@ struct Index {
             .onClick(() => {
               // CCPD2019-balance 分层抽 1000 张整车图（30 省，每省上限 100）。
               // T10 那 6.8% 是裁剪图工况，不能外推到真实场景 —— 本探针补这一格。
-              this.ccpdSceneAB();
+              this.ccpdSceneAB('det');
+            })
+          Button('整车场景 rec A/B')
+            .fontSize(12)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              // 必须与 det 同输入同工况：rec 的 4.9% 来自 T11 的**裁剪图裸喂**，
+              // 与 det 的 0.1%（真实场景）不可比。只有这里跑出来才能回答
+              // 「真实场景下哪个角色更敏感」。
+              this.ccpdSceneAB('rec');
             })
           Button('算子对撞')
             .fontSize(13)
