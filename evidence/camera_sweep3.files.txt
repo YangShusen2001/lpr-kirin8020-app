@@ -1,0 +1,2 @@
+﻿-rw-rw-rw- 1 20020391 20020391  4072 2026-09-21 13:51 /data/app/el2/100/base/com.shusen.lprdemo/haps/entry/files/camera_run_1789969876385.log
+-rw-rw-rw- 1 20020391 20020391 24839 2026-09-21 13:54 /data/app/el2/100/base/com.shusen.lprdemo/haps/entry/files/camera_run_1789969923725.log
