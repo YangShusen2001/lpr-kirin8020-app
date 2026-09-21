@@ -5,6 +5,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <thread>
+#include <vector>
 
 #include <hilog/log.h>
 
@@ -642,7 +644,8 @@ static double Pctl(std::vector<double> v, double p) {
   return v[i];
 }
 
-MsBench MsBenchRun(MsSession* s, int warmup, int repeat) {
+MsBench MsBenchRun(MsSession* s, int warmup, int repeat, double gapMs, int polluteKB,
+                   double spinMs) {
   MsBench r;
   if (s == nullptr || s->model == nullptr) {
     r.error = "session is null";
@@ -653,6 +656,9 @@ MsBench MsBenchRun(MsSession* s, int warmup, int repeat) {
   r.backend = s->backend;
   r.warmup = warmup;
   r.repeat = repeat;
+  r.gapMs = gapMs;
+  r.polluteKB = polluteKB;
+  r.spinMs = spinMs;
 
   OH_AI_TensorHandleArray ins = OH_AI_ModelGetInputs(s->model);
   OH_AI_TensorHandleArray outs = OH_AI_ModelGetOutputs(s->model);
@@ -680,11 +686,58 @@ MsBench MsBenchRun(MsSession* s, int warmup, int repeat) {
 
   std::vector<double> times;
   times.reserve(repeat);
+  // 干扰缓冲：只在 polluteKB>0 时分配。它模拟流水线里 conv 写的 1.2 MB RGBA
+  // 与 letterbox 输出对缓存/内存带宽的占用。
+  std::vector<uint8_t> pollute;
+  if (polluteKB > 0) {
+    pollute.assign(static_cast<size_t>(polluteKB) * 1024, 0xA5);
+  }
   for (int i = 0; i < repeat; i++) {
-    // A18 section 8, run r8: an experiment slept 3 ms between iterations to
-    // mimic the pipeline's phase rhythm; p50 moved only 7.54 -> 8.71 ms, so the
-    // load-pattern/frequency explanation of the pipeline-vs-bench gap has weak
-    // support at best. Sleep removed.
+    // ---- 迭代之间的干扰（**不在计时区内**）----
+    // 关键：这几件事都发生在 t0 之前，所以被计时的那次 ModelPredict 本身
+    // 与历史基线逐位相同。变的只是「这次推理是在什么状态下被调用」。
+    //
+    // 【2026-09-21 结论】这三档把「隔离 7.3 ms vs 流水线 19.5 ms」定位成了
+    // **两个叠加的机理**（详见 docs/notes/camera-npu-headroom.md §3.2c.2）：
+    //   1. DVFS：gapMs 单调把 p50 从 7.4 推到 30.7 ms；在 cpu_t1 上
+    //      用 spinMs（忙等）可**完全消除**该效应（+26.8 -> +0.3 ms）⇒ 是频率。
+    //   2. 线程池唤醒：cpu_t4 上 spinMs **救不回来**（仍 +20.8 ms），
+    //      因为忙等只占住调用线程，另外 3 个工作线程照样 park，
+    //      下次 predict 要先唤醒它们 —— 这段开销落在计时区内。
+    //   polluteKB=1200（≈conv 的 1.2 MB RGBA 写）**无影响** ⇒ 缓存/带宽假设被否。
+    //
+    // 注意：这里曾有一条旧结论「sleep 3 ms 只把 p50 从 7.54 推到 8.71 ms，
+    // 所以负载节奏解释证据薄弱」—— **那是剂量太小**。3 ms 落在剂量-反应曲线
+    // 的第一段，斜率尚未起来；8/16/33 ms 下效应非常清楚。
+    if (gapMs > 0) {
+      std::this_thread::sleep_for(
+          std::chrono::duration<double, std::milli>(gapMs));
+    }
+    if (spinMs > 0) {
+      // 对照组：**忙等**同样长的时间。与 sleep 的区别只有一个 ——
+      // 这段时间里 CPU 是**忙**的，所以频率不会被降下去。
+      // 若这一档的 p50 回到紧循环水平，就证明「掉频」是主因，
+      // 而不是「两次调用间隔了多久」这件事本身。
+      const auto spinEnd = std::chrono::steady_clock::now() +
+          std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+              std::chrono::duration<double, std::milli>(spinMs));
+      volatile uint64_t acc = 0;
+      while (std::chrono::steady_clock::now() < spinEnd) {
+        for (int k = 0; k < 1000; k++) {
+          acc = acc * 6364136223846793005ULL + 1442695040888963407ULL;
+        }
+      }
+      (void)acc;
+    }
+    if (!pollute.empty()) {
+      // 逐字节读+写，确保真的过一遍缓存与内存，不被编译器优化掉。
+      volatile uint8_t sink = 0;
+      for (size_t k = 0; k < pollute.size(); k += 64) {
+        pollute[k] = static_cast<uint8_t>(pollute[k] + 1);
+        sink = static_cast<uint8_t>(sink + pollute[k]);
+      }
+      (void)sink;
+    }
     auto t0 = std::chrono::steady_clock::now();
     OH_AI_Status st = OH_AI_ModelPredict(s->model, ins, &outs, nullptr, nullptr);
     auto t1 = std::chrono::steady_clock::now();

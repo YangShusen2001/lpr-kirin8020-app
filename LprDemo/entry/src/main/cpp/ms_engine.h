@@ -146,13 +146,40 @@ struct MsBench {
   double maxAbs = 0;
   int outputDtype = 0;
   size_t outputElems = 0;
+  // ---- 2026-09-21: 用于定位「隔离 7.4 ms vs 流水线 19.5 ms」的 2 倍差距 ----
+  /** 迭代之间插入的睡眠（毫秒）。用于检验 DVFS：调用变稀疏是否掉频。 */
+  double gapMs = 0;
+  /** 迭代之间搬运的干扰缓冲大小（KB）。用于检验缓存/内存带宽污染。 */
+  int polluteKB = 0;
+  /**
+   * 迭代之间**忙等**（自旋）的毫秒数 —— `gapMs` 的对照组。
+   *
+   * 为什么必须有这一档：`gapMs` 把 p50 从 7.4 推到 30.7 ms（单调剂量-反应），
+   * 但那有两种解释：
+   *   (a) **DVFS**：CPU 空闲 → 降频 → 推理跑在低频；
+   *   (b) **时间本身**：某种与「两次调用相隔多久」有关的开销。
+   * 自旋与睡眠的**经过时间相同**，但自旋是计算密集的，会把频率**顶住**。
+   * 若自旋下 p50 回到 ~7.4 ms ⇒ 是频率 (a)，不是时间 (b)。
+   * 这是本实验最关键的一刀：它把「相关」变成「因果」。
+   */
+  double spinMs = 0;
 };
 
 /**
  * Time `repeat` steady-state inferences on `s`, filling the input deterministically
  * inside C++ so every backend sees byte-identical data (the CPU-diff protocol).
  * Never throws; failures come back in `r.ok` / `r.error`.
+ *
+ * `gapMs` / `polluteKB`（2026-09-21 新增）默认 0 = 历史行为逐位不变。
+ * 它们只改变**迭代之间**发生什么，不改变被计时的那次推理本身：
+ *   - `gapMs > 0`：每次迭代前 sleep，模拟流水线「每帧一次、间隔 ~33 ms」的节奏
+ *     ⇒ 若 p50 涨到 ~15–19 ms，则 DVFS/频率假设成立。
+ *   - `polluteKB > 0`：每次迭代前 memcpy 一个该大小的干扰缓冲，模拟流水线里
+ *     conv（1.2 MB RGBA 写）+ letterbox 对缓存/带宽的占用
+ *     ⇒ 若 p50 涨到 ~15–19 ms，则缓存/内存污染假设成立。
+ * 两者可同时给，用于观察是否叠加。
  */
-MsBench MsBenchRun(MsSession* s, int warmup, int repeat);
+MsBench MsBenchRun(MsSession* s, int warmup, int repeat, double gapMs = 0,
+                   int polluteKB = 0, double spinMs = 0);
 
 #endif  // LPR_MS_ENGINE_H

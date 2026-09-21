@@ -236,6 +236,58 @@ const THREAD_BACKENDS: string[] = ['cpu_t1', 'cpu_t2', 'cpu_t4', 'cpu_t6', 'cpu_
 const AFFINITY_BACKENDS: string[] = ['cpu_t4', 'cpu_a1', 'cpu_a2'];
 
 /**
+ * 【C8 定位实验】间隔/污染/忙等档：`[gapMs, polluteKB, spinMs]`。
+ *
+ * 要回答的问题：同一模型、同一后端、同样 4 线程，
+ * **隔离基准 7.4 ms，相机流水线内 15.3–19.5 ms（慢 2 倍）**。
+ *
+ * 已排除：热降频、线程数（t4 最优）、亲和绑定（无绑定最快）、
+ * 输入打包（0.49 ms）、输出拷贝（p50Io 已含）。
+ *
+ * 实测（2026-09-21，y5fu_320x，cpu_t4）：
+ *   | 档 | p50 |
+ *   |---|---|
+ *   | 紧循环 | 7.41 ms |
+ *   | gap 4 ms | 9.16 ms |
+ *   | gap 8 ms | 16.33 ms |
+ *   | gap 16 ms | 24.16 ms |
+ *   | gap 33 ms | 30.74 ms |
+ *   | 污染 1.2 MB（无 gap） | 7.52 ms |
+ * **单调剂量-反应**，且污染档**毫无影响** ⇒ 缓存/带宽假设被否掉。
+ *
+ * 但「gap 越大越慢」仍有两种解释：
+ *   (a) **DVFS**：CPU 空闲 → 降频 → 推理跑在低频；
+ *   (b) 「两次调用间隔多久」这件事本身有开销。
+ * **`spinMs` 就是用来分开它们的**：忙等与睡眠经过时间相同，
+ * 但忙等让 CPU 保持忙碌、频率顶住。若自旋档回到 ~7.4 ms ⇒ 是 (a)。
+ */
+const GAP_TIERS: number[][] = [
+  [0, 0, 0],      // 基线：紧循环
+  [8, 0, 0],      // 稀疏（中）
+  [33, 0, 0],     // 稀疏 = 流水线帧间隔
+  [0, 0, 33],     // ★ 对照组：忙等 33 ms（时间相同，但 CPU 不空闲）
+  [0, 1200, 0],   // 缓存污染（1.2 MB ≈ conv 的 RGBA 写）
+];
+
+/**
+ * gap 实验要在哪些后端上跑 —— 这是**定位机理**的关键一刀。
+ *
+ * 已确证：`gapMs` 单调地把 p50 从 7.3 推到 31.9 ms，而**忙等（spinMs=33）
+ * 同样慢（30.4 ms）** ⇒ **DVFS 被否掉**（CPU 忙着，频率没掉，却依然慢）。
+ * 污染档无影响 ⇒ 缓存/带宽也被否掉。
+ *
+ * 剩下的解释：**worker 线程池的唤醒延迟**。MS Lite 的 CPU 后端按
+ * `thread_num` 起一个线程池；主线程 sleep 时**池里的工作线程也闲置并 park**，
+ * 下次 predict 要先唤醒它们，这段开销落在计时区内。
+ * 注意**忙等只占住调用线程本身**，另外 3 个池线程照样 park —— 这正好
+ * 解释了「忙等也慢」这个反直觉现象。
+ *
+ * 判据：若 `cpu_t1`（**单线程，没有池可 park**）上 gap 效应消失或大幅缩小，
+ * 则机理是池唤醒延迟；若 t1 上也一样慢，则另有来源。
+ */
+const GAP_BACKENDS: string[] = ['cpu_t4', 'cpu_t1'];
+
+/**
  * 端到端后端矩阵：逐模型 × 逐后端都跑一遍完整流水线（补后端覆盖）。
  * 一次只替换一个模型，其余保持生产配置 → 任一行差异只能来自被替换者。
  * 判据：`LANDED=`（实际落点，不看请求值；MS 行另带 `req=`/`fallback=`，ncnn 行带
@@ -1248,6 +1300,82 @@ struct Index {
     }
   }
 
+  /**
+   * 【C8】间隔/污染/忙等扫描（2026-09-21）：定位「隔离 7.3 ms vs 流水线 19.5 ms」。
+   *
+   * 已确证的结论（见 GAP_TIERS / GAP_BACKENDS 的注释）：
+   *   - `gapMs` 单调把 p50 从 7.3 推到 31.9 ms（剂量-反应）
+   *   - **忙等（spinMs=33）同样慢（30.4 ms）⇒ DVFS 被否掉**
+   *   - 污染 1.2 MB 无影响（7.33 ms）⇒ 缓存/带宽被否掉
+   *   - 同一次调用里的 `p50Io`（独立紧循环）恒定 ~8 ms ⇒ 会话本身没退化
+   * 现测**机理**：在 `GAP_BACKENDS` 的每个后端上重跑同一组档，
+   * 看 `cpu_t1`（单线程、无线程池可 park）是否消除 gap 效应。
+   *
+   * 每个模型 × 每个后端只加载一次，再对该后端的各档重复 bench ——
+   * 保证档与档之间唯一的差异就是 gapMs/polluteKB/spinMs，而不是重新加载。
+   * 每档的 `L2` 必须逐位相同，否则说明干扰影响了数值（不应发生）。
+   */
+  private async gapSweep(): Promise<void> {
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.appendNative('GAP SWEEP BEGIN models=' + MODELS_FULL.length.toString() +
+      ' backends=' + GAP_BACKENDS.join(',') +
+      ' tiers=' + GAP_TIERS.length.toString());
+    try {
+      for (let bi = 0; bi < GAP_BACKENDS.length; bi++) {
+        const backend: string = GAP_BACKENDS[bi];
+        for (let i = 0; i < MODELS_FULL.length; i++) {
+          const file: string = MODELS_FULL[i];
+          const short: string = file.replace('models/', '');
+          let bytes: Uint8Array;
+          try {
+            bytes = ctx.resourceManager.getRawFileContentSync(file);
+          } catch (e) {
+            this.append('MATRIX ' + short + ' MISSING-RAWFILE');
+            continue;
+          }
+          const loadRaw: string = await lpr.loadModelAsync(
+            file, this.toArrayBuffer(bytes), backend);
+          const li: Map<string, string> = parseKv(loadRaw);
+          if (li.get('ok') !== '1') {
+            this.append('MATRIX ' + short + ' ' + backend +
+              ' BUILD-FAIL err=' + str(li, 'error'));
+            continue;
+          }
+          const id: number = num(li, 'id');
+          const landed: string = str(li, 'backend');
+          for (let j = 0; j < GAP_TIERS.length; j++) {
+            const gap: number = GAP_TIERS[j][0];
+            const pol: number = GAP_TIERS[j][1];
+            const spn: number = GAP_TIERS[j][2];
+            const b: Map<string, string> = parseKv(
+              await lpr.benchAsync(id, 5, 30, gap, pol, spn));
+            if (b.get('ok') !== '1') {
+              this.append('MATRIX ' + short + ' ' + backend +
+                ' gap=' + gap.toString() + ' pol=' + pol.toString() +
+                ' spin=' + spn.toString() + ' BENCH-FAIL err=' + str(b, 'error'));
+              continue;
+            }
+            const cks: number = num(b, 'checksum');
+            // 行里同时回显 gapMs/polluteKB/spinMs（来自 native，不是我们传的值）——
+            // 这样「档真的生效了」是自证的，不靠 ArkTS 侧的记忆。
+            this.append('MATRIX ' + short + ' LANDED=' + landed +
+              ' gapMs=' + str(b, 'gapMs') + ' polluteKB=' + str(b, 'polluteKB') +
+              ' spinMs=' + str(b, 'spinMs') +
+              ' p50=' + str(b, 'p50Ms') + 'ms mean=' + str(b, 'meanMs') + 'ms' +
+              ' p50Io=' + str(b, 'p50IoMs') + 'ms' +
+              ' min=' + str(b, 'minMs') + 'ms max=' + str(b, 'maxMs') + 'ms' +
+              ' L2=' + cks.toFixed(4));
+            await this.tick();
+          }
+        }
+      }
+      this.appendNative('GAP SWEEP END');
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('GAP SWEEP EXCEPTION ' + err.message);
+    }
+  }
+
   /** 加速器矩阵：逐模型 × 逐后端，每项 warmup 5 + 正式 30 次 p50。 */
   private async probeAll(): Promise<void> {
     if (this.busy) {
@@ -1831,6 +1959,22 @@ struct Index {
             .height(38)
             .onClick(() => {
               this.vulkanProbeRun();
+            })
+        }
+        .width('100%')
+
+        // ── 第三行：C8 定位实验（隔离 vs 流水线的 2 倍差距）
+        Row({ space: 10 }) {
+          Button('间隔/污染扫描')
+            .fontSize(13)
+            .fontColor(IOS_BLUE)
+            .backgroundColor(IOS_BLUE_SOFT)
+            .type(ButtonType.Normal)
+            .borderRadius(10)
+            .layoutWeight(1)
+            .height(38)
+            .onClick(() => {
+              this.gapSweep();
             })
         }
         .width('100%')

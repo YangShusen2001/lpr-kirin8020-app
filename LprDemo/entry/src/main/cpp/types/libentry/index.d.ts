@@ -61,7 +61,20 @@ export const cameraFrameAsync: (
 export const ncnnLoadSlotAsync: (
   slot: number, param: ArrayBuffer, bin: ArrayBuffer, useVulkan?: boolean) => Promise<string>;
 
-export const benchAsync: (id: number, warmup: number, repeat: number) => Promise<string>;
+/**
+ * 隔离基准：`warmup` 次预热后，对同一 session 计时 `repeat` 次推理。
+ *
+ * `gapMs` / `polluteKB`（2026-09-21 新增，可选）在**计时区之外**制造干扰，
+ * 用于定位「隔离 7.4 ms vs 相机流水线内 19.5 ms」的 2 倍差距：
+ *   - `gapMs`：迭代间 sleep，检验 DVFS（调用变稀疏是否掉频）。
+ *   - `polluteKB`：迭代间搬运该大小的缓冲，检验缓存/内存带宽污染
+ *     （流水线每帧还要写 1.2 MB RGBA + 读 1.2 MB NV21 + letterbox，
+ *     而 sleep 完全模拟不到这一层）。
+ * 不传即历史行为（两者为 0）。返回值里带 `gapMs=` / `polluteKB=` 回显，便于自证。
+ */
+export const benchAsync: (
+  id: number, warmup: number, repeat: number,
+  gapMs?: number, polluteKB?: number, spinMs?: number) => Promise<string>;
 
 /** 追加一行到文件（矩阵落盘续跑用，被杀也能知道跑到哪）。 */
 export const appendLine: (path: string, line: string) => string;

@@ -217,6 +217,16 @@ struct AsyncJob {
   // kBench
   int warmup = 0;
   int repeat = 0;
+  /**
+   * kBench 干扰参数（2026-09-21，用于定位「隔离 7.4 ms vs 流水线 19.5 ms」）：
+   *   gapMs     —— 迭代间 sleep，检验 DVFS（调用变稀疏是否掉频）
+   *   polluteKB —— 迭代间搬运的干扰缓冲，检验缓存/带宽污染
+   * 两者都发生在**计时区之外**，不改变被计时的那次推理本身。
+   */
+  double benchGapMs = 0;
+  int benchPolluteKB = 0;
+  /** kBench 忙等毫秒（gapMs 的对照组，见 MsBench::spinMs）。 */
+  double benchSpinMs = 0;
 
   // kCameraFrame：NV21 原始帧 → RGBA(+旋转) → 流水线，一次调用做完
   int stride = 0;
@@ -969,11 +979,15 @@ static void RunJob(AsyncJob* job) {
         }
         s = g_sessions[job->detId].s;
       }
-      MsBench b = MsBenchRun(s, job->warmup, job->repeat);
+      MsBench b = MsBenchRun(s, job->warmup, job->repeat, job->benchGapMs,
+                             job->benchPolluteKB, job->benchSpinMs);
       job->kv = "ok=" + std::string(b.ok ? "1" : "0") +
                 ";backend=" + KvSanitize(b.backend) +
                 ";warmup=" + std::to_string(b.warmup) +
                 ";repeat=" + std::to_string(b.repeat) +
+                ";gapMs=" + Num(b.gapMs) +
+                ";polluteKB=" + std::to_string(b.polluteKB) +
+                ";spinMs=" + Num(b.spinMs) +
                 ";meanMs=" + Num(b.mean) +
                 ";p50Ms=" + Num(b.p50) +
                 ";p95Ms=" + Num(b.p95) +
@@ -1234,8 +1248,10 @@ static napi_value NnrtTryModelAsync(napi_env env, napi_callback_info info) {
 }
 
 static napi_value BenchAsync(napi_env env, napi_callback_info info) {
-  size_t argc = 3;
-  napi_value args[3] = {nullptr, nullptr, nullptr};
+  // 参数：(sessionId, warmup, repeat, gapMs, polluteKB, spinMs)
+  // 后三个可选（2026-09-21 新增），不传则与历史行为逐位相同。
+  size_t argc = 6;
+  napi_value args[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
   napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
   AsyncJob* job = new AsyncJob();
   job->kind = JobKind::kBench;
@@ -1244,6 +1260,25 @@ static napi_value BenchAsync(napi_env env, napi_callback_info info) {
   if (argc >= 1) napi_get_value_int32(env, args[0], &job->detId);
   if (argc >= 2) napi_get_value_int32(env, args[1], &job->warmup);
   if (argc >= 3) napi_get_value_int32(env, args[2], &job->repeat);
+  if (argc >= 4) {
+    double g = 0;
+    if (napi_get_value_double(env, args[3], &g) == napi_ok && g >= 0 && g <= 1000) {
+      job->benchGapMs = g;
+    }
+  }
+  if (argc >= 5) {
+    int32_t p = 0;
+    // 上限 64 MB：够模拟流水线那 1.2 MB 的几倍，又不至于把内存吃爆。
+    if (napi_get_value_int32(env, args[4], &p) == napi_ok && p >= 0 && p <= 65536) {
+      job->benchPolluteKB = p;
+    }
+  }
+  if (argc >= 6) {
+    double s = 0;
+    if (napi_get_value_double(env, args[5], &s) == napi_ok && s >= 0 && s <= 1000) {
+      job->benchSpinMs = s;
+    }
+  }
   return QueueJob(env, job, "lpr.benchAsync");
 }
 
