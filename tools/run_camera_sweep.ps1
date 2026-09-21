@@ -22,8 +22,9 @@
     每档稳态观测时长（默认 75 s，约 37 个窗口）。
 
 .PARAMETER Gears
-    要跑的档位（默认 0,1,3,4：生产 / 全 NPU / 基准 / callback）。
-    2（全 GPU）默认不跑 —— Vulkan 三模型都比 CPU 慢，已有结论。
+    要跑的档位（默认 7,8,3：视频+推理生产后端 / 视频+推理全 NPU / 基准对照）。
+    0=生产 1=全NPU 2=全GPU 3=基准 4=callback 5=视频60 6=视频+录 7=视频+推理 8=视频+推理(全NPU)。
+    档 2（全 GPU）默认不跑 —— Vulkan 三模型都比 CPU 慢，已有结论。
 
 .EXAMPLE
     pwsh tools/run_camera_sweep.ps1 -Tag sweep1
@@ -37,7 +38,7 @@ param(
     # 而 [int[]] 转换会把逗号剥掉变成数字 **134** —— 于是 $GearXY[134] 为 null，
     # 报「Cannot index into a null array」，且错得完全看不出原因（实测踩到）。
     # 收字符串再自己 split，两种调用方式（-File 与 -Command）都对。
-    [string]$Gears = '0,1,3,4'
+    [string]$Gears = '7,8,3'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,17 +46,53 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Hdc = 'D:\IDE\DevEco_Studio\sdk\default\openharmony\toolchains\hdc.exe'
 $Bundle = 'com.shusen.lprdemo'
 
-# 分段控件的点击坐标（1224x2688 屏幕，来自 uitest dumpLayout 的实测 bounds）
-$GearXY = @{
-    0 = @(126, 2541)    # 生产    bounds=[5,2499][248,2583]
-    1 = @(369, 2541)    # 全 NPU  bounds=[248,2499][491,2583]
-    2 = @(612, 2541)    # 全 GPU  bounds=[491,2499][734,2583]
-    3 = @(854, 2541)    # 基准    bounds=[733,2499][976,2583]
-    4 = @(1097, 2541)   # callback bounds=[976,2499][1219,2583]
-}
-$GearName = @{ 0 = '生产'; 1 = '全 NPU'; 2 = '全 GPU'; 3 = '基准'; 4 = 'callback' }
+# ⚠️ 档位按钮的点击坐标**不再写死**。
+#
+# 历史教训：这里原有一张 gear->(x,y) 硬编码表，只覆盖档 0-4。分段控件后来从
+# 5 段变成 7 段、再到 9 段（T9 的档 7/8），每段宽度都变 —— 硬编码坐标会**静默**
+# 点到邻档，而症状（窗口数不对/档位与预期不符）看起来像仪器坏了。
+# 现在改为**从设备现场 dumpLayout 的 bounds 反算中心**，档位数变化自动跟随。
+#
+# 段名与 GEAR_SHORT 一一对应（顺序即档号）。
+$GearShort = @('生产', '全NPU', '全GPU', '基准', 'cb', '视频60', '视频+录', '视频+推理', '视频+全NPU')
+$GearName = @{ 0 = '生产'; 1 = '全 NPU'; 2 = '全 GPU'; 3 = '基准'; 4 = 'callback'
+               5 = '视频60'; 6 = '视频+录'; 7 = '视频+推理(生产后端)'; 8 = '视频+推理(全 NPU)' }
 
 function Invoke-Hdc { param([string]$Cmd) & $Hdc shell $Cmd 2>&1 | Out-String }
+
+<#
+.SYNOPSIS
+    从设备 dumpLayout 读分段控件的每个档位按钮中心坐标。
+
+.DESCRIPTION
+    用**整节点匹配**取 text 严格等于段名的节点，再算 bounds 中心。
+    不用「包含」匹配：标题/说明文案里也可能出现同样的词（权限弹窗那次就踩过，
+    见 Approve-CameraPermission 的注释）。
+#>
+function Get-GearXY {
+    Invoke-Hdc 'uitest dumpLayout -p /data/local/tmp/gears.json' | Out-Null
+    $tmp = Join-Path $Root '_scratch\gears_layout.json'
+    & $Hdc file recv /data/local/tmp/gears.json $tmp 2>&1 | Out-Null
+    if (-not (Test-Path $tmp)) { throw 'dumpLayout 失败，拿不到档位坐标' }
+    $json = Get-Content $tmp -Raw -Encoding UTF8
+    $map = @{}
+    for ($g = 0; $g -lt $GearShort.Count; $g++) {
+        $label = $GearShort[$g]
+        $nodes = [regex]::Matches($json, '\{[^{}]*"text"\s*:\s*"[^"]*"[^{}]*\}')
+        $hit = $null
+        foreach ($n in $nodes) {
+            $t = [regex]::Match($n.Value, '"text"\s*:\s*"([^"]*)"').Groups[1].Value
+            if ($t -eq $label) { $hit = $n; break }
+        }
+        if (-not $hit) { continue }
+        $m = [regex]::Match($hit.Value, '"bounds"\s*:\s*"\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
+        if (-not $m.Success) { continue }
+        $map[$g] = @(
+            [int](([int]$m.Groups[1].Value + [int]$m.Groups[3].Value) / 2),
+            [int](([int]$m.Groups[2].Value + [int]$m.Groups[4].Value) / 2))
+    }
+    return $map
+}
 
 function Get-CurrentGear {
     # 从 App 落盘文件最后一行 RATE / GEAR SWITCH 读当前档位。
@@ -157,11 +194,22 @@ foreach ($part in ($Gears -split ',')) {
     if ($t -eq '') { continue }
     $v = 0
     if (-not [int]::TryParse($t, [ref]$v)) { throw "无法解析档位 '$t'（-Gears 应为逗号分隔，如 0,1,3,4）" }
-    if (-not $GearXY.ContainsKey($v)) { throw "未知档位 $v（可选 0,1,2,3,4）" }
+    if ($v -lt 0 -or $v -ge $GearShort.Count) { throw "未知档位 $v（可选 0..$($GearShort.Count - 1)）" }
     $gearList += $v
 }
 if ($gearList.Count -eq 0) { throw '-Gears 为空' }
 Write-Host "[plan] 档位 $($gearList -join ', ') · 每档 settle ${settleSec}s + 观测 ${ObserveSec}s"
+
+# 现场读档位坐标（分段控件段数已从 5 变到 9，硬编码会静默点错档）。
+$GearXY = Get-GearXY
+$missing = $gearList | Where-Object { -not $GearXY.ContainsKey($_) }
+if ($missing) {
+    throw ("没能在界面里找到档位 $($missing -join ', ') 的按钮 —— " +
+           "dumpLayout 里没匹配到对应段名。检查 GEAR_SHORT 与 -Gears 是否一致，或界面是否在相机页。")
+}
+foreach ($g in $gearList) {
+    Write-Host ("[layout] gear {0} -> ({1},{2})" -f $g, $GearXY[$g][0], $GearXY[$g][1])
+}
 
 $log = @()
 foreach ($g in $gearList) {
@@ -179,13 +227,20 @@ foreach ($g in $gearList) {
     Write-Host ("[gear {0}] 观测 {1} s ..." -f $g, $ObserveSec)
     Start-Sleep -Seconds $ObserveSec
 
-    # 自证：这一档到底出了多少窗口
+    # 自证：这一档到底出了多少窗口 + 检出/空帧分桶
+    #
+    # ⚠️ 检出帧数是本轮的**核心读数**（T9 要的就是有车牌时的产能）。
+    # 若 hit 恒为 0，说明取景框里没有车牌 —— 那测到的只是空帧吞吐，
+    # 与 camera-fps-ceiling.md §7.1 的教训同类，必须当场看见而不是事后发现。
     $tail = Invoke-Hdc "grep 'gear=$g' /data/app/el2/100/base/$Bundle/haps/entry/files/camera_run_*.log | tail -40"
     $rateN = ([regex]::Matches($tail, 'RATE win=')).Count
     $hits = 0
+    $empties = 0
     foreach ($m in [regex]::Matches($tail, 'hit_n=(\d+)')) { $hits += [int]$m.Groups[1].Value }
-    Write-Host ("[gear {0}] 最近 40 行里 RATE 窗口 {1} 个，检出帧合计 {2}" -f $g, $rateN, $hits)
-    $log += "gear=$g rate_windows_in_tail=$rateN hit_frames_in_tail=$hits"
+    foreach ($m in [regex]::Matches($tail, 'empty_n=(\d+)')) { $empties += [int]$m.Groups[1].Value }
+    $warn = if ($hits -eq 0 -and $rateN -gt 0) { '  ⚠️ 无检出帧 —— 取景框里可能没有车牌，本档只能作空帧吞吐' } else { '' }
+    Write-Host ("[gear {0}] 最近 40 行里 RATE 窗口 {1} 个，检出帧 {2}，空帧 {3}{4}" -f $g, $rateN, $hits, $empties, $warn)
+    $log += "gear=$g rate_windows_in_tail=$rateN hit_frames_in_tail=$hits empty_frames_in_tail=$empties"
 }
 
 # ── 3. 收尾：拉证据 ──────────────────────────────────────────────────────────

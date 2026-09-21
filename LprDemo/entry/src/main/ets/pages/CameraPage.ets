@@ -120,15 +120,55 @@ const GEAR_VIDEO: number = 5;
  *  60-60。如果 HAL 的 60fps 传感器档位只在录像配置下激活，只有本档能验证到。
  *  与档 3/5 一样**只取帧不推理** —— 它测的是相机到达率，不是流水线。 */
 const GEAR_VIDEO_VOUT: number = 6;
+/** 【T9 / 2026-09-23】60fps 供给 + **真实推理**。会话配置与档 6 完全相同
+ *  （NORMAL_VIDEO + 预览 60-60 + VideoOutput 60-60），唯一差别是**不在
+ *  `isFrameOnlyGear` 族里** —— 它会正常加载模型并走 `infer()`。
+ *
+ *  为什么需要这一档：相机页**有意丢帧不排队**，故 `done ≡ min(arrive, 产能)`。
+ *  在 ~30 fps 供给下只要流水线快于相机，`done` 就恒被**相机**卡住，产能被
+ *  完全掩盖（T3 的 `arrive == done` 即此）。供给提到 47~58 后，`done` 第一次
+ *  成为**流水线产能的直接读数** —— 这是此前结构上无法测量的量。
+ *
+ *  判据仍只用 `RATE arrive/done/dropped`，且**必须分桶**（hit/empty 分开）。
+ *  预期：生产档（det=CPU）done 明显低于 arrive；全 NPU 档更高。
+ *  见 lpr-kirin8020 issue #10。 */
+const GEAR_VIDEO_INFER: number = 7;
+/** 【T9】档 7 的全 NPU 对照：同样 60fps 供给，但 det/rec/cls 全走 NNRT。
+ *  两档只差**检测器的落点**这一个变量 —— 这正是「NPU 的帧率」要回答的问题：
+ *  在 30 fps 供给下 det 落点只影响「能不能贴住 30」，而在 47~58 供给下
+ *  它直接决定**产能**。⚠️ 引用时必须同时给出 `苏E05172` 这个读错结果
+ *  （`det-backend-alters-result.md`：全 NPU 档读错参考图）。 */
+const GEAR_VIDEO_INFER_NPU: number = 8;
 const GEAR_NAMES: string[] =
   ['生产 det=CPU rec=NPU cls=CPU', '全 NPU', '全 GPU(Vulkan)', '基准：只取帧不推理', '只数 callback',
-    '视频档：NORMAL_VIDEO 预览请求60', '视频+录像档：60fps VideoOutput'];
-/** 分段控件用的短名 —— 五段并排会挤爆。 */
-const GEAR_SHORT: string[] = ['生产', '全 NPU', '全 GPU', '基准', 'callback', '视频60', '视频+录'];
+    '视频档：NORMAL_VIDEO 预览请求60', '视频+录像档：60fps VideoOutput',
+    '视频+推理(生产后端)：60fps 供给下测产能', '视频+推理(全 NPU)：60fps 供给下测产能'];
+/** 分段控件用的短名 —— 段数一多就会挤爆，字号已随段数收窄。 */
+const GEAR_SHORT: string[] =
+  ['生产', '全NPU', '全GPU', '基准', 'cb', '视频60', '视频+录', '视频+推理', '视频+全NPU'];
 
-/** 这三档只取帧不推理（相机上限仪器族）。 */
+/** 这三档只取帧不推理（相机上限仪器族）。
+ *  ⚠️ 档 7/8 **故意不在**此列 —— 它们要跑推理，那正是它们存在的理由。 */
 function isFrameOnlyGear(g: number): boolean {
   return g === GEAR_RAW || g === GEAR_ARRIVE_ONLY || g === GEAR_VIDEO || g === GEAR_VIDEO_VOUT;
+}
+
+/** 用 `NORMAL_VIDEO` 会话（VideoSession）的档：5/6/7/8。 */
+function isVideoGear(g: number): boolean {
+  return g === GEAR_VIDEO || g === GEAR_VIDEO_VOUT ||
+    g === GEAR_VIDEO_INFER || g === GEAR_VIDEO_INFER_NPU;
+}
+
+/** 跑真实推理的「视频+推理」档：7/8。 */
+function isVideoInferGear(g: number): boolean {
+  return g === GEAR_VIDEO_INFER || g === GEAR_VIDEO_INFER_NPU;
+}
+
+/** 需要那条 60fps `VideoOutput`（帧率耦合规则的另一腿）的档：6/7/8。
+ *  档 5 是单流对照组 —— 它证明「只换会话模式不加 VideoOutput」并不提速
+ *  （实测 25.98 < 基准 30.01）。 */
+function wantsVideoOutput(g: number): boolean {
+  return g === GEAR_VIDEO_VOUT || isVideoInferGear(g);
 }
 
 // ---------------------------------------------------------------- iOS 配色
@@ -648,7 +688,8 @@ struct CameraPage {
       let detBe: string = DET_CPU_BACKEND;
       let recBe: string = 'nnrt';
       let clsBe: string = 'cpu';
-      if (this.gear === GEAR_NPU) {
+      if (this.gear === GEAR_NPU || this.gear === GEAR_VIDEO_INFER_NPU) {
+        // 档 8 = 60fps 供给 + 全 NPU。与档 1 同一后端配置，只多一条 60fps 会话。
         detBe = 'nnrt';
         recBe = 'nnrt';
         clsBe = 'nnrt';
@@ -783,7 +824,7 @@ struct CameraPage {
       // SceneMode 分派**的（camera_manager.cpp L2651-2656），NORMAL_VIDEO 下的
       // 预览/录像 profile 集合可能与 NORMAL_PHOTO 不同 —— 本轮顺带把这个问题钉死。
       const gearAtOpen: number = this.gear;
-      const videoMode: boolean = gearAtOpen === GEAR_VIDEO || gearAtOpen === GEAR_VIDEO_VOUT;
+      const videoMode: boolean = isVideoGear(gearAtOpen);
       const cap: camera.CameraOutputCapability = videoMode
         ? mgr.getSupportedOutputCapability(device, camera.SceneMode.NORMAL_VIDEO)
         : mgr.getSupportedOutputCapability(device, camera.SceneMode.NORMAL_PHOTO);
@@ -909,7 +950,7 @@ struct CameraPage {
         // 【2026-09-23 实验】档 6：开流前先把 AVRecorder 备好。
         // 时序按官方录像样例：prepare → getInputSurface → createVideoOutput →
         // （beginConfig 窗口内）addOutput；avRecorder.start() 等 session.start() 成功后。
-        const wantVout: boolean = videoMode && gearAtOpen === GEAR_VIDEO_VOUT &&
+        const wantVout: boolean = videoMode && wantsVideoOutput(gearAtOpen) &&
           vProfileChosen !== undefined;
         if (wantVout) {
           const vp: camera.VideoProfile = vProfileChosen as camera.VideoProfile;
@@ -1591,7 +1632,7 @@ struct CameraPage {
       const emptyP50: number = p50(this.rtEmptyWin);
       const bucketText: string = ' · 往返 检出 ' + (this.inferP50 > 0 ? this.inferP50.toFixed(1) : '-') +
         ' / 未检出 ' + (emptyP50 > 0 ? emptyP50.toFixed(1) : '-') + ' ms';
-      if (this.gear === GEAR_RAW || this.gear === GEAR_VIDEO || this.gear === GEAR_VIDEO_VOUT) {
+      if (isFrameOnlyGear(this.gear) && this.gear !== GEAR_ARRIVE_ONLY) {
         this.segText = '本档只取帧不推理 · 相机出帧上限';
       } else if (this.lastStages === '-') {
         this.segText = 'prep ' + p50(this.prepMsWin).toFixed(1) +
@@ -1742,11 +1783,15 @@ struct CameraPage {
       }, 20);
       return;
     }
-    // 【2026-09-23 实验】档 5/6 需要NORMAL_VIDEO 会话（档 6 另加 VideoOutput），
+    // 【2026-09-23 实验】档 5/6/7/8 需要 NORMAL_VIDEO 会话（6/7/8 另加 VideoOutput），
     // 而相机会话只在 openCamera 建一次 —— 目标形态与当前不一致时必须**整流重启**。
     // 这也是为什么视频实验不能做成普通档位：普通档只换模型会话，不动相机流。
-    const wantVideo: boolean = this.gear === GEAR_VIDEO || this.gear === GEAR_VIDEO_VOUT;
-    const wantVout: boolean = this.gear === GEAR_VIDEO_VOUT;
+    //
+    // 用 `isVideoGear` / `wantsVideoOutput` 而不是枚举档号：档 7/8 与档 6 的
+    // **会话形态完全相同**，差别只在是否推理，所以「需不需要重启」只看形态。
+    // 枚举写法每加一档就要改一处，正是 t8 那次静默回滚的温床。
+    const wantVideo: boolean = isVideoGear(this.gear);
+    const wantVout: boolean = wantsVideoOutput(this.gear);
     const needRestart: boolean = wantVideo !== this.camVideoMode ||
       (wantVideo && wantVout !== this.camHasVout);
     if (needRestart) {
@@ -1946,8 +1991,8 @@ struct CameraPage {
                 .margin({ bottom: 2 })
             }
             .alignItems(VerticalAlign.Bottom)
-            Text(this.gear === GEAR_RAW || this.gear === GEAR_VIDEO ||
-              this.gear === GEAR_VIDEO_VOUT ? '取帧 p50' : '帧 p50')
+            Text(isFrameOnlyGear(this.gear) && this.gear !== GEAR_ARRIVE_ONLY
+              ? '取帧 p50' : '帧 p50')
               .fontSize(11)
               .fontColor(IOS_LABEL2)
               .maxLines(1)
@@ -2049,14 +2094,19 @@ struct CameraPage {
       .backgroundColor(IOS_CARD)
       .margin({ top: 8 })
 
-      // ── 分段控件：四档后端
+      // ── 分段控件：逐档后端
+      //
+      // ⚠️ 档位一多，等宽分段会挤到点不准。**不要在这里写死点击坐标** ——
+      // 坐标由 uitest dumpLayout 现场读（tools/run_camera_sweep.ps1 的
+      // -Gears 从 bounds 反算中心）。字号随段数收窄，保证 9 段仍能显示全。
       Row() {
         ForEach(GEAR_SHORT, (name: string, idx: number) => {
           Text(name)
-            .fontSize(13)
+            .fontSize(GEAR_SHORT.length > 6 ? 10 : 13)
             .fontWeight(this.gear === idx ? FontWeight.Bold : FontWeight.Normal)
             .fontColor(this.gear === idx ? IOS_LABEL : IOS_LABEL2)
             .textAlign(TextAlign.Center)
+            .maxLines(1)
             .layoutWeight(1)
             .padding({ top: 7, bottom: 7 })
             .backgroundColor(this.gear === idx ? IOS_CARD : 'rgba(0,0,0,0)')
