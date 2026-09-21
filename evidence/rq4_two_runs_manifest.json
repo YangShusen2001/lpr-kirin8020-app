@@ -1,0 +1,50 @@
+[
+ {
+  "session": 1,
+  "file": "rq4_indep_s1.log",
+  "ts_begin": 1789993657420,
+  "planned_rounds": 80,
+  "planned_minutes": 20,
+  "interval_ms": 15000,
+  "frame": "assets/samples/hlpr-test.jpg",
+  "rounds_captured": 80,
+  "round_first": 0,
+  "round_last": 79,
+  "t_last_s": 1383,
+  "ended_cleanly": true,
+  "end_declared_rounds": 80,
+  "end_declared_minutes": 23.3
+ },
+ {
+  "session": 2,
+  "file": "rq4_indep_s2.log",
+  "ts_begin": 1789995261112,
+  "planned_rounds": 80,
+  "planned_minutes": 20,
+  "interval_ms": 15000,
+  "frame": "assets/samples/hlpr-test.jpg",
+  "rounds_captured": 40,
+  "round_first": 0,
+  "round_last": 39,
+  "t_last_s": 585,
+  "ended_cleanly": false,
+  "end_declared_rounds": null,
+  "end_declared_minutes": null
+ },
+ {
+  "session": 3,
+  "file": "rq4_indep_s3.log",
+  "ts_begin": 1790024919172,
+  "planned_rounds": 80,
+  "planned_minutes": 20,
+  "interval_ms": 15000,
+  "frame": "assets/samples/hlpr-test.jpg",
+  "rounds_captured": 41,
+  "round_first": 0,
+  "round_last": 40,
+  "t_last_s": 600,
+  "ended_cleanly": false,
+  "end_declared_rounds": null,
+  "end_declared_minutes": null
+ }
+]

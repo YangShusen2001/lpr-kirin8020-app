@@ -157,7 +157,7 @@ def main() -> int:
         print(f"\n发现 {len(problems)} 处未优化构建：\n")
         for p in problems:
             print(f"  - {p}\n")
-        print("理由：-O0 下 native 单帧 ~86 ms / 相机 7 fps；-O2 下 ~20 ms / 28 fps。")
+        print("理由：-O0 下 native 单帧 ~86 ms / 相机 7 fps；-O2 下 ~20 ms / 20 fps。")
         print("所有延迟与帧率数字必须先确认本守卫通过，否则不可引用。")
         return 1
 

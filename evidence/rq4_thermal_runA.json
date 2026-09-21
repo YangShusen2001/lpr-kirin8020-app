@@ -1,0 +1,2162 @@
+[
+ {
+  "round": 0,
+  "t_s": 0,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 39.4708,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "25.6003|6.3630|18.4372|0.0364|1.6173|11.5792|0.3647|0.3116|18.1256",
+  "stage_ms": {
+   "detect": 25.6003,
+   "letterbox": 6.363,
+   "encInfer": 18.4372,
+   "decNms": 0.0364,
+   "rectify": 1.6173,
+   "recog": 11.5792,
+   "cls": 0.3647,
+   "pack": 0.3116,
+   "infer": 18.1256
+  }
+ },
+ {
+  "round": 1,
+  "t_s": 15,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 68.5442,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "53.2659|10.5505|42.0588|0.0189|1.5938|13.5519|0.0858|1.4456|40.6131",
+  "stage_ms": {
+   "detect": 53.2659,
+   "letterbox": 10.5505,
+   "encInfer": 42.0588,
+   "decNms": 0.0189,
+   "rectify": 1.5938,
+   "recog": 13.5519,
+   "cls": 0.0858,
+   "pack": 1.4456,
+   "infer": 40.6131
+  }
+ },
+ {
+  "round": 2,
+  "t_s": 30,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 108.8038,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "80.2989|10.7453|66.9398|0.0825|7.6330|20.5934|0.2098|1.4373|65.5025",
+  "stage_ms": {
+   "detect": 80.2989,
+   "letterbox": 10.7453,
+   "encInfer": 66.9398,
+   "decNms": 0.0825,
+   "rectify": 7.633,
+   "recog": 20.5934,
+   "cls": 0.2098,
+   "pack": 1.4373,
+   "infer": 65.5025
+  }
+ },
+ {
+  "round": 3,
+  "t_s": 45,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 95.7873,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "66.9753|10.3655|53.8573|0.0828|7.6825|20.8814|0.2058|1.4397|52.4177",
+  "stage_ms": {
+   "detect": 66.9753,
+   "letterbox": 10.3655,
+   "encInfer": 53.8573,
+   "decNms": 0.0828,
+   "rectify": 7.6825,
+   "recog": 20.8814,
+   "cls": 0.2058,
+   "pack": 1.4397,
+   "infer": 52.4177
+  }
+ },
+ {
+  "round": 4,
+  "t_s": 60,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 93.8336,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "64.0045|10.8969|49.8091|0.0816|7.6828|21.8239|0.2700|1.4939|48.3152",
+  "stage_ms": {
+   "detect": 64.0045,
+   "letterbox": 10.8969,
+   "encInfer": 49.8091,
+   "decNms": 0.0816,
+   "rectify": 7.6828,
+   "recog": 21.8239,
+   "cls": 0.27,
+   "pack": 1.4939,
+   "infer": 48.3152
+  }
+ },
+ {
+  "round": 5,
+  "t_s": 75,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 66.9719,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "50.7730|10.1947|39.5820|0.0281|2.1664|13.8784|0.1067|1.4400|38.1420",
+  "stage_ms": {
+   "detect": 50.773,
+   "letterbox": 10.1947,
+   "encInfer": 39.582,
+   "decNms": 0.0281,
+   "rectify": 2.1664,
+   "recog": 13.8784,
+   "cls": 0.1067,
+   "pack": 1.44,
+   "infer": 38.142
+  }
+ },
+ {
+  "round": 6,
+  "t_s": 90,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 53.2086,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "36.1755|10.0291|25.1802|0.0264|2.2127|14.6667|0.1156|1.4444|23.7358",
+  "stage_ms": {
+   "detect": 36.1755,
+   "letterbox": 10.0291,
+   "encInfer": 25.1802,
+   "decNms": 0.0264,
+   "rectify": 2.2127,
+   "recog": 14.6667,
+   "cls": 0.1156,
+   "pack": 1.4444,
+   "infer": 23.7358
+  }
+ },
+ {
+  "round": 7,
+  "t_s": 105,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 72.4667,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "54.4659|10.0908|43.4025|0.0264|2.2000|15.6300|0.1231|1.4403|41.9622",
+  "stage_ms": {
+   "detect": 54.4659,
+   "letterbox": 10.0908,
+   "encInfer": 43.4025,
+   "decNms": 0.0264,
+   "rectify": 2.2,
+   "recog": 15.63,
+   "cls": 0.1231,
+   "pack": 1.4403,
+   "infer": 41.9622
+  }
+ },
+ {
+  "round": 8,
+  "t_s": 120,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 96.5644,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "65.1800|10.0067|51.9823|0.0864|7.8078|23.1042|0.4292|1.4417|50.5406",
+  "stage_ms": {
+   "detect": 65.18,
+   "letterbox": 10.0067,
+   "encInfer": 51.9823,
+   "decNms": 0.0864,
+   "rectify": 7.8078,
+   "recog": 23.1042,
+   "cls": 0.4292,
+   "pack": 1.4417,
+   "infer": 50.5406
+  }
+ },
+ {
+  "round": 9,
+  "t_s": 135,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 93.3088,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "64.9761|10.4011|51.3363|0.0834|7.6747|20.3830|0.2322|1.4387|49.8975",
+  "stage_ms": {
+   "detect": 64.9761,
+   "letterbox": 10.4011,
+   "encInfer": 51.3363,
+   "decNms": 0.0834,
+   "rectify": 7.6747,
+   "recog": 20.383,
+   "cls": 0.2322,
+   "pack": 1.4387,
+   "infer": 49.8975
+  }
+ },
+ {
+  "round": 10,
+  "t_s": 150,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 90.6769,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "61.2509|10.2097|47.8272|0.0788|7.6902|21.4236|0.2708|1.4381|46.3891",
+  "stage_ms": {
+   "detect": 61.2509,
+   "letterbox": 10.2097,
+   "encInfer": 47.8272,
+   "decNms": 0.0788,
+   "rectify": 7.6902,
+   "recog": 21.4236,
+   "cls": 0.2708,
+   "pack": 1.4381,
+   "infer": 46.3891
+  }
+ },
+ {
+  "round": 11,
+  "t_s": 165,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 85.32,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "68.3398|10.1180|57.2272|0.0256|2.1959|14.6372|0.1097|1.4470|55.7802",
+  "stage_ms": {
+   "detect": 68.3398,
+   "letterbox": 10.118,
+   "encInfer": 57.2272,
+   "decNms": 0.0256,
+   "rectify": 2.1959,
+   "recog": 14.6372,
+   "cls": 0.1097,
+   "pack": 1.447,
+   "infer": 55.7802
+  }
+ },
+ {
+  "round": 12,
+  "t_s": 180,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 94.4409,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "64.7417|10.0505|51.4341|0.0819|7.6295|21.7505|0.2686|1.4455|49.9886",
+  "stage_ms": {
+   "detect": 64.7417,
+   "letterbox": 10.0505,
+   "encInfer": 51.4341,
+   "decNms": 0.0819,
+   "rectify": 7.6295,
+   "recog": 21.7505,
+   "cls": 0.2686,
+   "pack": 1.4455,
+   "infer": 49.9886
+  }
+ },
+ {
+  "round": 13,
+  "t_s": 195,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 99.2653,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "69.6959|10.4420|56.0108|0.0878|7.7745|21.4706|0.2698|1.4414|54.5694",
+  "stage_ms": {
+   "detect": 69.6959,
+   "letterbox": 10.442,
+   "encInfer": 56.0108,
+   "decNms": 0.0878,
+   "rectify": 7.7745,
+   "recog": 21.4706,
+   "cls": 0.2698,
+   "pack": 1.4414,
+   "infer": 54.5694
+  }
+ },
+ {
+  "round": 14,
+  "t_s": 210,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 95.0287,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "64.8075|10.1209|51.4484|0.0806|7.6444|22.2627|0.2706|1.4912|49.9572",
+  "stage_ms": {
+   "detect": 64.8075,
+   "letterbox": 10.1209,
+   "encInfer": 51.4484,
+   "decNms": 0.0806,
+   "rectify": 7.6444,
+   "recog": 22.2627,
+   "cls": 0.2706,
+   "pack": 1.4912,
+   "infer": 49.9572
+  }
+ },
+ {
+  "round": 15,
+  "t_s": 225,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 98.8983,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "67.4272|9.9542|54.1642|0.0812|7.6877|23.4509|0.2747|1.4394|52.7248",
+  "stage_ms": {
+   "detect": 67.4272,
+   "letterbox": 9.9542,
+   "encInfer": 54.1642,
+   "decNms": 0.0812,
+   "rectify": 7.6877,
+   "recog": 23.4509,
+   "cls": 0.2747,
+   "pack": 1.4394,
+   "infer": 52.7248
+  }
+ },
+ {
+  "round": 16,
+  "t_s": 240,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 57.3878,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "41.2653|10.2433|30.2330|0.0194|1.6309|14.2944|0.0909|1.5752|28.6578",
+  "stage_ms": {
+   "detect": 41.2653,
+   "letterbox": 10.2433,
+   "encInfer": 30.233,
+   "decNms": 0.0194,
+   "rectify": 1.6309,
+   "recog": 14.2944,
+   "cls": 0.0909,
+   "pack": 1.5752,
+   "infer": 28.6578
+  }
+ },
+ {
+  "round": 17,
+  "t_s": 255,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 96.8938,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "66.0716|10.0097|52.8403|0.0828|7.7227|22.9453|0.1148|1.4398|51.4005",
+  "stage_ms": {
+   "detect": 66.0716,
+   "letterbox": 10.0097,
+   "encInfer": 52.8403,
+   "decNms": 0.0828,
+   "rectify": 7.7227,
+   "recog": 22.9453,
+   "cls": 0.1148,
+   "pack": 1.4398,
+   "infer": 51.4005
+  }
+ },
+ {
+  "round": 18,
+  "t_s": 270,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 86.2847,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "61.4514|10.1786|47.9298|0.0830|7.6633|16.9478|0.1773|1.4959|46.4339",
+  "stage_ms": {
+   "detect": 61.4514,
+   "letterbox": 10.1786,
+   "encInfer": 47.9298,
+   "decNms": 0.083,
+   "rectify": 7.6633,
+   "recog": 16.9478,
+   "cls": 0.1773,
+   "pack": 1.4959,
+   "infer": 46.4339
+  }
+ },
+ {
+  "round": 19,
+  "t_s": 285,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 58.7495,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "42.4381|10.1470|31.5286|0.0217|1.6133|14.5767|0.0855|1.4412|30.0873",
+  "stage_ms": {
+   "detect": 42.4381,
+   "letterbox": 10.147,
+   "encInfer": 31.5286,
+   "decNms": 0.0217,
+   "rectify": 1.6133,
+   "recog": 14.5767,
+   "cls": 0.0855,
+   "pack": 1.4412,
+   "infer": 30.0873
+  }
+ },
+ {
+  "round": 20,
+  "t_s": 300,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 71.8448,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "54.1144|10.1706|42.9581|0.0311|2.2239|15.3275|0.1400|1.4495|41.5086",
+  "stage_ms": {
+   "detect": 54.1144,
+   "letterbox": 10.1706,
+   "encInfer": 42.9581,
+   "decNms": 0.0311,
+   "rectify": 2.2239,
+   "recog": 15.3275,
+   "cls": 0.14,
+   "pack": 1.4495,
+   "infer": 41.5086
+  }
+ },
+ {
+  "round": 21,
+  "t_s": 315,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 71.5975,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "56.4550|9.9373|45.7497|0.0222|1.6750|13.3427|0.0853|1.4953|44.2544",
+  "stage_ms": {
+   "detect": 56.455,
+   "letterbox": 9.9373,
+   "encInfer": 45.7497,
+   "decNms": 0.0222,
+   "rectify": 1.675,
+   "recog": 13.3427,
+   "cls": 0.0853,
+   "pack": 1.4953,
+   "infer": 44.2544
+  }
+ },
+ {
+  "round": 22,
+  "t_s": 330,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 63.3302,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "48.1872|10.1866|37.3052|0.0192|1.5405|13.4597|0.0927|1.5080|35.7972",
+  "stage_ms": {
+   "detect": 48.1872,
+   "letterbox": 10.1866,
+   "encInfer": 37.3052,
+   "decNms": 0.0192,
+   "rectify": 1.5405,
+   "recog": 13.4597,
+   "cls": 0.0927,
+   "pack": 1.508,
+   "infer": 35.7972
+  }
+ },
+ {
+  "round": 23,
+  "t_s": 345,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 36.6447,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "19.1581|2.3305|16.0641|0.0284|1.6488|15.7330|0.0886|0.2950|15.7691",
+  "stage_ms": {
+   "detect": 19.1581,
+   "letterbox": 2.3305,
+   "encInfer": 16.0641,
+   "decNms": 0.0284,
+   "rectify": 1.6488,
+   "recog": 15.733,
+   "cls": 0.0886,
+   "pack": 0.295,
+   "infer": 15.7691
+  }
+ },
+ {
+  "round": 24,
+  "t_s": 360,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 75.9116,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "58.5627|10.1683|47.6922|0.0255|2.2097|14.9781|0.1114|1.4767|46.2155",
+  "stage_ms": {
+   "detect": 58.5627,
+   "letterbox": 10.1683,
+   "encInfer": 47.6922,
+   "decNms": 0.0255,
+   "rectify": 2.2097,
+   "recog": 14.9781,
+   "cls": 0.1114,
+   "pack": 1.4767,
+   "infer": 46.2155
+  }
+ },
+ {
+  "round": 25,
+  "t_s": 375,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 81.8066,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "66.1805|9.9611|55.4531|0.0202|1.5720|13.9380|0.0789|1.4416|54.0116",
+  "stage_ms": {
+   "detect": 66.1805,
+   "letterbox": 9.9611,
+   "encInfer": 55.4531,
+   "decNms": 0.0202,
+   "rectify": 1.572,
+   "recog": 13.938,
+   "cls": 0.0789,
+   "pack": 1.4416,
+   "infer": 54.0116
+  }
+ },
+ {
+  "round": 26,
+  "t_s": 390,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 62.0667,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "45.0316|9.9934|34.2195|0.0236|2.1266|14.7550|0.1100|1.4402|32.7794",
+  "stage_ms": {
+   "detect": 45.0316,
+   "letterbox": 9.9934,
+   "encInfer": 34.2195,
+   "decNms": 0.0236,
+   "rectify": 2.1266,
+   "recog": 14.755,
+   "cls": 0.11,
+   "pack": 1.4402,
+   "infer": 32.7794
+  }
+ },
+ {
+  "round": 27,
+  "t_s": 405,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 112.3344,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "81.1589|10.5869|67.3148|0.0770|7.6916|23.3339|0.1131|1.4392|65.8756",
+  "stage_ms": {
+   "detect": 81.1589,
+   "letterbox": 10.5869,
+   "encInfer": 67.3148,
+   "decNms": 0.077,
+   "rectify": 7.6916,
+   "recog": 23.3339,
+   "cls": 0.1131,
+   "pack": 1.4392,
+   "infer": 65.8756
+  }
+ },
+ {
+  "round": 28,
+  "t_s": 420,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 95.9794,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "67.5341|10.2080|54.1445|0.0825|7.6381|20.5542|0.2039|1.4434|52.7011",
+  "stage_ms": {
+   "detect": 67.5341,
+   "letterbox": 10.208,
+   "encInfer": 54.1445,
+   "decNms": 0.0825,
+   "rectify": 7.6381,
+   "recog": 20.5542,
+   "cls": 0.2039,
+   "pack": 1.4434,
+   "infer": 52.7011
+  }
+ },
+ {
+  "round": 29,
+  "t_s": 435,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 73.6862,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "55.3489|10.2583|44.1339|0.0259|2.4023|15.7823|0.1059|1.4444|42.6895",
+  "stage_ms": {
+   "detect": 55.3489,
+   "letterbox": 10.2583,
+   "encInfer": 44.1339,
+   "decNms": 0.0259,
+   "rectify": 2.4023,
+   "recog": 15.7823,
+   "cls": 0.1059,
+   "pack": 1.4444,
+   "infer": 42.6895
+  }
+ },
+ {
+  "round": 30,
+  "t_s": 450,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 69.1883,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "52.1931|9.6403|41.7522|0.0258|1.8581|15.0047|0.0970|1.5023|40.2498",
+  "stage_ms": {
+   "detect": 52.1931,
+   "letterbox": 9.6403,
+   "encInfer": 41.7522,
+   "decNms": 0.0258,
+   "rectify": 1.8581,
+   "recog": 15.0047,
+   "cls": 0.097,
+   "pack": 1.5023,
+   "infer": 40.2498
+  }
+ },
+ {
+  "round": 31,
+  "t_s": 465,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 56.4842,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "37.6527|10.0670|26.2441|0.0322|2.6184|16.0639|0.1122|1.5200|24.7241",
+  "stage_ms": {
+   "detect": 37.6527,
+   "letterbox": 10.067,
+   "encInfer": 26.2441,
+   "decNms": 0.0322,
+   "rectify": 2.6184,
+   "recog": 16.0639,
+   "cls": 0.1122,
+   "pack": 1.52,
+   "infer": 24.7241
+  }
+ },
+ {
+  "round": 32,
+  "t_s": 480,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 70.6206,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "53.5658|9.9294|42.6344|0.0333|2.2164|14.6695|0.1216|1.5211|41.1133",
+  "stage_ms": {
+   "detect": 53.5658,
+   "letterbox": 9.9294,
+   "encInfer": 42.6344,
+   "decNms": 0.0333,
+   "rectify": 2.2164,
+   "recog": 14.6695,
+   "cls": 0.1216,
+   "pack": 1.5211,
+   "infer": 41.1133
+  }
+ },
+ {
+  "round": 33,
+  "t_s": 495,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 60.0102,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "44.4928|9.8067|33.6716|0.0300|1.9794|13.3989|0.1039|1.4397|32.2319",
+  "stage_ms": {
+   "detect": 44.4928,
+   "letterbox": 9.8067,
+   "encInfer": 33.6716,
+   "decNms": 0.03,
+   "rectify": 1.9794,
+   "recog": 13.3989,
+   "cls": 0.1039,
+   "pack": 1.4397,
+   "infer": 32.2319
+  }
+ },
+ {
+  "round": 34,
+  "t_s": 510,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 41.9444,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "26.2856|2.8208|22.7733|0.0198|2.0419|13.4856|0.1152|0.3119|22.4614",
+  "stage_ms": {
+   "detect": 26.2856,
+   "letterbox": 2.8208,
+   "encInfer": 22.7733,
+   "decNms": 0.0198,
+   "rectify": 2.0419,
+   "recog": 13.4856,
+   "cls": 0.1152,
+   "pack": 0.3119,
+   "infer": 22.4614
+  }
+ },
+ {
+  "round": 35,
+  "t_s": 525,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 47.0647,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "31.2098|4.0470|26.3473|0.0239|1.8166|13.9259|0.0892|0.6872|25.6602",
+  "stage_ms": {
+   "detect": 31.2098,
+   "letterbox": 4.047,
+   "encInfer": 26.3473,
+   "decNms": 0.0239,
+   "rectify": 1.8166,
+   "recog": 13.9259,
+   "cls": 0.0892,
+   "pack": 0.6872,
+   "infer": 25.6602
+  }
+ },
+ {
+  "round": 36,
+  "t_s": 540,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 71.7117,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "54.9409|10.0869|43.8317|0.0273|2.3658|14.2623|0.1069|1.4400|42.3917",
+  "stage_ms": {
+   "detect": 54.9409,
+   "letterbox": 10.0869,
+   "encInfer": 43.8317,
+   "decNms": 0.0273,
+   "rectify": 2.3658,
+   "recog": 14.2623,
+   "cls": 0.1069,
+   "pack": 1.44,
+   "infer": 42.3917
+  }
+ },
+ {
+  "round": 37,
+  "t_s": 555,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 74.3116,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "57.9442|10.1531|47.0511|0.0211|1.6647|14.5591|0.1059|1.4436|45.6075",
+  "stage_ms": {
+   "detect": 57.9442,
+   "letterbox": 10.1531,
+   "encInfer": 47.0511,
+   "decNms": 0.0211,
+   "rectify": 1.6647,
+   "recog": 14.5591,
+   "cls": 0.1059,
+   "pack": 1.4436,
+   "infer": 45.6075
+  }
+ },
+ {
+  "round": 38,
+  "t_s": 570,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 95.2195,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "65.3244|10.1117|52.1219|0.0798|7.7064|21.9431|0.2070|1.4439|50.6780",
+  "stage_ms": {
+   "detect": 65.3244,
+   "letterbox": 10.1117,
+   "encInfer": 52.1219,
+   "decNms": 0.0798,
+   "rectify": 7.7064,
+   "recog": 21.9431,
+   "cls": 0.207,
+   "pack": 1.4439,
+   "infer": 50.678
+  }
+ },
+ {
+  "round": 39,
+  "t_s": 585,
+  "thermal": 2,
+  "battC": 35.0,
+  "soc": 100,
+  "charging": 3,
+  "load": "2",
+  "totalMs": 97.873,
+  "code": "苏ED5172",
+  "backends": {
+   "det": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "1076.7692",
+    "l2AsFp16": "nan",
+    "used": "1"
+   },
+   "rec": {
+    "req": "nnrt",
+    "landed": "NNRT:NPU_ohos.boot.hardware.kirin8020_v2_0",
+    "fallback": "",
+    "l2": "4.0489",
+    "l2AsFp16": "3692.1536",
+    "used": "1"
+   },
+   "cls": {
+    "req": "cpu",
+    "landed": "CPU",
+    "fallback": "",
+    "l2": "0.0000",
+    "l2AsFp16": "0.0000",
+    "used": "0"
+   }
+  },
+  "chars": "苏|E|D|5|1|7|2",
+  "cropSum": "2773473",
+  "cropHW": "78|123",
+  "rect": "1751|747|1879|855",
+  "colour": "green|0.9756",
+  "stages": "70.8733|10.0898|57.4877|0.0848|7.8255|19.0209|0.1148|1.4447|56.0430",
+  "stage_ms": {
+   "detect": 70.8733,
+   "letterbox": 10.0898,
+   "encInfer": 57.4877,
+   "decNms": 0.0848,
+   "rectify": 7.8255,
+   "recog": 19.0209,
+   "cls": 0.1148,
+   "pack": 1.4447,
+   "infer": 56.043
+  }
+ }
+]
