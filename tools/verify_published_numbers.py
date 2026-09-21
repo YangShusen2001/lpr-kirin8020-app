@@ -287,6 +287,39 @@ def rq4_drift(g: Guard, rel: str) -> None:
             19.2, 0.2, rel, "%")
 
 
+def c8_dose_response(g: Guard) -> None:
+    """C8：隔离基准 ≠ 流水线内成本（论文 Fig. 6 的四个数字）。
+
+    论文的 Fig. 6 图注里发布了 7.26 / 31.56 / +20.8 / +0.29 四个数，
+    所以它们必须可机检 —— 这是本项目的纪律：**发布了的数字就要能被重算**。
+    """
+    rel = "evidence/camera_gap_sweep.log"
+    g.exists("C8 证据存在", rel)
+    pat = re.compile(r"LANDED=CPU:t(\d) gapMs=([\d.]+) polluteKB=(\d+) spinMs=([\d.]+) p50=([\d.]+)")
+    rows: list[tuple[int, float, int, float, float]] = []
+    for line in read_lines(rel):
+        if "y5fu_320x_head_fp32.ms" not in line:
+            continue
+        m = pat.search(line)
+        if m:
+            rows.append((int(m.group(1)), float(m.group(2)), int(m.group(3)),
+                         float(m.group(4)), float(m.group(5))))
+
+    def pick(threads: int, gap: float, spin: float = 0.0, pollute: int = 0) -> float:
+        for th, gp, po, sp, p50 in rows:
+            if th == threads and abs(gp - gap) < 0.01 and abs(sp - spin) < 0.01 and po == pollute:
+                return p50
+        raise KeyError((threads, gap, spin, pollute))
+
+    g.check("C8 紧循环基线 (t4)", pick(4, 0), 7.26, 0.02, rel, " ms")
+    g.check("C8 gap=8 (t4)", pick(4, 8), 16.14, 0.02, rel, " ms")
+    g.check("C8 gap=33 (t4)", pick(4, 33), 31.56, 0.02, rel, " ms")
+    # 忙等对照：t4 上几乎没救回来，t1 上几乎完全消除 —— 这是分离两个机理的关键
+    g.check("C8 忙等残差 (t4)", pick(4, 0, spin=33) - pick(4, 0), 20.80, 0.02, rel, " ms")
+    g.check("C8 忙等残差 (t1)", pick(1, 0, spin=33) - pick(1, 0), 0.29, 0.02, rel, " ms")
+    g.check("C8 缓存污染无影响 (t4)", pick(4, 0, pollute=1200), 7.50, 0.02, rel, " ms")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rq4", default="evidence/rq4_thermal_80r.csv",
@@ -313,6 +346,7 @@ def main() -> int:
     t8_operators(g)
     t7_rq4(g, args.rq4)
     rq4_drift(g, args.rq4)
+    c8_dose_response(g)
     return g.report()
 
 
