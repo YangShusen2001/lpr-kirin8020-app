@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
-# sign_hap.sh —— 用 .signing/ 的材料签署 entry 模块的 unsigned HAP
+# sign_hap.sh —— 用 .signing/ 的**OpenHarmony 官方**材料签署 entry 模块的 unsigned HAP
+#
+# ⚠️ 目标设备决定用哪个脚本（详见 docs/adr/0009-real-device-signing-trust-root.md）
+# ==============================================================================
+#   sign_hap.sh          OH 官方材料，信任根 OpenHarmony Application Root CA
+#                        → 只能装**云手机 / OH 开发板**
+#   sign_hap_huawei.sh   华为材料（~/.ohos/config），信任根 Huawei CBG Root CA G2
+#                        → 装**华为商用真机**（本项目用户的 MIA-AL00 就是这类）
+#
+#   两者互不相认。用错了设备侧会报：
+#       failed to install bundle. code:9568257 error: fail to verify pkcs7 file.
+#   这个报错**与证书过期 / 包名 / UDID 都无关**，唯一判据是信任根。
+#   诊断：hdc shell hilog -x | grep -a HapVerify
 #
 # 为什么不经 hvigor 的 SignHap：
 #   hvigor 的 decipher-util.js 会**无条件**把 build-profile.json5 里的口令当 AES-GCM

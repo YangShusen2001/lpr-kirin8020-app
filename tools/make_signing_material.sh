@@ -66,6 +66,23 @@ print(re.search(r'\"bundleName\"\s*:\s*\"([^\"]+)\"',s).group(1))
 ")"
 echo "[signing] bundleName = $BUNDLE_NAME"
 
+# ---- 目标真机 UDID（debug profile 的装机白名单） --------------------------
+# 不写进 profile 就会在设备侧报 "fail to verify pkcs7 file"（见第 2 步注释）。
+# 自动从已连接的 hdc 设备取；取不到就留空（只影响真机装机，不影响签名本身）。
+if [ -z "${LPR_DEVICE_UDID:-}" ]; then
+  HDC_BIN="$(command -v hdc || echo 'D:/Applications/CamStreamReceiver/connection/hdc.exe')"
+  if [ -x "$HDC_BIN" ] || command -v hdc >/dev/null 2>&1; then
+    LPR_DEVICE_UDID="$("$HDC_BIN" shell bm get -u 2>/dev/null \
+      | sed -n 's/.*udid of current device is *: *//p' | tr -d '\r\n ' || true)"
+    export LPR_DEVICE_UDID
+    if [ -n "$LPR_DEVICE_UDID" ]; then
+      echo "[signing] 真机 UDID = $LPR_DEVICE_UDID"
+    else
+      echo "[signing] 未取到 hdc 设备 UDID —— 若之后要在真机装，用 LPR_DEVICE_UDID=<64位hex> 重跑"
+    fi
+  fi
+fi
+
 # ---- 口令：hvigor 强制 ≥32 位且偶数长度；此处生成一次并复用 ----------------
 PW_FILE="$SIGN_DIR/pw.txt"
 if [ ! -f "$PW_FILE" ]; then
@@ -94,6 +111,16 @@ print(f'[signing] CA 链拆出 {len(certs)} 张证书')
 PY
 
 # ---- 2. 生成未签名的 debug profile（替换 bundle-name） --------------------
+#
+# device-ids 必须包含目标真机的 UDID，否则设备侧报：
+#     failed to install bundle. code:9568257 error: fail to verify pkcs7 file.
+# 注意这个报错**名字会骗人** —— 它看着像证书链/签名格式问题（本地 verify-app
+# 也确实报 true），实际是 debug profile 的 debug-info.device-ids 里没有这台设备。
+# 签名工具本地校验只验摘要，不验设备授权，所以本地永远是成功。
+#
+# 取真机 UDID：  hdc shell bm get -u    →  输出 "udid of current device is : <64位hex>"
+# 模板里预置的是云手机 UDID，真机装机必须补上当前这台。
+# 可多个，用逗号分隔；用 LPR_EXTRA_UDIDS 追加。
 python - "$TOOL_LIB" "$SIGN_DIR" "$BUNDLE_NAME" <<'PY'
 import json, sys, os
 tool_lib, out, bundle = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -104,9 +131,24 @@ d['bundle-info']['developer-id'] = 'OpenHarmony'
 d['validity'] = {'not-before': 1757000000, 'not-after': 2062000000}
 d['uuid'] = '9f2a7c31-4b8e-4d2a-b6f1-3c9d5e7a1b20'
 d.pop('app-privilege-capabilities', None)
+
+# 合并 UDID 白名单：模板自带的 + 环境变量追加的 + 现场从 hdc 抓的
+ids = list(d.get('debug-info', {}).get('device-ids', []))
+if ids and ids[0] == 'all':
+    ids = []
+extra = [u.strip() for u in os.environ.get('LPR_EXTRA_UDIDS', '').split(',') if u.strip()]
+device = os.environ.get('LPR_DEVICE_UDID', '').strip()
+for u in extra + ([device] if device else []):
+    if u not in ids:
+        ids.append(u)
+        print(f'[signing] + UDID {u}')
+d.setdefault('debug-info', {})
+d['debug-info']['device-ids'] = ids
+d['debug-info']['device-id-type'] = 'udid'
+
 json.dump(d, open(os.path.join(out, 'lpr-debug-profile.json'), 'w', encoding='utf-8'),
           ensure_ascii=False, indent=4)
-print(f'[signing] profile 模板已改写 bundle-name={bundle}')
+print(f'[signing] profile 模板已改写 bundle-name={bundle}，UDID 白名单 n={len(ids)}')
 PY
 
 # ---- 3. 签名 profile ------------------------------------------------------
