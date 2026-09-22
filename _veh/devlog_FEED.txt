@@ -1,0 +1,7 @@
+09-22 15:59:22.309  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED ok=1 count=1 hit=1 veh=4 useRoi=1 src=320x320 convMs=0.7938 inferMs=168.7013 error=
+09-22 15:59:22.309  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED GEOM src=320x320 view=427.60x329.15 scale=1.028603 vehDraw=3 plateDraw=1 density=2.8625 viewPos=0.00,156.01 viewPosPx=0.0,446.6
+09-22 15:59:22.310  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED BOX veh i=0 src=19.54,65.32,245.04,184.39 draw=69.33,67.19,301.27,189.66 drawPx=198.4,192.3,862.4,542.9
+09-22 15:59:22.310  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED BOX veh i=1 src=290.40,95.86,319.78,135.61 draw=347.93,98.60,378.15,139.48 drawPx=996.0,282.2,1082.5,399.3
+09-22 15:59:22.310  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED BOX veh i=2 src=0.29,66.31,62.51,88.96 draw=49.53,68.20,113.52,91.51 drawPx=141.8,195.2,324.9,261.9
+09-22 15:59:22.311  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED BOX plate i=0 owner=0 src=107.00,114.00,170.00,130.00 draw=159.28,117.26,224.09,133.72 drawPx=455.9,335.7,641.4,382.8
+09-22 15:59:22.311  5580  5580 I A0D001/com.shusen.lprdemo/LprCamera: FEED RESULT plate=浙AG557A colour=green owner=0 hit=1 seg=veh 111.4752 + roi 55.5717 ms · 车框 4→3（跨类去重 1）· 牌去重丢 0
