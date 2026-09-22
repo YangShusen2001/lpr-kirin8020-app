@@ -1,0 +1,11 @@
+[veh_ref] 设备日志含 2 轮，取最后一轮；各轮框数 [5, 5]
+[veh_ref] 各轮框逐元素一致：是（可复现）
+[veh_ref] 设备: count=5 truncated=0 conf=0.050000 iou=0.500000 vehicleOnly=1 size=320 nhwc=1 inferMs=48.535469 backend=CPU
+[veh_ref] PC  : count=5 truncated=False conf=0.0500 iou=0.5000 vehicle_only=True size=320
+
+[veh_ref] 配对 5 / PC 5 / 设备 5
+[veh_ref] 坐标最大偏差 = 0.0000 px（中位 0.0000）
+[veh_ref] 分数最大偏差 = 1.73e-06（中位 7.26e-07）
+[veh_ref] 最小配对 IOU   = 0.999998
+
+[veh_ref] ✓ PC 与设备结果一致（数量、类别、坐标、分数都在容差内）

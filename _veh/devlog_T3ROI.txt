@@ -1,0 +1,59 @@
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI srcSize=320x320
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI rgbSumAll=66637791
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI geomFrame=320x320
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-center;ok=1;x0=85;y0=85;w=130;h=130;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;exp=85,85,130,130;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-left-edge;ok=1;x0=0;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=0,35,117,130;box=2.000000,50.000000,102.000000,150.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-right-edge;ok=1;x0=203;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=203,35,117,130;box=218.000000,50.000000,318.000000,150.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-bottom-edge;ok=1;x0=35;y0=203;w=130;h=117;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=35,203,130,117;box=50.000000,218.000000,150.000000,318.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-no-expand;ok=1;x0=50;y0=60;w=100;h=100;imgW=320;imgH=320;clamped=0;valid=1;expand=0.000000;exp=50,60,100,100;box=50.000000,60.000000,150.000000,160.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-round-outward;ok=1;x0=15;y0=25;w=131;h=131;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;exp=15,25,131,131;box=30.400000,40.599998,130.399994,140.600006
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-tall-thin;ok=1;x0=2;y0=0;w=66;h=240;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=2,0,66,240;box=10.000000,10.000000,60.000000,210.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-zero-area;ok=1;x0=0;y0=0;w=0;h=0;imgW=320;imgH=320;clamped=0;valid=0;expand=0.150000;box=10.000000,10.000000,10.000000,20.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-fully-outside;ok=1;x0=385;y0=385;w=-65;h=-65;imgW=320;imgH=320;clamped=1;valid=0;expand=0.150000;box=400.000000,400.000000,500.000000,500.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-bad-src-size;ok=1;x0=0;y0=0;w=0;h=0;imgW=0;imgH=0;clamped=0;valid=0;expand=0.150000;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=roi-negative-expand;ok=1;x0=0;y0=0;w=0;h=0;imgW=320;imgH=320;clamped=0;valid=0;expand=-0.100000;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=cover-center;ok=1;x0=85;y0=85;w=130;h=130;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=cover-left-edge;ok=1;x0=0;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=cover-poking-out;ok=1;x0=285;y0=285;w=35;h=35;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=285,285,35,35
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=cover-negative;ok=1;x0=85;y0=85;w=100;h=100;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=cover-boundary-inclusive;ok=1;x0=85;y0=85;w=115;h=115;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=map-int;ok=1;got=85,85,95,95;exp=85,85,95,95
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=map-float;ok=1;x1=86.500000;exp=86.5,87.5,88.5,89.5
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=map-roundtrip;ok=1;x1=3.000000;exp=3
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=map-vehicleboxes;ok=1;b0x1=85.000000;exp=85
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=crop-interior-bytes;ok=1;x0=56;y0=56;w=208;h=208;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;rgbSum=25501141;box=80.000000,80.000000,240.000000,240.000000;err=
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=crop-clamped-bytes;ok=1;x0=0;y0=0;w=184;h=184;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;rgbSum=21232457;box=0.000000,0.000000,160.000000,160.000000;err=
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=crop-invalid-roi;ok=1;err=cropRoi: roi not valid
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=crop-out-of-source;ok=1;err=cropRoi: roi out of source
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI case=crop-empty-src;ok=1;err=cropRoi: invalid source
+09-22 09:09:33.601 64501 64669 I A0D001/com.shusen.lprdemo/LprNative: T3ROI total=25;failed=0
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI srcSize=320x320
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI rgbSumAll=66637791
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI geomFrame=320x320
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-center;ok=1;x0=85;y0=85;w=130;h=130;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;exp=85,85,130,130;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-left-edge;ok=1;x0=0;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=0,35,117,130;box=2.000000,50.000000,102.000000,150.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-right-edge;ok=1;x0=203;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=203,35,117,130;box=218.000000,50.000000,318.000000,150.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-bottom-edge;ok=1;x0=35;y0=203;w=130;h=117;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=35,203,130,117;box=50.000000,218.000000,150.000000,318.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-no-expand;ok=1;x0=50;y0=60;w=100;h=100;imgW=320;imgH=320;clamped=0;valid=1;expand=0.000000;exp=50,60,100,100;box=50.000000,60.000000,150.000000,160.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-round-outward;ok=1;x0=15;y0=25;w=131;h=131;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;exp=15,25,131,131;box=30.400000,40.599998,130.399994,140.600006
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-tall-thin;ok=1;x0=2;y0=0;w=66;h=240;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=2,0,66,240;box=10.000000,10.000000,60.000000,210.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-zero-area;ok=1;x0=0;y0=0;w=0;h=0;imgW=320;imgH=320;clamped=0;valid=0;expand=0.150000;box=10.000000,10.000000,10.000000,20.000000
+09-22 09:09:33.603 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-fully-outside;ok=1;x0=385;y0=385;w=-65;h=-65;imgW=320;imgH=320;clamped=1;valid=0;expand=0.150000;box=400.000000,400.000000,500.000000,500.000000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-bad-src-size;ok=1;x0=0;y0=0;w=0;h=0;imgW=0;imgH=0;clamped=0;valid=0;expand=0.150000;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=roi-negative-expand;ok=1;x0=0;y0=0;w=0;h=0;imgW=320;imgH=320;clamped=0;valid=0;expand=-0.100000;box=100.000000,100.000000,200.000000,200.000000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=cover-center;ok=1;x0=85;y0=85;w=130;h=130;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=cover-left-edge;ok=1;x0=0;y0=35;w=117;h=130;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=cover-poking-out;ok=1;x0=285;y0=285;w=35;h=35;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;exp=285,285,35,35
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=cover-negative;ok=1;x0=85;y0=85;w=100;h=100;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=cover-boundary-inclusive;ok=1;x0=85;y0=85;w=115;h=115;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=map-int;ok=1;got=85,85,95,95;exp=85,85,95,95
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=map-float;ok=1;x1=86.500000;exp=86.5,87.5,88.5,89.5
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=map-roundtrip;ok=1;x1=3.000000;exp=3
+09-22 09:09:33.604 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=map-vehicleboxes;ok=1;b0x1=85.000000;exp=85
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=crop-interior-bytes;ok=1;x0=56;y0=56;w=208;h=208;imgW=320;imgH=320;clamped=0;valid=1;expand=0.150000;rgbSum=25501141;box=80.000000,80.000000,240.000000,240.000000;err=
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=crop-clamped-bytes;ok=1;x0=0;y0=0;w=184;h=184;imgW=320;imgH=320;clamped=1;valid=1;expand=0.150000;rgbSum=21232457;box=0.000000,0.000000,160.000000,160.000000;err=
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=crop-invalid-roi;ok=1;err=cropRoi: roi not valid
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=crop-out-of-source;ok=1;err=cropRoi: roi out of source
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI case=crop-empty-src;ok=1;err=cropRoi: invalid source
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI total=25;failed=0
+09-22 09:09:33.605 64501 64501 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROI VERDICT total=25;failed=0

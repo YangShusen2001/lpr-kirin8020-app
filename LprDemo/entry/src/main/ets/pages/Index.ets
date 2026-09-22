@@ -123,6 +123,25 @@ const BACKEND_CLS: string = 'cpu';
 const MODEL_DET: string = 'models/y5fu_320x_head_fp32.ms';
 const MODEL_REC: string = 'models/rpv3_mdict_160_r3.ms';
 const MODEL_CLS: string = 'models/litemodel_cls_96x_r1.ms';
+/**
+ * T2 车辆检测（YOLOv5u/ultralytics，320，80 类 COCO）。
+ *
+ * 它是**DFL 改写后**才转出来的 .ms：原版 yolov5u 的 DFL 头里有两个
+ * `perm != [0,1,3,2]` 的 Transpose，MindSpore Lite 转换器在
+ * `/model.24/dfl/conv/Conv` 上直接失败（`Transform meta graph failed! ret=-500`），
+ * 连 CPU 的 .ms 都产不出来。改写脚本 `_veh/patch_dfl.py` 把
+ * 「转置→softmax→转置→1x1Conv」等价替换成「减最大值→Exp→加权→归约→相除」，
+ * 并用 onnxruntime 做了逐元素自证；`tools/scan_onnx.py` 两条 NPU 硬门也随之全过。
+ *
+ * 后端固定 'cpu'：一期不上 NPU（T8 才做原版 anchor-based 的 NPU 转换）。
+ */
+const MODEL_VEH: string = 'models/yolov5su_320_veh_fp32.ms';
+/**
+ * T2 自检图。**必须恰好 320x320**，理由见 `vehicleSelfTest`。
+ * 由 `_veh/veh_ref.py --make-image` 从 CCPD 真实道路场景图生成。
+ */
+const VEH_SAMPLE: string = 'assets/veh320/veh320.png';
+const VEH_SIZE: number = 320;
 
 /**
  * 一份**厂商转换器产出的真 `.om`**（来自华为官方 HiAI Foundation codelab，Caffe/SqueezeNet
@@ -598,6 +617,13 @@ struct Index {
   private detId: number = -1;
   private recId: number = -1;
   private clsId: number = -1;
+  /**
+   * T2 车辆检测会话 id（yolov5su）—— 与上面三个**不是同一批模型**。
+   *
+   * 车牌检测是 y5fu_320x（3 个 head 输出），车辆检测是 yolov5su（单输出 1x84x2100）。
+   * 把 `detId` 当车辆模型用会得到 `yolov5u 期望单输出，实际 3` —— 设备上实测踩过。
+   */
+  private vehId: number = -1;
 
   // ---------------------------------------------------------- 页面跳转
 
@@ -731,6 +757,251 @@ struct Index {
     await src.release();
     this.appendNative('NATIVE DECODE ' + file + ' ' + w + 'x' + h);
     return { data: rgba, width: w, height: h };
+  }
+
+  /**
+   * T2 车辆检测自检：把 rawfile 里那张测试图喂给车辆检测器，把结果留在屏上。
+   *
+   * ## 为什么测试图**必须**恰好 320x320
+   *
+   * `LprVehicleDetect` 会先把源图 letterbox 到 320x320。源图若本身就是 320x320，
+   * 则 `r = min(320/320, 320/320) = 1`、`left = top = 0`，letterbox 退化成
+   * **逐字节拷贝** —— 于是 PC 侧参考实现（`_veh/veh_ref.py`，跑 onnxruntime）
+   * 与真机看到的模型输入是同一串字节。
+   *
+   * 这一条不是洁癖：T2 的验收是「PC 侧与 native 侧在同一张图上结果一致」。
+   * 若源图尺寸不等于 320，两侧就要各自做一次插值缩放，而两边的插值实现
+   * （native 的手写双线性 vs PIL/Pillow）本来就不会逐位相同，于是"结果不一致"
+   * 会变成一个分不清是解码写错、还是插值差异的糊涂账。把 resize 从等式里消掉，
+   * 剩下的差异就只可能来自解码。
+   *
+   * 所以这里**硬校验尺寸并拒绝**，而不是"差不多就行"。
+   */
+  private async vehicleSelfTest(): Promise<void> {
+    const c: common.UIAbilityContext | undefined = this.ctx;
+    if (c === undefined || this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.progress = '车辆检测自检';
+    try {
+      // 1) 载入模型。会话按 (rawfile|后端) 缓存，重复点不会重建；
+      //    这里显式传 'cpu'，一期不上 NPU。
+      const bytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_VEH);
+      const loadRaw: string = await lpr.loadModelAsync(MODEL_VEH, this.toArrayBuffer(bytes), 'cpu');
+      const lk: Map<string, string> = parseKv(loadRaw);
+      if (lk.get('ok') !== '1') {
+        this.appendNative('VEH LOAD FAIL ' + loadRaw);
+        return;
+      }
+      const id: number = num(lk, 'id');
+      this.vehId = id;  // 记住会话 id：ROI 探针要用同一个车辆检测器
+      this.appendNative('VEH LOAD ok id=' + id.toString() +
+        ' LANDED=' + str(lk, 'backend') + ' req=' + str(lk, 'requested') +
+        ' fallback=' + str(lk, 'fallbackFrom') + ' trail=[' + str(lk, 'attemptLog') + ']');
+
+      // 2) 测试图 -> RGBA
+      const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
+      if (frame === null) {
+        this.appendNative('VEH FAIL 解不出测试图 ' + VEH_SAMPLE);
+        return;
+      }
+      if (frame.width !== VEH_SIZE || frame.height !== VEH_SIZE) {
+        this.appendNative('VEH FAIL 测试图必须是 ' + VEH_SIZE.toString() + 'x' +
+          VEH_SIZE.toString() + '，实际 ' + frame.width.toString() + 'x' +
+          frame.height.toString() + ' —— letterbox 会真的插值，与 PC 参考不再是同一份输入');
+        return;
+      }
+
+      // 3) 预热一次再读结果：首跑含缓冲分配与首次触碰页错误，
+      //    计进去会把冷启动误当成后端/实现差异（与 e2eMatrix 同一口径）。
+      await lpr.vehicleDetectAsync(id, frame.data, frame.width, frame.height);
+      const raw: string = await lpr.vehicleDetectAsync(id, frame.data, frame.width, frame.height);
+      const kv: Map<string, string> = parseKv(raw);
+      if (kv.get('ok') !== '1') {
+        this.appendNative('VEH FAIL ' + raw);
+        return;
+      }
+      const n: number = num(kv, 'count');
+      this.appendNative('VEH RESULT ' + raw);
+      this.appendNative('T2VEH count=' + n.toString() +
+        ' truncated=' + str(kv, 'truncated') +
+        ' conf=' + str(kv, 'conf') + ' iou=' + str(kv, 'iou') +
+        ' vehicleOnly=' + str(kv, 'vehicleOnly') +
+        ' size=' + str(kv, 'size') + ' nhwc=' + str(kv, 'nhwc') +
+        ' inferMs=' + str(kv, 'inferMs') + ' totalMs=' + str(kv, 'totalMs') +
+        ' LANDED=' + str(kv, 'backend'));
+      // 逐框单独一行，便于在屏上核对与复制
+      for (let i = 0; i < n; i++) {
+        const f: string[] = str(kv, 'b' + i.toString()).split(',');
+        if (f.length < 4) {
+          continue;
+        }
+        this.appendNative('T2BOX idx=' + i.toString() + ' cls=' + f[0] + ' score=' + f[1] +
+          ' rect=' + f[2] + ' name=' + f[3]);
+      }
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('VEH EXCEPTION ' + err.message);
+    } finally {
+      this.busy = false;
+      this.progress = '';
+    }
+  }
+
+  /**
+   * T3 自证：ROI 裁剪 + 坐标映射。**不需要模型**，测的是纯几何与逐字节裁剪。
+   *
+   * 复用 T2 那张 320x320 测试图：它是真实素材、尺寸已知，于是报告里的 `rgbSum`
+   * 可以在 PC 侧拿**同一张 PNG** 独立重算 —— 构成「设备裁出来的那块区域
+   * == PC 算出来的那块区域」的跨实现证据（不是同一条代码自说自话）。
+   *
+   * 报告是多行文本，逐行回显到屏上（也是逐行写 hilog）。
+   */
+  private async roiSelfTest(): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.progress = 'ROI 自证';
+    try {
+      const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
+      if (frame === null) {
+        this.appendNative('T3ROI FAIL 解不出测试图 ' + VEH_SAMPLE);
+        return;
+      }
+      const raw: string = await lpr.roiSelfTestAsync(frame.data, frame.width, frame.height);
+      const lines: string[] = raw.split('\n');
+      let verdict: string = 'total=?;failed=?';
+      for (let i = 0; i < lines.length; i++) {
+        const ln: string = lines[i].trim();
+        if (ln.length === 0) {
+          continue;
+        }
+        this.appendNative('T3ROI ' + ln);
+        if (ln.indexOf('failed=') >= 0) {
+          verdict = ln;
+        }
+      }
+      this.appendNative('T3ROI VERDICT ' + verdict);
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('T3ROI EXCEPTION ' + err.message);
+    } finally {
+      this.busy = false;
+      this.progress = '';
+    }
+  }
+
+  /**
+   * T3 探针：车框 → 裁 ROI → 车牌检测 → **映射回原图坐标**。
+   *
+   * 只做分数最高的那一个车框（遍历所有框 + 合并去重是 T4）。要证的是一件事：
+   * ROI 路径映射回来的车牌框，必须与整图直检出来的框落在**同一处**。
+   * 判据是 IoU，逐框打印 —— 不靠人眼看图。
+   */
+  private async roiPlateProbe(): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.progress = 'ROI 探针';
+    try {
+      if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
+        this.appendNative('T3PROBE 车牌三会话尚未加载，先加载…');
+        await this.loadNative();
+      }
+      if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
+        this.appendNative('T3PROBE FAIL 会话不可用 det=' + this.detId.toString() +
+          ' rec=' + this.recId.toString() + ' cls=' + this.clsId.toString());
+        return;
+      }
+      // 车辆检测器是**另一个模型**，与上面三个分开加载。
+      if (this.vehId < 0) {
+        this.appendNative('T3PROBE 车辆检测会话尚未加载，先加载 ' + MODEL_VEH + ' …');
+        const c: common.UIAbilityContext | undefined = this.ctx;
+        if (c === undefined) {
+          this.appendNative('T3PROBE FAIL 无 UIAbilityContext');
+          return;
+        }
+        const bytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_VEH);
+        const loadRaw: string = await lpr.loadModelAsync(MODEL_VEH, this.toArrayBuffer(bytes),
+          'cpu');
+        const lk: Map<string, string> = parseKv(loadRaw);
+        if (lk.get('ok') !== '1') {
+          this.appendNative('T3PROBE FAIL 车辆模型加载失败 ' + loadRaw);
+          return;
+        }
+        this.vehId = num(lk, 'id');
+      }
+      const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
+      if (frame === null) {
+        this.appendNative('T3PROBE FAIL 解不出测试图 ' + VEH_SAMPLE);
+        return;
+      }
+      // 探两个框：0 = 最高分（这一张图上它贴着左边缘，ROI 被 clamp 成 x0=0），
+      // 4 = 一个 x0>0 的框。**只探 0 的话，x 方向的映射等于没被验证** ——
+      // "忘了加 x0"与"映射正确"在 x0=0 时结果完全一样。
+      const n0: number = await this.roiProbeOne(frame, 0, true);
+      if (n0 > 4) {
+        await this.roiProbeOne(frame, 4, false);
+      } else {
+        this.appendNative('T3PROBE 车辆框只有 ' + n0.toString() +
+          ' 个，这一张图里没有 x0>0 的框可探（x 方向映射未被区分）');
+      }
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('T3PROBE EXCEPTION ' + err.message);
+    } finally {
+      this.busy = false;
+      this.progress = '';
+    }
+  }
+
+  /**
+   * ROI 探针的单次执行（探第 `boxIdx` 个车辆框）。返回车辆框总数，失败返回 -1。
+   *
+   * `logDirect` 为假时不重复打印直检框 —— 直检与选哪个车框无关，
+   * 每次探针都一模一样，重复打印只是噪声。
+   */
+  private async roiProbeOne(frame: RgbaFrame, boxIdx: number,
+    logDirect: boolean): Promise<number> {
+    const raw: string = await lpr.roiPlateProbeAsync(this.vehId, this.detId, this.recId,
+      this.clsId, frame.data, frame.width, frame.height, boxIdx);
+    const kv: Map<string, string> = parseKv(raw);
+    if (kv.get('ok') !== '1') {
+      this.appendNative('T3PROBE FAIL boxIdx=' + boxIdx.toString() + ' ' + raw);
+      return -1;
+    }
+    this.appendNative('T3PROBE boxIdx=' + str(kv, 'boxIdx') +
+      ' direct=' + str(kv, 'directCount') + ' veh=' + str(kv, 'vehCount') +
+      ' roi=' + str(kv, 'roiX0') + ',' + str(kv, 'roiY0') + ',' + str(kv, 'roiW') + ',' +
+      str(kv, 'roiH') + ' clamped=' + str(kv, 'roiClamped') +
+      ' coversBox=' + str(kv, 'roiCoversBox') + ' expand=' + str(kv, 'expand') +
+      ' roiPlates=' + str(kv, 'roiCount') + ' directMs=' + str(kv, 'directMs') +
+      ' roiMs=' + str(kv, 'roiMs'));
+    const nr: number = num(kv, 'roiCount');
+    for (let i = 0; i < nr; i++) {
+      const f: string[] = str(kv, 'r' + i.toString()).split(',');
+      if (f.length < 5) {
+        continue;
+      }
+      this.appendNative('T3ROIBOX boxIdx=' + str(kv, 'boxIdx') + ' idx=' + i.toString() +
+        ' rect=' + f[0] + ' score=' + f[1] + ' directJ=' + f[2] + ' iou=' + f[3] +
+        ' code=' + f[4]);
+    }
+    if (logDirect) {
+      const nd: number = num(kv, 'directCount');
+      for (let j = 0; j < nd; j++) {
+        const f: string[] = str(kv, 'd' + j.toString()).split(',');
+        if (f.length < 3) {
+          continue;
+        }
+        this.appendNative('T3DIRECTBOX idx=' + j.toString() + ' rect=' + f[0] +
+          ' score=' + f[1] + ' code=' + f[2]);
+      }
+    }
+    return num(kv, 'vehCount');
   }
 
   /**
@@ -3397,6 +3668,51 @@ struct Index {
           .fontFamily(INS_FONT)
           .layoutWeight(1)
           .maxLines(2)
+        Text('车辆检测')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.vehicleSelfTest();
+            }
+          })
+
+        Text('ROI 自证')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.roiSelfTest();
+            }
+          })
+
+        Text('ROI 探针')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.roiPlateProbe();
+            }
+          })
+
         Text('清空')
           .fontSize(11)
           .fontColor(this.busy ? INS_LABEL3 : INS_BAD)

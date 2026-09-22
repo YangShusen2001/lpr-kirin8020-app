@@ -233,6 +233,141 @@ bool LprNv21ToRgba(const uint8_t* nv21, size_t nv21Size, int width, int height, 
 /** Character set, index 0 = CTC blank. 44 entries. */
 const std::vector<std::string>& LprToken();
 
+// ---------------------------------------------------------------- 车辆检测（T2）
+//
+// 【为什么不是 ncnn】
+// T2 票面写的是「一期走 ncnn(CPU)」。摸排后发现两件事，路线因此改了：
+//   1. 本项目的 CPU 通路本来就是 **MindSpore Lite + .ms**（`LprSessions::det` 走
+//      `y5fu_320x_head_fp32.ms`，且它本来就在 CPU）；ncnn 在本项目只服务
+//      GPU/Vulkan 档（ADR-008）。为一期新引入 ncnn 会多一条并行通路要维护，
+//      而不是"复用现成通路"。
+//   2. `.ms` 转换被 DFL 的两个 Transpose 挡死（`Transform meta graph failed! ret=-500`），
+//      这才是真正的障碍；它对 ncnn 也同样挡（`tools/scan_onnx.py` 判定
+//      `perm != [0,1,3,2]` 不支持）。所以无论走哪条路，DFL 都得先改写。
+// 于是实际路线 = **改写 DFL → 转 .ms → 走已有的 MS Lite CPU 通路**，与 `det=CPU`
+// 完全一致，且 DFL 里的两个 Transpose 一并消失，T8 的 NPU perm 硬门也顺带清了。
+// 改写脚本：`_veh/patch_dfl.py`（含 onnxruntime 数值自证，不过就不落盘）。
+
+/** COCO 80 类名，下标即类号。车辆类见 `LprIsVehicleClass`。 */
+const std::vector<std::string>& LprCocoNames();
+
+/** COCO 里的车辆类：2=car, 3=motorcycle, 5=bus, 7=truck。 */
+bool LprIsVehicleClass(int classId);
+
+/** 一个车辆框。`rect` 与 `PlateResult::rect` 同样是**源图坐标**。 */
+struct VehicleBox {
+  float rect[4] = {0, 0, 0, 0};  // x1, y1, x2, y2 in source-image coordinates
+  float score = 0;
+  int classId = 0;
+};
+
+/**
+ * 解码 YOLOv5u(ultralytics) 的 `output0 [1,84,2100]`。
+ *
+ * 这个输出**已经是解码过的**：图里最后一段 Slice/Sub/Add/Div/Concat 已经把
+ * DFL 的 16-bin 加权和转成 xywh **像素坐标**（输入尺度），并乘过 stride；
+ * `Sigmoid` 也已把 80 个类分数压到 [0,1]。所以这里**不做** anchor/stride 解码，
+ * 只做「取框 → 按类 NMS → letterbox 反变换」。
+ *
+ * 布局是**通道优先**：`raw[c * anchors + a]`，c=0..3 是 cx,cy,w,h，c=4..83 是类分数。
+ *
+ * `r` / `left` / `top` 来自 `LprLetterBox`，用于把框还原到源图坐标。
+ */
+std::vector<VehicleBox> LprDecodeYolov5u(const std::vector<float>& raw, float confThresh,
+                                         float iouThresh, float r, int left, int top,
+                                         bool vehicleOnly, int maxBoxes, bool* outTruncated);
+
+/**
+ * 车辆检测端到端：letterbox -> encode -> infer -> decode -> 按类 NMS。
+ *
+ * `confThresh` 由调用方给（T2 默认 0.05，比车牌检测的 0.25 低得多 —— 车辆是大目标，
+ * 低阈值是为了 T4 的「车框→车牌」不因为漏框而整段丢检；代价是框变多，靠 NMS 收）。
+ * `vehicleOnly` 为真时只留 COCO 的 4 个车辆类。
+ *
+ * 检出数按分数降序，最多 `kMaxVehicleBoxes` 个（截断时 `outTruncated` 置真，
+ * 调用方必须如实报告，不能假装那就是全部）。
+ */
+constexpr int kMaxVehicleBoxes = 100;
+
+bool LprVehicleDetect(const RgbaImage& img, MsSession* det, float confThresh, float iouThresh,
+                      bool vehicleOnly, std::vector<VehicleBox>& out, bool& outTruncated,
+                      float& outInferMs, std::string& err);
+
+/** 从会话的输入形状推出 letterbox 边长与需不需要 NHWC 布局。 */
+bool LprDetectGeometryOf(const MsSession* det, int& outSize, bool& outNhwc, std::string& err);
+
+// ---------------------------------------------------------------- ROI 裁剪（T3）
+//
+// 这一层是「车框 → 裁 ROI → 车牌检测 → 框映射回原图」的第一、三步。
+//
+// **裁剪放在 native 侧**（票面要求）：RGBA 是大 buffer（1080p 一帧 8.3 MB），
+// 跨 ArkTS/native 边界反复拷贝会直接吃掉相机帧预算（33.3 ms）。放在这里还有一个
+// 附带好处：`LprCropRoi` 是纯逐行 memcpy，无插值、无格式转换、无重采样，
+// 像素与源图**逐字节相同** —— 这一点由 T3 自证里的逐字节比对钉住（不是"看着像"）。
+
+/** ROI 外扩比例默认值。实测 0.15 与 0.40 的召回差异 <1%，取小者省像素。 */
+constexpr float kRoiExpandDefault = 0.15f;
+
+/**
+ * 一个 ROI 的整数几何。`x0`/`y0` 是 ROI 左上角在**源图**中的像素坐标，
+ * `w`/`h` 是 ROI 的像素尺寸（已 clamp 到图内）。
+ *
+ * `imgW`/`imgH` 一并记下来，是为了让 `ContainsBox` 能正确判断「ROI 是否覆盖车框」——
+ * 车框本身可以超出图边界（YOLO 的框经常顶到边上），这时该裁的是**框与图的交集**，
+ * 不是框本身。
+ */
+struct RoiRect {
+  int x0 = 0, y0 = 0, w = 0, h = 0;
+  int imgW = 0, imgH = 0;
+  bool valid = false;    // false = 裁剪区域为空（零面积框 / 框完全在图外 / 图尺寸非法）
+  bool clamped = false;  // 外扩被图边界削过 ⇒ ROI 比"理想外扩"小，日志要如实写
+  float expand = 0;      // 请求的外扩比例（原样记下，便于从日志复现）
+
+  /** ROI 是否覆盖 (车框 ∩ 图)。框与图无交时返回 true（空集被任何集合覆盖）。 */
+  bool ContainsBox(const float box[4]) const;
+};
+
+/**
+ * 由车框（源图坐标）算 ROI：按框**自身宽高**的 `expand` 倍向外扩，再 clamp 到图内。
+ *
+ * 取整方向是**向外**（左/上用 `floor`，右/下用 `ceil`）。向内取整会切掉车框边线上的
+ * 像素，而车牌恰好经常贴着框的边线 —— 这是"少一个像素就丢一块牌"的地方。
+ */
+RoiRect LprRoiFromBox(const float box[4], int imgW, int imgH, float expand);
+
+/** 从源图裁出 ROI。纯逐行 memcpy，像素与源图逐字节相同。 */
+bool LprCropRoi(const RgbaImage& src, const RoiRect& roi, RgbaImage& out, std::string& err);
+
+/**
+ * ROI 局部坐标 → 源图坐标（就地）：`x += roi.x0`、`y += roi.y0`。
+ *
+ * **必须在去重与可视化之前调用**：`LprRunPipeline` 作用在 ROI 上，它返回的
+ * `PlateResult::rect` 是 ROI **局部**坐标；直接拿去画框会整体偏移 `(x0, y0)`，
+ * 表现为"检测是对的、位置是错的"（spec §六.3 说的就是这个坑）。
+ */
+void LprRoiMapRect(int rect[4], const RoiRect& roi);
+void LprRoiMapRect(float rect[4], const RoiRect& roi);
+void LprRoiMapRects(std::vector<VehicleBox>& boxes, const RoiRect& roi);
+
+/** 源图坐标 → ROI 局部坐标（就地）：`LprRoiMapRect` 的逆。T4 用它把车框搬进 ROI 局部系。 */
+void LprRoiUnmapRect(float rect[4], const RoiRect& roi);
+
+/** RGB 之和（跳过 alpha）。与 `PlateResult::cropSum` **同口径**，数值可直接互相比对。 */
+long long LprRgbSum(const RgbaImage& img);
+
+/**
+ * T3 单元级自证：用**构造函数造的已知车框**断言 ROI 几何、覆盖性、坐标映射与裁剪内容。
+ * 返回逐行报告（`\n` 分隔，每行形如 `case=<名字>;ok=0/1;<细节>`），由调用方写 hilog。
+ *
+ * 为什么要有它：票面要求「有单元级验证：构造已知车辆框，断言映射后坐标正确」。
+ * 期望值全部**手算后硬编码**在实现里（不是拿同一套公式再算一遍），所以公式一旦回归
+ * 断言就会红。跑在真机上，因此这份报告同时是"设备上的 C++ 真的按这套规则算"的证据。
+ *
+ * `img` 用于"裁剪内容逐字节一致"与 `rgbSum` 这两条跨实现比对；传无效图时
+ * 自动改用确定性图案合成一张 320x320，保证自证在任何情况下都能跑完。
+ */
+std::string LprRoiSelfTest(const RgbaImage& img);
+
 /** CTC greedy decode over one [T] index row with its per-step probabilities. */
 void LprCtcGreedy(const std::vector<int>& idx, const std::vector<float>& prob,
                   std::string& code, float& conf,

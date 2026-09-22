@@ -1,0 +1,11 @@
+[t3probe] 探针数 = 2；直检框 = 1；ROI 路径框 = 1
+[t3probe] boxIdx=0 direct=1 veh=5 roi=(0,47,279,156) clamped=1 coversBox=1 expand=0.1500 roiPlates=1 directMs=36.7173 roiMs=17.3827
+[t3probe] boxIdx=4 direct=1 veh=5 roi=(16,28,203,51) clamped=0 coversBox=1 expand=0.1500 roiPlates=0 directMs=18.7473 roiMs=12.9577
+[t3probe] 各探针 roiX0 = [0, 16]；roiY0 = [47, 28]
+[t3probe] y 方向偏移：端到端已覆盖（ROI 路径框的 y 已按 roiY0 平移）
+[t3probe] NOTE x 方向偏移**未被端到端覆盖**：本素材里能检出车牌的车框贴着左边缘，ROI 的 x0 被 clamp 成 0。x 分量由设备侧单元用例覆盖（map-int / map-float / map-vehicleboxes 都带 x 偏移 85）。
+[t3probe] ✓ boxIdx=0 roiPlate#0 rect=107|114|170|130 score=0.8557 directJ=0 IoU=0.8750 code=浙AG557A
+[t3probe]   直检对应 direct#0 rect=107,113,171,131 score=0.870800 code=浙AG557A
+
+[t3probe] ✓ ROI 路径映射回原图坐标后与直检框重合（IoU 达标、车牌串逐字符一致）
+[t3probe]   偏移方向的覆盖情况见上面的 y 方向/x 方向两行 —— 不要把 NOTE 读成已覆盖

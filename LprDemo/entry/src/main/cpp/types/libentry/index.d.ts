@@ -52,6 +52,69 @@ export const cameraFrameAsync: (
   recSlot?: number, clsSlot?: number) => Promise<string>;
 
 /**
+ * 车辆检测（T2）。**只跑车辆检测器，不进车牌流水线。**
+ *
+ * `detId` 是会话 id（用 `loadModelAsync('models/yolov5su_320_veh_fp32.ms', bytes, 'cpu')`
+ * 拿到）；`rgba` 是 **RGBA8888** 缓冲，大小必须等于 w*h*4。
+ *
+ * 返回扁平 kv 串（ArkTS 禁用 `any`，所以不用 JSON）：
+ *
+ *   ok=1;count=3;truncated=0;conf=0.0500;iou=0.5000;vehicleOnly=1;size=320;nhwc=1;
+ *   inferMs=..;totalMs=..;backend=CPU;requested=cpu;fallbackFrom=;error=;
+ *   b0=2,0.8123,12.0000|34.0000|56.0000|78.0000,car;
+ *   ...
+ *
+ * 每个 `b<i>` = `类号,分数,x1|x2|x2|x2,类名`，坐标是**源图坐标**（已做 letterbox 反变换）。
+ *
+ * `truncated=1` 表示检出数被上限（100）截断过 —— 调用方必须如实显示，不能当成"全部"。
+ *
+ * 阈值缺省：confThresh=0.05（比车牌检测的 0.25 低得多，为 T4 不漏车框）、
+ * iouThresh=0.5、vehicleOnly=true（只留 car/motorcycle/bus/truck）。
+ * 显式传入的阈值必须是 (0,1) 内的有限数，否则**报错**而不是静默退回默认值。
+ */
+export const vehicleDetectAsync: (
+  detId: number, rgba: ArrayBuffer, width: number, height: number,
+  confThresh?: number, iouThresh?: number, vehicleOnly?: boolean) => Promise<string>;
+
+/**
+ * T3：ROI 裁剪 + 坐标映射的单元自证。
+ *
+ * 只要一张 RGBA 图，**不需要**模型会话 —— 它测的是纯几何与逐字节裁剪：
+ * 外扩取整方向、图边界 clamp、退化输入不崩、ROI→源图坐标映射、
+ * 以及"裁出来的像素与源图对应区域逐字节相同"。
+ *
+ * 返回**多行报告**（不是 kv 串），每行 `case=<名字>;ok=0/1;<细节>`，
+ * 末行 `total=N;failed=M`。传入无效图时原生侧会合成确定性图案并写明
+ * `note=src-synth`，不会假装用的是真实素材。
+ */
+export const roiSelfTestAsync: (
+  rgba: ArrayBuffer, width: number, height: number) => Promise<string>;
+
+/**
+ * T3：车框 → 裁 ROI → 车牌检测 → **映射回原图坐标**（只做分数最高的一个车框）。
+ *
+ * 刻意不做"遍历所有车框 + 合并去重"——那是 T4。本入口要证的是
+ * 「ROI 裁得对、映射不偏」，判据是 ROI 路径映射回来的车牌框与整图直检框的 IoU，
+ * 逐框写在日志与返回串里（`r0=...` 是 ROI 路径、`d0=...` 是直检对照）。
+ *
+ * **四个会话 id 不是同一批模型**：`vehId` 是车辆检测器（yolov5su，单输出），
+ * `detId`/`recId`/`clsId` 是车牌流水线（y5fu_320x 检测 + 识别 + 分类）。
+ * 把车牌检测器当车辆模型传会得到 `yolov5u 期望单输出，实际 3`。
+ *
+ * 车辆检测固定用 conf=0.05 / iou=0.5 / 只留车辆类（与 T2 同口径）。
+ *
+ * `boxIdx` 选探第几个车辆框（按分数降序，缺省 0）。**必须探一个 `x0 > 0` 的框**：
+ * 最高分框常贴着左边缘，ROI 会被 clamp 成 `x0 = 0`，这时"忘了加 x0"与"映射正确"
+ * 结果完全一样 —— x 方向的映射等于没验证。
+ *
+ * `expand` 缺省 0.15（`kRoiExpandDefault`），显式传入必须落在 [0,1) 否则报错。
+ */
+export const roiPlateProbeAsync: (
+  vehId: number, detId: number, recId: number, clsId: number,
+  rgba: ArrayBuffer, width: number, height: number,
+  boxIdx?: number, expand?: number) => Promise<string>;
+
+/**
  * ncnn 通用模型槽位（识别=1 / 分类=2，0 保留给检测旁路）。
  *
  * GPU（Vulkan）在麒麟 8020 上只有 ncnn 一条通路，而 MS Lite 的 GPU 档编译期判否 ——

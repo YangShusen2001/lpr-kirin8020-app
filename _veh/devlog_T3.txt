@@ -1,0 +1,11 @@
+09-22 09:19:21.653  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3PROBE 车牌三会话尚未加载，先加载…
+09-22 09:19:22.022  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3PROBE 车辆检测会话尚未加载，先加载 models/yolov5su_320_veh_fp32.ms …
+09-22 09:19:22.363  5377  5567 I A0D001/com.shusen.lprdemo/LprNative: T3PROBE boxIdx=0 direct=1 veh=5 roi=0,47,279,156 crop=279x156 roiPlates=1
+09-22 09:19:22.363  5377  5567 I A0D001/com.shusen.lprdemo/LprNative: T3ROIBOX idx=0 rect=107,114,170,130 score=0.855748 code=浙AG557A directJ=0 iou=0.875000
+09-22 09:19:22.363  5377  5567 I A0D001/com.shusen.lprdemo/LprNative: T3DIRECTBOX idx=0 rect=107,113,171,131 score=0.870800 code=浙AG557A
+09-22 09:19:22.365  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3PROBE boxIdx=0 direct=1 veh=5 roi=0,47,279,156 clamped=1 coversBox=1 expand=0.1500 roiPlates=1 directMs=36.7173 roiMs=17.3827
+09-22 09:19:22.367  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3ROIBOX boxIdx=0 idx=0 rect=107|114|170|130 score=0.8557 directJ=0 iou=0.8750 code=浙AG557A
+09-22 09:19:22.367  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3DIRECTBOX idx=0 rect=107|113|171|131 score=0.8708 code=浙AG557A
+09-22 09:19:22.454  5377  5567 I A0D001/com.shusen.lprdemo/LprNative: T3PROBE boxIdx=4 direct=1 veh=5 roi=16,28,203,51 crop=203x51 roiPlates=0
+09-22 09:19:22.454  5377  5567 I A0D001/com.shusen.lprdemo/LprNative: T3DIRECTBOX idx=0 rect=107,113,171,131 score=0.870800 code=浙AG557A
+09-22 09:19:22.456  5377  5377 I A0D001/com.shusen.lprdemo/LprNativeUI: T3PROBE boxIdx=4 direct=1 veh=5 roi=16,28,203,51 clamped=0 coversBox=1 expand=0.1500 roiPlates=0 directMs=18.7473 roiMs=12.9577

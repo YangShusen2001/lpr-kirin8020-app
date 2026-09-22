@@ -1345,3 +1345,673 @@ bool LprNv21ToRgba(const uint8_t* nv21, size_t nv21Size, int width, int height, 
   }
   return true;
 }
+
+// ============================================================ 车辆检测（T2）
+//
+// 路线说明见 lpr_pipeline.h 的「车辆检测」段：票面写的 ncnn 改成了
+// 「改写 DFL → 转 .ms → 走 MS Lite CPU」，理由与现有 det=CPU 一致。
+
+const std::vector<std::string>& LprCocoNames() {
+  // ultralytics/COCO 的固定 80 类顺序，下标即类号。顺序不能改 ——
+  // 它与训练时的 names 字典一一对应，改了就会把 bus 叫成 car。
+  static const std::vector<std::string> kNames = {
+      "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck",
+      "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench",
+      "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra",
+      "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
+      "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove",
+      "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
+      "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange",
+      "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
+      "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
+      "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink",
+      "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier",
+      "toothbrush",
+  };
+  return kNames;
+}
+
+bool LprIsVehicleClass(int classId) {
+  // car / motorcycle / bus / truck。不含 bicycle(1) —— 那是非机动车，
+  // 拍不到车牌；也不含 train(6)。
+  return classId == 2 || classId == 3 || classId == 5 || classId == 7;
+}
+
+static float BoxIou(const float a[4], const float b[4]) {
+  const float x1 = std::max(a[0], b[0]);
+  const float y1 = std::max(a[1], b[1]);
+  const float x2 = std::min(a[2], b[2]);
+  const float y2 = std::min(a[3], b[3]);
+  const float iw = x2 - x1;
+  const float ih = y2 - y1;
+  if (!(iw > 0) || !(ih > 0)) {
+    return 0;
+  }
+  const float inter = iw * ih;
+  const float aa = std::max(0.0f, a[2] - a[0]) * std::max(0.0f, a[3] - a[1]);
+  const float bb = std::max(0.0f, b[2] - b[0]) * std::max(0.0f, b[3] - b[1]);
+  const float uni = aa + bb - inter;
+  return uni > 0 ? inter / uni : 0;
+}
+
+bool LprDetectGeometryOf(const MsSession* det, int& outSize, bool& outNhwc, std::string& err) {
+  outSize = 0;
+  outNhwc = false;
+  if (det == nullptr) {
+    err = "detectGeometry: null session";
+    return false;
+  }
+  outNhwc = (det->inputFormat == OH_AI_FORMAT_NHWC);
+  long long prod = 1;
+  for (int64_t d : det->inputShape) {
+    if (d <= 0) {
+      err = "detectGeometry: 输入形状含动态维";
+      return false;
+    }
+    prod *= static_cast<long long>(d);
+  }
+  // 不按 layout 猜边长，直接由元素数反推 —— NHWC/NCHW 的报告在本项目里并不稳定，
+  // 但 "3 * S * S" 这个事实两种 layout 下都成立。
+  if (prod <= 0 || (prod % 3) != 0) {
+    err = "detectGeometry: 输入元素数 " + std::to_string(prod) + " 不是 3 的倍数";
+    return false;
+  }
+  const long long area = prod / 3;
+  const int side = static_cast<int>(std::lround(std::sqrt(static_cast<double>(area))));
+  if (side <= 0 || static_cast<long long>(side) * side != area) {
+    err = "detectGeometry: 输入不是 3xSxS（元素数 " + std::to_string(prod) + "）";
+    return false;
+  }
+  outSize = side;
+  return true;
+}
+
+std::vector<VehicleBox> LprDecodeYolov5u(const std::vector<float>& raw, float confThresh,
+                                         float iouThresh, float r, int left, int top,
+                                         bool vehicleOnly, int maxBoxes, bool* outTruncated) {
+  if (outTruncated != nullptr) {
+    *outTruncated = false;
+  }
+  constexpr int kClasses = 80;
+  constexpr int kChannels = 4 + kClasses;  // 84
+  if (raw.empty() || (raw.size() % kChannels) != 0) {
+    return {};
+  }
+  const int anchors = static_cast<int>(raw.size() / kChannels);
+
+  std::vector<VehicleBox> cand;
+  cand.reserve(64);
+  for (int a = 0; a < anchors; ++a) {
+    // 先扫类分数：低于阈值就整条丢，省掉一次坐标计算
+    int best = -1;
+    float bestScore = 0;
+    for (int c = 0; c < kClasses; ++c) {
+      const float s = raw[static_cast<size_t>(4 + c) * anchors + a];
+      if (s > bestScore) {
+        bestScore = s;
+        best = c;
+      }
+    }
+    if (!(bestScore > confThresh)) {
+      continue;
+    }
+    if (vehicleOnly && !LprIsVehicleClass(best)) {
+      continue;
+    }
+    const float cx = raw[static_cast<size_t>(0) * anchors + a];
+    const float cy = raw[static_cast<size_t>(1) * anchors + a];
+    const float bw = raw[static_cast<size_t>(2) * anchors + a];
+    const float bh = raw[static_cast<size_t>(3) * anchors + a];
+    VehicleBox b;
+    b.rect[0] = cx - bw * 0.5f;
+    b.rect[1] = cy - bh * 0.5f;
+    b.rect[2] = cx + bw * 0.5f;
+    b.rect[3] = cy + bh * 0.5f;
+    b.score = bestScore;
+    b.classId = best;
+    cand.push_back(b);
+  }
+  if (cand.empty()) {
+    return {};
+  }
+
+  // 按分数降序；NMS 之前先截一刀，避免低阈值下候选爆到 2100 让 O(n²) 变贵。
+  std::vector<int> order(cand.size());
+  for (size_t i = 0; i < order.size(); ++i) {
+    order[i] = static_cast<int>(i);
+  }
+  std::stable_sort(order.begin(), order.end(),
+                   [&cand](int x, int y) { return cand[x].score > cand[y].score; });
+  constexpr size_t kMaxCand = 1000;
+  if (order.size() > kMaxCand) {
+    order.resize(kMaxCand);
+    if (outTruncated != nullptr) {
+      *outTruncated = true;  // 候选被截断过，结果已不完整，必须如实上报
+    }
+  }
+
+  // 按类 NMS（YOLO 约定：不同类之间不互相抑制）
+  std::vector<char> dead(cand.size(), 0);
+  std::vector<VehicleBox> kept;
+  for (int oi : order) {
+    if (dead[oi]) {
+      continue;
+    }
+    if (maxBoxes > 0 && static_cast<int>(kept.size()) >= maxBoxes) {
+      if (outTruncated != nullptr) {
+        *outTruncated = true;
+      }
+      break;
+    }
+    kept.push_back(cand[oi]);
+    for (int oj : order) {
+      if (oj == oi || dead[oj] || cand[oj].classId != cand[oi].classId) {
+        continue;
+      }
+      if (BoxIou(cand[oi].rect, cand[oj].rect) > iouThresh) {
+        dead[oj] = 1;
+      }
+    }
+  }
+
+  // letterbox 反变换：先减 padding 再除 scale（与 LprDecodeDetections 同一套）
+  for (VehicleBox& b : kept) {
+    b.rect[0] = (b.rect[0] - static_cast<float>(left)) / r;
+    b.rect[1] = (b.rect[1] - static_cast<float>(top)) / r;
+    b.rect[2] = (b.rect[2] - static_cast<float>(left)) / r;
+    b.rect[3] = (b.rect[3] - static_cast<float>(top)) / r;
+  }
+  return kept;
+}
+
+bool LprVehicleDetect(const RgbaImage& img, MsSession* det, float confThresh, float iouThresh,
+                      bool vehicleOnly, std::vector<VehicleBox>& out, bool& outTruncated,
+                      float& outInferMs, std::string& err) {
+  out.clear();
+  outTruncated = false;
+  outInferMs = 0;
+  if (!img.Valid()) {
+    err = "vehicleDetect: invalid image";
+    return false;
+  }
+  int size = 0;
+  bool nhwc = false;
+  if (!LprDetectGeometryOf(det, size, nhwc, err)) {
+    return false;
+  }
+
+  // ⚠️ T4 待办：这里的 scratch / 输入缓冲是**每帧新分配**的。A18 §1 记录过
+  //    首次触碰的缺页开销（~7 ms/帧），det 段当年就是靠复用 buffer 消掉的。
+  //    一期先求正确，等 T4 把「车框→逐框车牌」串起来时再一并搬进共享 scratch。
+  ResizeScratch sc;
+  LetterBoxed lb;
+  LprLetterBoxInto(img, size, lb, sc);
+  if (!lb.img.Valid()) {
+    err = "vehicleDetect: letterbox failed";
+    return false;
+  }
+
+  std::vector<float> in;
+  if (nhwc) {
+    LprToNhwcInto(lb.img, /*swapRB=*/true, in);
+  } else {
+    LprToNchwInto(lb.img, /*swapRB=*/true, in);
+  }
+
+  std::vector<std::vector<float>> outs;
+  const double t0 = NowMs();
+  if (!MsRunMulti(det, in.data(), outs, err)) {
+    return false;
+  }
+  outInferMs = static_cast<float>(NowMs() - t0);
+
+  if (outs.size() != 1) {
+    err = "vehicleDetect: yolov5u 期望单输出，实际 " + std::to_string(outs.size());
+    return false;
+  }
+  const std::vector<float>& raw = outs[0];
+  if (raw.empty() || (raw.size() % 84) != 0) {
+    err = "vehicleDetect: 输出长度 " + std::to_string(raw.size()) + " 不是 84 的倍数";
+    return false;
+  }
+
+  out = LprDecodeYolov5u(raw, confThresh, iouThresh, lb.r, lb.left, lb.top, vehicleOnly,
+                         kMaxVehicleBoxes, &outTruncated);
+  return true;
+}
+
+// ---------------------------------------------------------------- ROI 裁剪（T3）
+
+bool RoiRect::ContainsBox(const float box[4]) const {
+  if (!valid || imgW <= 0 || imgH <= 0) {
+    return false;
+  }
+  const float fx1 = std::min(box[0], box[2]);
+  const float fy1 = std::min(box[1], box[3]);
+  const float fx2 = std::max(box[0], box[2]);
+  const float fy2 = std::max(box[1], box[3]);
+  // 先与图求交 —— 车框可以超出图边界，这时"被覆盖"指的是框与图的交集被覆盖。
+  const float cx1 = std::max(0.0f, std::min(fx1, static_cast<float>(imgW)));
+  const float cy1 = std::max(0.0f, std::min(fy1, static_cast<float>(imgH)));
+  const float cx2 = std::max(0.0f, std::min(fx2, static_cast<float>(imgW)));
+  const float cy2 = std::max(0.0f, std::min(fy2, static_cast<float>(imgH)));
+  if (!(cx2 > cx1) || !(cy2 > cy1)) {
+    return true;  // 框与图无交：空集，任何 ROI 都"覆盖"它
+  }
+  return x0 <= static_cast<int>(std::floor(cx1)) &&
+         y0 <= static_cast<int>(std::floor(cy1)) &&
+         (x0 + w) >= static_cast<int>(std::ceil(cx2)) &&
+         (y0 + h) >= static_cast<int>(std::ceil(cy2));
+}
+
+RoiRect LprRoiFromBox(const float box[4], int imgW, int imgH, float expand) {
+  RoiRect r;
+  r.imgW = imgW;
+  r.imgH = imgH;
+  r.expand = expand;
+  if (imgW <= 0 || imgH <= 0 || !(expand >= 0)) {
+    return r;  // valid=false：非法图尺寸 / 负外扩
+  }
+  const float fx1 = std::min(box[0], box[2]);
+  const float fy1 = std::min(box[1], box[3]);
+  const float fx2 = std::max(box[0], box[2]);
+  const float fy2 = std::max(box[1], box[3]);
+  const float bw = fx2 - fx1;
+  const float bh = fy2 - fy1;
+  if (!(bw > 0) || !(bh > 0)) {
+    return r;  // 零面积框：没有可裁的东西，交给调用方跳过（不产生空 ROI 崩溃）
+  }
+  const float ex = expand * bw;
+  const float ey = expand * bh;
+  // 向外取整：左/上 floor，右/下 ceil。
+  int x0 = static_cast<int>(std::floor(fx1 - ex));
+  int y0 = static_cast<int>(std::floor(fy1 - ey));
+  int x1 = static_cast<int>(std::ceil(fx2 + ex));
+  int y1 = static_cast<int>(std::ceil(fy2 + ey));
+  if (x0 < 0) {
+    x0 = 0;
+    r.clamped = true;
+  }
+  if (y0 < 0) {
+    y0 = 0;
+    r.clamped = true;
+  }
+  if (x1 > imgW) {
+    x1 = imgW;
+    r.clamped = true;
+  }
+  if (y1 > imgH) {
+    y1 = imgH;
+    r.clamped = true;
+  }
+  r.x0 = x0;
+  r.y0 = y0;
+  r.w = x1 - x0;
+  r.h = y1 - y0;
+  // 框完全在图外时 w/h 会算出负值 —— 这里统一收敛成"不可用"，而不是让它带着负数往下走。
+  r.valid = (r.w > 0 && r.h > 0);
+  return r;
+}
+
+bool LprCropRoi(const RgbaImage& src, const RoiRect& roi, RgbaImage& out, std::string& err) {
+  out.data.clear();
+  out.width = 0;
+  out.height = 0;
+  if (!src.Valid()) {
+    err = "cropRoi: invalid source";
+    return false;
+  }
+  if (!roi.valid) {
+    err = "cropRoi: roi not valid";
+    return false;
+  }
+  if (roi.x0 < 0 || roi.y0 < 0 || roi.w <= 0 || roi.h <= 0 ||
+      roi.x0 + roi.w > src.width || roi.y0 + roi.h > src.height) {
+    err = "cropRoi: roi out of source";
+    return false;
+  }
+  out.width = roi.w;
+  out.height = roi.h;
+  out.data.resize(static_cast<size_t>(roi.w) * static_cast<size_t>(roi.h) * 4);
+  const size_t rowBytes = static_cast<size_t>(roi.w) * 4;
+  for (int y = 0; y < roi.h; y++) {
+    const uint8_t* s = src.data.data() +
+                       (static_cast<size_t>(roi.y0 + y) * static_cast<size_t>(src.width) +
+                        static_cast<size_t>(roi.x0)) * 4;
+    std::memcpy(out.data.data() + static_cast<size_t>(y) * rowBytes, s, rowBytes);
+  }
+  return true;
+}
+
+void LprRoiMapRect(int rect[4], const RoiRect& roi) {
+  rect[0] += roi.x0;
+  rect[1] += roi.y0;
+  rect[2] += roi.x0;
+  rect[3] += roi.y0;
+}
+
+void LprRoiMapRect(float rect[4], const RoiRect& roi) {
+  rect[0] += static_cast<float>(roi.x0);
+  rect[1] += static_cast<float>(roi.y0);
+  rect[2] += static_cast<float>(roi.x0);
+  rect[3] += static_cast<float>(roi.y0);
+}
+
+void LprRoiUnmapRect(float rect[4], const RoiRect& roi) {
+  rect[0] -= static_cast<float>(roi.x0);
+  rect[1] -= static_cast<float>(roi.y0);
+  rect[2] -= static_cast<float>(roi.x0);
+  rect[3] -= static_cast<float>(roi.y0);
+}
+
+void LprRoiMapRects(std::vector<VehicleBox>& boxes, const RoiRect& roi) {
+  for (VehicleBox& b : boxes) {
+    LprRoiMapRect(b.rect, roi);
+  }
+}
+
+long long LprRgbSum(const RgbaImage& img) {
+  long long sum = 0;
+  for (size_t i = 0; i < img.data.size(); i++) {
+    if (i % 4 != 3) {
+      sum += img.data[i];
+    }
+  }
+  return sum;
+}
+
+/** 裁出来的字节是否与源图对应区域**逐字节**相同。 */
+static bool RoiBytesEqual(const RgbaImage& src, const RgbaImage& crop, const RoiRect& roi) {
+  if (crop.width != roi.w || crop.height != roi.h) {
+    return false;
+  }
+  const size_t rowBytes = static_cast<size_t>(roi.w) * 4;
+  for (int y = 0; y < roi.h; y++) {
+    const uint8_t* s = src.data.data() +
+                       (static_cast<size_t>(roi.y0 + y) * static_cast<size_t>(src.width) +
+                        static_cast<size_t>(roi.x0)) * 4;
+    const uint8_t* c = crop.data.data() + static_cast<size_t>(y) * rowBytes;
+    if (std::memcmp(s, c, rowBytes) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string LprRoiSelfTest(const RgbaImage& img) {
+  std::string rep;
+  int total = 0;
+  int failed = 0;
+
+  RgbaImage src;
+  if (img.Valid()) {
+    src = img;
+  } else {
+    // 没拿到图也要能跑完自证：合成一张确定性图案（值只依赖 x/y，可复现）。
+    src.width = 320;
+    src.height = 320;
+    src.data.resize(320 * 320 * 4);
+    for (int y = 0; y < 320; y++) {
+      for (int x = 0; x < 320; x++) {
+        const size_t i = (static_cast<size_t>(y) * 320 + x) * 4;
+        src.data[i + 0] = static_cast<uint8_t>((x * 7 + y * 13) & 0xFF);
+        src.data[i + 1] = static_cast<uint8_t>((x * 3 + y * 29) & 0xFF);
+        src.data[i + 2] = static_cast<uint8_t>((x * 17 + y * 5) & 0xFF);
+        src.data[i + 3] = 255;
+      }
+    }
+    rep += "note=src-synth;why=传入图无效，改用确定性图案\n";
+  }
+
+  const int W = src.width;
+  const int H = src.height;
+  rep += "srcSize=" + std::to_string(W) + "x" + std::to_string(H) + "\n";
+  rep += "rgbSumAll=" + std::to_string(LprRgbSum(src)) + "\n";
+  // 几何用例统一在固定的 320x320 坐标系里断言 —— 期望值是手算硬编码的，
+  // 若跟着传入图尺寸走，期望值就得现算，那也就失去"独立于实现"的意义了。
+  rep += "geomFrame=320x320\n";
+
+  auto row = [&rep, &total, &failed](const char* name, bool ok, const std::string& detail) {
+    total++;
+    if (!ok) {
+      failed++;
+    }
+    rep += "case=";
+    rep += name;
+    rep += ";ok=";
+    rep += (ok ? "1" : "0");
+    if (!detail.empty()) {
+      rep += ";";
+      rep += detail;
+    }
+    rep += "\n";
+  };
+
+  // 把 imgW/imgH/expand 一并报出来：PC 侧复核要能**原样复现**这次调用的参数。
+  // 否则它只能猜 —— 例如 `roi-bad-src-size` 传的是 0x0，猜成 320x320 就会误判。
+  auto roiStr = [](const RoiRect& r) {
+    return "x0=" + std::to_string(r.x0) + ";y0=" + std::to_string(r.y0) +
+           ";w=" + std::to_string(r.w) + ";h=" + std::to_string(r.h) +
+           ";imgW=" + std::to_string(r.imgW) + ";imgH=" + std::to_string(r.imgH) +
+           ";clamped=" + std::to_string(r.clamped ? 1 : 0) +
+           ";valid=" + std::to_string(r.valid ? 1 : 0) +
+           ";expand=" + std::to_string(r.expand);
+  };
+
+  auto boxStr = [](const float b[4]) {
+    return "box=" + std::to_string(b[0]) + "," + std::to_string(b[1]) + "," +
+           std::to_string(b[2]) + "," + std::to_string(b[3]);
+  };
+
+  auto expStr = [](int x0, int y0, int w, int h) {
+    return "exp=" + std::to_string(x0) + "," + std::to_string(y0) + "," +
+           std::to_string(w) + "," + std::to_string(h);
+  };
+
+  auto geomOk = [](const RoiRect& r, int x0, int y0, int w, int h) {
+    return r.valid && r.x0 == x0 && r.y0 == y0 && r.w == w && r.h == h;
+  };
+
+  const float kE = kRoiExpandDefault;  // 0.15
+
+  // ---- 几何：外扩 + 取整方向 + clamp ----
+  {
+    const float b[4] = {100, 100, 200, 200};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // 100-15=85, 200+15=215 → 130x130
+    row("roi-center", geomOk(r, 85, 85, 130, 130) && !r.clamped,
+        roiStr(r) + ";" + expStr(85, 85, 130, 130) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {2, 50, 102, 150};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // x0 = floor(2-15) = -13 → clamp 0；x1 = ceil(117) = 117
+    row("roi-left-edge", geomOk(r, 0, 35, 117, 130) && r.clamped,
+        roiStr(r) + ";" + expStr(0, 35, 117, 130) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {218, 50, 318, 150};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // x1 = ceil(333) = 333 → clamp 320；x0 = floor(203) = 203
+    row("roi-right-edge", geomOk(r, 203, 35, 117, 130) && r.clamped,
+        roiStr(r) + ";" + expStr(203, 35, 117, 130) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {50, 218, 150, 318};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // y1 = ceil(333) → 320；y0 = floor(203) = 203
+    row("roi-bottom-edge", geomOk(r, 35, 203, 130, 117) && r.clamped,
+        roiStr(r) + ";" + expStr(35, 203, 130, 117) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {50, 60, 150, 160};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, 0.0f);
+    row("roi-no-expand", geomOk(r, 50, 60, 100, 100) && !r.clamped,
+        roiStr(r) + ";" + expStr(50, 60, 100, 100) + ";" + boxStr(b));
+  }
+  {
+    // 小数框、内部、无 clamp —— 专门盯"取整方向"。
+    // 向外取整 → 15,25,146,156（131x131）；向内取整会给 145,155（130x130）→ 红。
+    const float b[4] = {30.4f, 40.6f, 130.4f, 140.6f};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    row("roi-round-outward", geomOk(r, 15, 25, 131, 131) && !r.clamped,
+        roiStr(r) + ";" + expStr(15, 25, 131, 131) + ";" + boxStr(b));
+  }
+  {
+    // x/y 各自按自身边长外扩：bw=50 → ex=7.5，bh=200 → ey=30
+    const float b[4] = {10, 10, 60, 210};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // x0=floor(2.5)=2, y0=floor(-20)→0, x1=ceil(67.5)=68, y1=ceil(240)=240
+    row("roi-tall-thin", geomOk(r, 2, 0, 66, 240) && r.clamped,
+        roiStr(r) + ";" + expStr(2, 0, 66, 240) + ";" + boxStr(b));
+  }
+
+  // ---- 退化输入：必须"不可用"，而不是崩或产出空 ROI ----
+  {
+    const float b[4] = {10, 10, 10, 20};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    row("roi-zero-area", !r.valid, roiStr(r) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {400, 400, 500, 500};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    // x0=385 > imgW=320 → w 为负 → 必须收敛成 invalid
+    row("roi-fully-outside", !r.valid, roiStr(r) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {100, 100, 200, 200};
+    const RoiRect r = LprRoiFromBox(b, 0, 0, kE);
+    row("roi-bad-src-size", !r.valid, roiStr(r) + ";" + boxStr(b));
+  }
+  {
+    const float b[4] = {100, 100, 200, 200};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, -0.1f);
+    row("roi-negative-expand", !r.valid, roiStr(r) + ";" + boxStr(b));
+  }
+
+  // ---- 覆盖性：ROI 必须盖住 (车框 ∩ 图) ----
+  {
+    const float b[4] = {100, 100, 200, 200};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    row("cover-center", r.ContainsBox(b), roiStr(r));
+  }
+  {
+    const float b[4] = {2, 50, 102, 150};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    row("cover-left-edge", r.ContainsBox(b), roiStr(r));
+  }
+  {
+    // 框顶出图外：只有 300..320 那 20 px 是真的要盖住的
+    const float b[4] = {300, 300, 400, 400};
+    const RoiRect r = LprRoiFromBox(b, 320, 320, kE);
+    row("cover-poking-out", r.ContainsBox(b), roiStr(r) + ";exp=285,285,35,35");
+  }
+  {
+    // 反向用例：把 ROI 缩到**真的盖不住**车框，覆盖性必须变假 ——
+    // 否则这个谓词就是恒真，前三条通过也没有意义。
+    //
+    // ⚠️ 不能只缩 1 px：ROI 有 15% 的外扩余量（这里每边 15 px），缩 1 px 仍然盖得住，
+    // 断言会"假失败"（第一版就是这么写错的，设备上实测 cover-negative;ok=0）。
+    // 缩到 x0+w < ceil(box x2) 才真正构成反例。
+    const float b[4] = {100, 100, 200, 200};
+    RoiRect r = LprRoiFromBox(b, 320, 320, kE);  // → 85,85,130,130
+    r.w -= 30;                                   // → 100，x0+w = 185 < 200
+    r.h -= 30;                                   // → 100，y0+h = 185 < 200
+    row("cover-negative", !r.ContainsBox(b), roiStr(r));
+  }
+  {
+    // 边界语义：x0+w == ceil(box x2) 时算"盖住"（判据用 >=，闭区间）。
+    // 把这条边界约定钉下来，免得以后有人把 >= 改成 > 而悄悄放过一条边线像素。
+    const float b[4] = {100, 100, 200, 200};
+    RoiRect r = LprRoiFromBox(b, 320, 320, kE);  // → 85,85,130,130
+    r.w = 200 - r.x0;                            // → 115，x0+w = 200 == box x2
+    r.h = 200 - r.y0;
+    row("cover-boundary-inclusive", r.ContainsBox(b), roiStr(r));
+  }
+
+  // ---- 坐标映射 ----
+  const float mbox[4] = {100, 100, 200, 200};
+  const RoiRect mroi = LprRoiFromBox(mbox, 320, 320, kE);
+  {
+    int rc[4] = {0, 0, 10, 10};
+    LprRoiMapRect(rc, mroi);
+    const bool ok = rc[0] == 85 && rc[1] == 85 && rc[2] == 95 && rc[3] == 95;
+    row("map-int", ok, "got=" + std::to_string(rc[0]) + "," + std::to_string(rc[1]) + "," +
+                            std::to_string(rc[2]) + "," + std::to_string(rc[3]) +
+                            ";exp=85,85,95,95");
+  }
+  {
+    float rf[4] = {1.5f, 2.5f, 3.5f, 4.5f};
+    LprRoiMapRect(rf, mroi);
+    const bool ok = rf[0] == 86.5f && rf[1] == 87.5f && rf[2] == 88.5f && rf[3] == 89.5f;
+    row("map-float", ok, "x1=" + std::to_string(rf[0]) + ";exp=86.5,87.5,88.5,89.5");
+  }
+  {
+    float rf[4] = {3, 4, 7, 9};
+    LprRoiMapRect(rf, mroi);
+    LprRoiUnmapRect(rf, mroi);
+    const bool ok = rf[0] == 3 && rf[1] == 4 && rf[2] == 7 && rf[3] == 9;
+    row("map-roundtrip", ok, "x1=" + std::to_string(rf[0]) + ";exp=3");
+  }
+  {
+    std::vector<VehicleBox> bs(2);
+    bs[0].rect[0] = 0; bs[0].rect[1] = 0; bs[0].rect[2] = 10; bs[0].rect[3] = 10;
+    bs[1].rect[0] = 5; bs[1].rect[1] = 5; bs[1].rect[2] = 15; bs[1].rect[3] = 15;
+    LprRoiMapRects(bs, mroi);
+    const bool ok = bs[0].rect[0] == 85 && bs[0].rect[3] == 95 && bs[1].rect[0] == 90 &&
+                    bs[1].rect[2] == 100;
+    row("map-vehicleboxes", ok, "b0x1=" + std::to_string(bs[0].rect[0]) + ";exp=85");
+  }
+
+  // ---- 裁剪：逐字节一致（跨实现证据另由 rgbSum 提供）----
+  {
+    const float b[4] = {W * 0.25f, H * 0.25f, W * 0.75f, H * 0.75f};
+    const RoiRect r = LprRoiFromBox(b, W, H, kE);
+    RgbaImage crop;
+    std::string err;
+    const bool okCrop = LprCropRoi(src, r, crop, err);
+    const bool ok = okCrop && !r.clamped && RoiBytesEqual(src, crop, r);
+    row("crop-interior-bytes", ok,
+        roiStr(r) + ";rgbSum=" + std::to_string(LprRgbSum(crop)) + ";" + boxStr(b) +
+            ";err=" + err);
+  }
+  {
+    const float b[4] = {0, 0, W * 0.5f, H * 0.5f};
+    const RoiRect r = LprRoiFromBox(b, W, H, kE);
+    RgbaImage crop;
+    std::string err;
+    const bool okCrop = LprCropRoi(src, r, crop, err);
+    const bool ok = okCrop && r.clamped && RoiBytesEqual(src, crop, r);
+    row("crop-clamped-bytes", ok,
+        roiStr(r) + ";rgbSum=" + std::to_string(LprRgbSum(crop)) + ";" + boxStr(b) +
+            ";err=" + err);
+  }
+  {
+    RoiRect bad;
+    RgbaImage crop;
+    std::string err;
+    const bool ok = !LprCropRoi(src, bad, crop, err) && !err.empty();
+    row("crop-invalid-roi", ok, "err=" + err);
+  }
+  {
+    RoiRect bad;
+    bad.imgW = W; bad.imgH = H;
+    bad.x0 = 0; bad.y0 = 0; bad.w = W + 10; bad.h = 1; bad.valid = true;
+    RgbaImage crop;
+    std::string err;
+    const bool ok = !LprCropRoi(src, bad, crop, err) && !err.empty();
+    row("crop-out-of-source", ok, "err=" + err);
+  }
+  {
+    RgbaImage empty;
+    const float tiny[4] = {0, 0, 10, 10};
+    RoiRect r = LprRoiFromBox(tiny, 10, 10, 0.0f);
+    RgbaImage crop;
+    std::string err;
+    const bool ok = !LprCropRoi(empty, r, crop, err) && !err.empty();
+    row("crop-empty-src", ok, "err=" + err);
+  }
+
+  rep += "total=" + std::to_string(total) + ";failed=" + std::to_string(failed) + "\n";
+  return rep;
+}

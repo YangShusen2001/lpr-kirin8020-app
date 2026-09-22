@@ -1,0 +1,15 @@
+09-22 08:52:25.990 56203 56203 I A0D001/com.shusen.lprdemo/LprNativeUI: VEH LOAD ok id=0 LANDED=CPU req=cpu fallback= trail=[CPU(ok)]
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH summary count=5 truncated=0 conf=0.050000 iou=0.500000 vehicleOnly=1 size=320 nhwc=1 inferMs=66.454216 totalMs=69.136563 backend=CPU
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=0 cls=2 name=car score=0.935537 rect=19.651146,65.395630,245.053497,184.305176
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=1 cls=2 name=car score=0.270940 rect=290.464172,95.732590,319.778748,135.602249
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=2 cls=3 name=motorcycle score=0.163512 rect=290.838867,98.037033,319.749878,135.746964
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=3 cls=2 name=car score=0.058915 rect=0.253269,66.283203,62.576523,88.878082
+09-22 08:52:26.085 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=4 cls=7 name=truck score=0.052160 rect=40.047974,34.418541,195.310425,72.316879
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH summary count=5 truncated=0 conf=0.050000 iou=0.500000 vehicleOnly=1 size=320 nhwc=1 inferMs=48.535469 totalMs=49.633750 backend=CPU
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=0 cls=2 name=car score=0.935537 rect=19.651146,65.395630,245.053497,184.305176
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=1 cls=2 name=car score=0.270940 rect=290.464172,95.732590,319.778748,135.602249
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=2 cls=3 name=motorcycle score=0.163512 rect=290.838867,98.037033,319.749878,135.746964
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=3 cls=2 name=car score=0.058915 rect=0.253269,66.283203,62.576523,88.878082
+09-22 08:52:26.135 56203 56297 I A0D001/com.shusen.lprdemo/LprNative: VEH box idx=4 cls=7 name=truck score=0.052160 rect=40.047974,34.418541,195.310425,72.316879
+09-22 08:52:26.138 56203 56203 I A0D001/com.shusen.lprdemo/LprNativeUI: VEH RESULT ok=1;count=5;truncated=0;conf=0.0500;iou=0.5000;vehicleOnly=1;size=320;nhwc=1;inferMs=48.5355;totalMs=49.6338;backend=CPU;requested=cpu;fallbackFrom=;error=;b0=2,0.9355,19.6511|65.3956|245.0535|184.3052,car;b1=2,0.2709,290.4642|95.7326|319.7787|135.6022,car;b2=3,0.1635,290.8389|98.0370|319.7499|135.7470,motorcycle;b3=2,0.0589,0.2533|66.2832|62.5765|88.8781,car;b4=7,0.0522,40.0480|34.4185|195.3104|72.3169,truck;
+09-22 08:52:26.139 56203 56203 I A0D001/com.shusen.lprdemo/LprNativeUI: T2VEH count=5 truncated=0 conf=0.0500 iou=0.5000 vehicleOnly=1 size=320 nhwc=1 inferMs=48.5355 totalMs=49.6338 LANDED=CPU

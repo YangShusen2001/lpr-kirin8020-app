@@ -176,7 +176,13 @@ enum class JobKind {
   kNcnnSlotLoad,
   kNnrtProbe,
   kNnrtTryModel,
-  kCameraFrame
+  kCameraFrame,
+  /** T2：车辆检测（yolov5u，单模型，不进车牌流水线）。 */
+  kVehicleDetect,
+  /** T3：ROI 裁剪与坐标映射的单元自证（纯图像运算，不需要模型会话）。 */
+  kRoiSelfTest,
+  /** T3：车框 → 裁 ROI → 车牌检测 → 映射回原图（单框，不循环、不去重 —— 那是 T4）。 */
+  kRoiPlateProbe
 };
 
 struct AsyncJob {
@@ -234,6 +240,34 @@ struct AsyncJob {
   /** 分段计时（毫秒）：转换 / 推理。 */
   double convMs = 0;
   double inferMs = 0;
+
+  // kVehicleDetect（T2）：车辆检测的阈值与范围。
+  // 默认值只写在 NAPI 入口（conf 0.05 / iou 0.5 / vehicleOnly true），
+  // 这里保持中性，避免两处默认值各自演化出分歧。
+  float confThresh = 0;
+  float iouThresh = 0;
+  bool vehicleOnly = true;
+  /** 检出数被 kMaxVehicleBoxes 截断过 —— 必须回给调用方，不能伪造"这就是全部"。 */
+  bool truncated = false;
+
+  // kRoiPlateProbe（T3）：车辆检测会话 id。
+  // ⚠️ 车辆检测器与车牌检测器是**两个不同的模型**：车牌检测是 y5fu_320x（3 个 head 输出），
+  // 车辆检测是 yolov5su（单输出 1x84x2100）。把 s.det 当车辆模型喂进去会得到
+  // `yolov5u 期望单输出，实际 3` —— 这个错在设备上实测踩过一次。
+  int vehId = -1;
+
+  /**
+   * kRoiPlateProbe（T3）：探第几个车辆框（按分数降序，0 = 最高分）。
+   *
+   * 为什么需要它：分数最高的那个车框经常贴着图的左/上边缘，`LprRoiFromBox` 会把它
+   * clamp 到 `x0 = 0` —— 这时"映射忘了加 x0"与"映射正确"结果完全一样，
+   * x 方向的映射等于**没被验证**。必须再探一个 `x0 > 0` 的框，才能把两个方向都盖住。
+   */
+  int boxIdx = 0;
+
+  // kRoiPlateProbe（T3）：ROI 外扩比例。默认取 kRoiExpandDefault（0.15），
+  // 这里给同一个常量而不是另写一个字面量，避免两处默认值各自演化出分歧。
+  float roiExpand = kRoiExpandDefault;
 
   // outputs
   std::string kv;
@@ -321,6 +355,24 @@ static std::string KvSanitize(const std::string& in) {
     }
   }
   return out;
+}
+
+/** 两个整数框的 IoU（T3 探针用：判断 ROI 路径映射回来的框与直检框是否重合）。 */
+static float RoiIou(const int a[4], const int b[4]) {
+  const float x1 = static_cast<float>(std::max(a[0], b[0]));
+  const float y1 = static_cast<float>(std::max(a[1], b[1]));
+  const float x2 = static_cast<float>(std::min(a[2], b[2]));
+  const float y2 = static_cast<float>(std::min(a[3], b[3]));
+  const float iw = x2 - x1;
+  const float ih = y2 - y1;
+  if (!(iw > 0) || !(ih > 0)) {
+    return 0;
+  }
+  const float inter = iw * ih;
+  const float aa = static_cast<float>(std::max(0, a[2] - a[0]) * std::max(0, a[3] - a[1]));
+  const float bb = static_cast<float>(std::max(0, b[2] - b[0]) * std::max(0, b[3] - b[1]));
+  const float uni = aa + bb - inter;
+  return uni > 0 ? inter / uni : 0;
 }
 
 static napi_value MakeNull(napi_env env) {
@@ -968,6 +1020,272 @@ static void RunJob(AsyncJob* job) {
       return;
     }
 
+    // ---------------------------------------------------------------- vehicle detect (T2)
+    case JobKind::kVehicleDetect: {
+      MsSession* det = nullptr;
+      {
+        std::lock_guard<std::mutex> lk(g_regMutex);
+        if (job->detId < 0 || job->detId >= (int)g_sessions.size()) {
+          job->kv = "ok=0;count=0;error=bad session id";
+          return;
+        }
+        det = g_sessions[job->detId].s;
+      }
+      if (det == nullptr) {
+        job->kv = "ok=0;count=0;error=null det session";
+        return;
+      }
+
+      RgbaImage img;
+      img.width = job->w;
+      img.height = job->h;
+      img.data = std::move(job->rgba);
+      if (!img.Valid()) {
+        job->kv = "ok=0;count=0;error=rgba size != w*h*4";
+        return;
+      }
+
+      std::vector<VehicleBox> boxes;
+      bool truncated = false;
+      float inferMs = 0;
+      std::string err;
+      const double t0 = NowMs();
+      if (!LprVehicleDetect(img, det, job->confThresh, job->iouThresh, job->vehicleOnly, boxes,
+                            truncated, inferMs, err)) {
+        LOGE("vehicleDetect failed: %{public}s", err.c_str());
+        job->kv = "ok=0;count=0;error=" + KvSanitize(err);
+        return;
+      }
+      const double totalMs = NowMs() - t0;
+
+      int size = 0;
+      bool nhwc = false;
+      std::string geoErr;
+      if (!LprDetectGeometryOf(det, size, nhwc, geoErr)) {
+        size = -1;
+        nhwc = false;
+      }
+
+      // 设备侧证据通道：一行汇总 + 每框一行。走 hilog 而不是往 App 私有目录写文件 ——
+      // 私有目录 hdc 拉不出来（T1 踩过），而 `hdc shell hilog -x | grep VEH` 一直可用。
+      // 每框单独一行也是为了绕开单条 hilog 的长度上限（框多时 kv 串能到几 KB）。
+      LOGI("VEH summary count=%{public}zu truncated=%{public}d conf=%{public}f iou=%{public}f "
+           "vehicleOnly=%{public}d size=%{public}d nhwc=%{public}d inferMs=%{public}f "
+           "totalMs=%{public}f backend=%{public}s",
+           boxes.size(), truncated ? 1 : 0, job->confThresh, job->iouThresh,
+           job->vehicleOnly ? 1 : 0, size, nhwc ? 1 : 0, inferMs, totalMs,
+           det->backend.c_str());
+
+      std::string kv = "ok=1;count=" + std::to_string(boxes.size()) +
+                       ";truncated=" + (truncated ? "1" : "0") +
+                       ";conf=" + Num(job->confThresh) + ";iou=" + Num(job->iouThresh) +
+                       ";vehicleOnly=" + (job->vehicleOnly ? "1" : "0") +
+                       ";size=" + std::to_string(size) +
+                       ";nhwc=" + (nhwc ? "1" : "0") +
+                       ";inferMs=" + Num(inferMs) +
+                       ";totalMs=" + Num(totalMs) +
+                       ";backend=" + KvSanitize(det->backend) +
+                       ";requested=" + KvSanitize(det->requested) +
+                       ";fallbackFrom=" + KvSanitize(det->fallbackFrom) + ";error=;";
+
+      const std::vector<std::string>& names = LprCocoNames();
+      for (size_t i = 0; i < boxes.size(); i++) {
+        const VehicleBox& b = boxes[i];
+        const char* cname =
+            (b.classId >= 0 && b.classId < (int)names.size()) ? names[b.classId].c_str() : "?";
+        LOGI("VEH box idx=%{public}zu cls=%{public}d name=%{public}s score=%{public}f "
+             "rect=%{public}f,%{public}f,%{public}f,%{public}f",
+             i, b.classId, cname, b.score, b.rect[0], b.rect[1], b.rect[2], b.rect[3]);
+        // 与 p0=... 同一套写法：逗号分段，框内四个数用 | 连。
+        kv += "b" + std::to_string(i) + "=" + std::to_string(b.classId) + "," + Num(b.score) +
+              "," + Num(b.rect[0]) + "|" + Num(b.rect[1]) + "|" + Num(b.rect[2]) + "|" +
+              Num(b.rect[3]) + "," + Scrub(cname) + ";";
+      }
+      job->kv = kv;
+      job->inferMs = inferMs;
+      job->truncated = truncated;
+      return;
+    }
+
+    // ---------------------------------------------------------------- roi self test (T3)
+    case JobKind::kRoiSelfTest: {
+      // 纯图像运算，不碰任何会话。RGBA 已经在入口拷进 job->rgba。
+      RgbaImage img;
+      img.width = job->w;
+      img.height = job->h;
+      img.data = job->rgba;
+      if (!img.Valid()) {
+        job->kv = "ok=0;error=roiSelfTest: invalid rgba (" + std::to_string(job->w) + "x" +
+                  std::to_string(job->h) + " vs " + std::to_string(job->rgba.size()) + " bytes)";
+        return;
+      }
+      // 逐行报告写 hilog：单条 hilog 有长度上限，而报告有二十来行，
+      // 攒成一条会被截断。ArkTS 侧也会逐行回显，两条路径互为印证。
+      const std::string report = LprRoiSelfTest(img);
+      std::string line;
+      for (size_t i = 0; i <= report.size(); i++) {
+        if (i == report.size() || report[i] == '\n') {
+          if (!line.empty()) {
+            LOGI("T3ROI %{public}s", line.c_str());
+          }
+          line.clear();
+        } else {
+          line += report[i];
+        }
+      }
+      // 整段原样返回（**不做** KvSanitize）：它是多行报告，不是 kv 串。
+      // 走 KvSanitize 会把 '\n' 压成 ','，逐行结构就没了，ArkTS 也就无法逐行回显。
+      job->kv = report;
+      return;
+    }
+
+    // ------------------------------------------------- roi plate probe (T3)
+    // 车框 → 裁 ROI → 车牌检测 → **映射回原图**。只做分数最高的那一个框：
+    // 循环遍历 + 合并去重是 T4 的事，这一票要证的是"裁得对、映射不偏"。
+    case JobKind::kRoiPlateProbe: {
+      LprSessions s;
+      MsSession* veh = nullptr;
+      {
+        std::lock_guard<std::mutex> lk(g_regMutex);
+        const int ids[3] = {job->detId, job->recId, job->clsId};
+        for (int i = 0; i < 3; i++) {
+          if (ids[i] < 0 || ids[i] >= (int)g_sessions.size()) {
+            job->kv = "ok=0;count=0;error=bad session id";
+            return;
+          }
+        }
+        if (job->vehId < 0 || job->vehId >= (int)g_sessions.size()) {
+          job->kv = "ok=0;count=0;error=bad vehicle session id";
+          return;
+        }
+        veh = g_sessions[job->vehId].s;
+        s.det = g_sessions[job->detId].s;
+        s.rec = g_sessions[job->recId].s;
+        s.cls = g_sessions[job->clsId].s;
+      }
+
+      RgbaImage img;
+      img.width = job->w;
+      img.height = job->h;
+      img.data = std::move(job->rgba);
+      if (!img.Valid()) {
+        job->kv = "ok=0;count=0;error=rgba size != w*h*4";
+        return;
+      }
+
+      std::string err;
+
+      // 1) 对照基线：整图直接跑一遍车牌流水线
+      std::vector<PlateResult> direct;
+      const double t0 = NowMs();
+      if (!LprRunPipeline(img, s, direct, err)) {
+        job->kv = "ok=0;count=0;error=direct=" + KvSanitize(err);
+        return;
+      }
+      const double directMs = NowMs() - t0;
+
+      // 2) 车辆检测（低阈值 + 遍历所有框，T2 的 D1 决定）。
+      //    ⚠️ 用 veh（yolov5su），**不是** s.det（y5fu_320x 车牌检测器）。
+      std::vector<VehicleBox> vehBoxes;
+      bool trunc = false;
+      float vehInferMs = 0;
+      if (!LprVehicleDetect(img, veh, job->confThresh, job->iouThresh, /*vehicleOnly=*/true,
+                            vehBoxes, trunc, vehInferMs, err)) {
+        job->kv = "ok=0;count=0;error=veh=" + KvSanitize(err);
+        return;
+      }
+
+      std::string kv = "ok=1;directCount=" + std::to_string(direct.size()) +
+                       ";vehCount=" + std::to_string(vehBoxes.size()) +
+                       ";truncated=" + (trunc ? "1" : "0") +
+                       ";conf=" + Num(job->confThresh) + ";iou=" + Num(job->iouThresh) +
+                       ";expand=" + Num(job->roiExpand) +
+                       ";directMs=" + Num(directMs) + ";error=;";
+
+      if (vehBoxes.empty()) {
+        LOGI("T3PROBE no vehicle box; direct=%{public}zu", direct.size());
+        job->kv = kv + "roiValid=0;roiCount=0;";
+        return;
+      }
+
+      if (job->boxIdx < 0 || job->boxIdx >= (int)vehBoxes.size()) {
+        job->kv = kv + "roiValid=0;roiCount=0;error=boxIdx out of range";
+        return;
+      }
+      const VehicleBox& b0 = vehBoxes[job->boxIdx];
+      const RoiRect roi = LprRoiFromBox(b0.rect, img.width, img.height, job->roiExpand);
+      kv += "boxIdx=" + std::to_string(job->boxIdx) +
+            ";roiValid=" + std::string(roi.valid ? "1" : "0") +
+            ";roiX0=" + std::to_string(roi.x0) + ";roiY0=" + std::to_string(roi.y0) +
+            ";roiW=" + std::to_string(roi.w) + ";roiH=" + std::to_string(roi.h) +
+            ";roiClamped=" + (roi.clamped ? "1" : "0") +
+            ";roiCoversBox=" + (roi.ContainsBox(b0.rect) ? "1" : "0") +
+            ";boxCls=" + std::to_string(b0.classId) + ";boxScore=" + Num(b0.score) + ";";
+      if (!roi.valid) {
+        job->kv = kv + "roiCount=0;";
+        return;
+      }
+
+      // 3) 裁 ROI → 车牌流水线 → 映射回原图坐标
+      RgbaImage crop;
+      if (!LprCropRoi(img, roi, crop, err)) {
+        job->kv = kv + "roiCount=0;error=" + KvSanitize(err) + ";";
+        return;
+      }
+      std::vector<PlateResult> roiPlates;
+      const double t1 = NowMs();
+      if (!LprRunPipeline(crop, s, roiPlates, err)) {
+        job->kv = kv + "roiCount=0;error=roi=" + KvSanitize(err) + ";";
+        return;
+      }
+      const double roiMs = NowMs() - t1;
+      // 少了这一步，框会整体偏移 (roi.x0, roi.y0) —— spec §六.3 说的就是这个坑。
+      for (PlateResult& p : roiPlates) {
+        LprRoiMapRect(p.rect, roi);
+      }
+      kv += "roiCount=" + std::to_string(roiPlates.size()) + ";roiMs=" + Num(roiMs) + ";";
+
+      LOGI("T3PROBE boxIdx=%{public}d direct=%{public}zu veh=%{public}zu "
+           "roi=%{public}d,%{public}d,%{public}d,%{public}d crop=%{public}dx%{public}d "
+           "roiPlates=%{public}zu",
+           job->boxIdx, direct.size(), vehBoxes.size(), roi.x0, roi.y0, roi.w, roi.h, crop.width,
+           crop.height, roiPlates.size());
+
+      // 逐框证据：ROI 路径映射回来的框 vs 直检框的 IoU。
+      // 判据是"两者高度重合"—— 这是程序化判据，不靠人眼看图。
+      for (size_t i = 0; i < roiPlates.size(); i++) {
+        const PlateResult& p = roiPlates[i];
+        float bestIou = 0;
+        int bestJ = -1;
+        for (size_t j = 0; j < direct.size(); j++) {
+          const float v = RoiIou(p.rect, direct[j].rect);
+          if (v > bestIou) {
+            bestIou = v;
+            bestJ = static_cast<int>(j);
+          }
+        }
+        LOGI("T3ROIBOX idx=%{public}zu rect=%{public}d,%{public}d,%{public}d,%{public}d "
+             "score=%{public}f code=%{public}s directJ=%{public}d iou=%{public}f",
+             i, p.rect[0], p.rect[1], p.rect[2], p.rect[3], p.detScore, p.code.c_str(), bestJ,
+             bestIou);
+        kv += "r" + std::to_string(i) + "=" + std::to_string(p.rect[0]) + "|" +
+              std::to_string(p.rect[1]) + "|" + std::to_string(p.rect[2]) + "|" +
+              std::to_string(p.rect[3]) + "," + Num(p.detScore) + "," +
+              std::to_string(bestJ) + "," + Num(bestIou) + "," + Scrub(p.code) + ";";
+      }
+      for (size_t j = 0; j < direct.size(); j++) {
+        const PlateResult& p = direct[j];
+        LOGI("T3DIRECTBOX idx=%{public}zu rect=%{public}d,%{public}d,%{public}d,%{public}d "
+             "score=%{public}f code=%{public}s",
+             j, p.rect[0], p.rect[1], p.rect[2], p.rect[3], p.detScore, p.code.c_str());
+        kv += "d" + std::to_string(j) + "=" + std::to_string(p.rect[0]) + "|" +
+              std::to_string(p.rect[1]) + "|" + std::to_string(p.rect[2]) + "|" +
+              std::to_string(p.rect[3]) + "," + Num(p.detScore) + "," + Scrub(p.code) + ";";
+      }
+      job->kv = kv;
+      return;
+    }
+
     // ---------------------------------------------------------------- bench
     case JobKind::kBench: {
       MsSession* s = nullptr;
@@ -1139,6 +1457,174 @@ static napi_value PipelineAsync(napi_env env, napi_callback_info info) {
   if (argc >= 8) napi_get_value_int32(env, args[7], &job->recSlot);
   if (argc >= 9) napi_get_value_int32(env, args[8], &job->clsSlot);
   return QueueJob(env, job, "lpr.pipelineAsync");
+}
+
+/**
+ * 车辆检测（T2）。**只跑车辆检测器，不进车牌流水线。**
+ *
+ * 参数：detId, rgba, width, height, confThresh?, iouThresh?, vehicleOnly?
+ *
+ * 与 pipelineAsync 的关系：两者都用同一个会话，但 pipelineAsync 输出的是车牌，
+ * 这里输出的是车辆框（源图坐标）+ COCO 类号 + 分数，供 T4 拿来逐框找车牌。
+ *
+ * 默认值（写在**这一层**，`AsyncJob` 里保持中性，避免两处默认值各自漂移）：
+ *   confThresh  = 0.05 —— 比车牌检测的 0.25 低得多。车辆是大目标，低阈值图的是
+ *                         T4 不因为漏框而整段丢检；代价是候选变多，由按类 NMS 收。
+ *   iouThresh   = 0.5
+ *   vehicleOnly = true —— 只留 COCO 的 car(2) / motorcycle(3) / bus(5) / truck(7)。
+ *
+ * 显式给的阈值必须是 (0,1) 内的有限数；不合法就**诚实报错**，不静默退回默认值
+ * （静默退回会让"我明明设了 0.3"变成一个查不出来的假象）。
+ */
+static napi_value VehicleDetectAsync(napi_env env, napi_callback_info info) {
+  size_t argc = 7;
+  napi_value args[7] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kVehicleDetect;
+  if (argc < 4) {
+    return RejectedJob(env, job, "ok=0;count=0;error=vehicleDetectAsync needs (detId, rgba, w, h)",
+                       "lpr.vehicleDetectAsync");
+  }
+  if (napi_get_value_int32(env, args[0], &job->detId) != napi_ok) {
+    return RejectedJob(env, job, "ok=0;count=0;error=detId must be an integer",
+                       "lpr.vehicleDetectAsync");
+  }
+  if (!ReadArrayBufferArgU8(env, args[1], job->rgba)) {
+    return RejectedJob(env, job, "ok=0;count=0;error=rgba ArrayBuffer is empty",
+                       "lpr.vehicleDetectAsync");
+  }
+  napi_get_value_int32(env, args[2], &job->w);
+  napi_get_value_int32(env, args[3], &job->h);
+
+  job->confThresh = 0.05f;
+  job->iouThresh = 0.5f;
+  job->vehicleOnly = true;
+
+  // JS 的 number 一律是 double，整数参数走同一个取值函数即可。
+  double v = 0;
+  if (argc >= 5 && napi_get_value_double(env, args[4], &v) == napi_ok) {
+    if (!(v > 0.0) || !(v < 1.0)) {
+      return RejectedJob(env, job, "ok=0;count=0;error=confThresh must be in (0,1)",
+                         "lpr.vehicleDetectAsync");
+    }
+    job->confThresh = static_cast<float>(v);
+  }
+  if (argc >= 6 && napi_get_value_double(env, args[5], &v) == napi_ok) {
+    if (!(v > 0.0) || !(v < 1.0)) {
+      return RejectedJob(env, job, "ok=0;count=0;error=iouThresh must be in (0,1)",
+                         "lpr.vehicleDetectAsync");
+    }
+    job->iouThresh = static_cast<float>(v);
+  }
+  if (argc >= 7) {
+    bool b = true;
+    if (napi_get_value_bool(env, args[6], &b) != napi_ok) {
+      return RejectedJob(env, job, "ok=0;count=0;error=vehicleOnly must be a boolean",
+                         "lpr.vehicleDetectAsync");
+    }
+    job->vehicleOnly = b;
+  }
+  return QueueJob(env, job, "lpr.vehicleDetectAsync");
+}
+
+/**
+ * T3：ROI 裁剪 + 坐标映射的单元自证。
+ *
+ * 入参只要一张 RGBA 图 —— 它测的是**纯几何与逐字节裁剪**，与模型无关，
+ * 所以不需要会话 id。传无效图也能跑完：原生侧会自动合成确定性图案，
+ * 并在报告里写明 `note=src-synth`，不假装用的是真实素材。
+ *
+ * 返回多行报告（**不是** kv 串），每行形如 `case=<名字>;ok=0/1;<细节>`。
+ */
+static napi_value RoiSelfTestAsync(napi_env env, napi_callback_info info) {
+  size_t argc = 3;
+  napi_value args[3] = {nullptr, nullptr, nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kRoiSelfTest;
+  if (argc < 3) {
+    return RejectedJob(env, job, "roiSelfTestAsync needs (rgba, width, height)",
+                       "lpr.roiSelfTestAsync");
+  }
+  if (!ReadArrayBufferArgU8(env, args[0], job->rgba)) {
+    return RejectedJob(env, job, "roiSelfTestAsync: rgba ArrayBuffer is empty",
+                       "lpr.roiSelfTestAsync");
+  }
+  if (napi_get_value_int32(env, args[1], &job->w) != napi_ok ||
+      napi_get_value_int32(env, args[2], &job->h) != napi_ok) {
+    return RejectedJob(env, job, "roiSelfTestAsync: width/height must be integers",
+                       "lpr.roiSelfTestAsync");
+  }
+  return QueueJob(env, job, "lpr.roiSelfTestAsync");
+}
+
+/**
+ * T3：车框 → 裁 ROI → 车牌检测 → **映射回原图**（只做分数最高的那一个框）。
+ *
+ * 循环遍历所有车框 + 合并去重属于 T4，本入口刻意不做 —— 这一票要证的是
+ * "ROI 裁得对、映射不偏"。判据是 ROI 路径映射回来的框与直检框的 IoU，
+ * 全部在日志里逐框给出，不靠人眼看图。
+ *
+ * 入参有**四个**会话 id：`vehId` 是车辆检测器（yolov5su），`detId`/`recId`/`clsId`
+ * 是车牌流水线的三个模型。它们不是同一批模型 —— 混用会得到
+ * `yolov5u 期望单输出，实际 3`（设备上实测踩过）。
+ *
+ * `expand` 缺省取 `kRoiExpandDefault`（0.15）；显式传入必须落在 [0,1)，否则报错。
+ */
+static napi_value RoiPlateProbeAsync(napi_env env, napi_callback_info info) {
+  size_t argc = 9;
+  napi_value args[9] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                        nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kRoiPlateProbe;
+  // 与 T2 同一口径：车辆检测用低阈值 + 遍历所有车框（spec D1）。
+  job->confThresh = 0.05f;
+  job->iouThresh = 0.5f;
+  if (argc < 7) {
+    return RejectedJob(env, job,
+                       "roiPlateProbeAsync needs (vehId, detId, recId, clsId, rgba, w, h, "
+                       "boxIdx?, expand?)",
+                       "lpr.roiPlateProbeAsync");
+  }
+  if (napi_get_value_int32(env, args[0], &job->vehId) != napi_ok ||
+      napi_get_value_int32(env, args[1], &job->detId) != napi_ok ||
+      napi_get_value_int32(env, args[2], &job->recId) != napi_ok ||
+      napi_get_value_int32(env, args[3], &job->clsId) != napi_ok) {
+    return RejectedJob(env, job, "roiPlateProbeAsync: ids must be integers",
+                       "lpr.roiPlateProbeAsync");
+  }
+  if (!ReadArrayBufferArgU8(env, args[4], job->rgba)) {
+    return RejectedJob(env, job, "roiPlateProbeAsync: rgba ArrayBuffer is empty",
+                       "lpr.roiPlateProbeAsync");
+  }
+  if (napi_get_value_int32(env, args[5], &job->w) != napi_ok ||
+      napi_get_value_int32(env, args[6], &job->h) != napi_ok) {
+    return RejectedJob(env, job, "roiPlateProbeAsync: width/height must be integers",
+                       "lpr.roiPlateProbeAsync");
+  }
+  if (argc >= 8) {
+    if (napi_get_value_int32(env, args[7], &job->boxIdx) != napi_ok) {
+      return RejectedJob(env, job, "roiPlateProbeAsync: boxIdx must be an integer",
+                         "lpr.roiPlateProbeAsync");
+    }
+    if (job->boxIdx < 0) {
+      return RejectedJob(env, job, "roiPlateProbeAsync: boxIdx must be >= 0",
+                         "lpr.roiPlateProbeAsync");
+    }
+  }
+  if (argc >= 9) {
+    double v = 0;
+    if (napi_get_value_double(env, args[8], &v) == napi_ok) {
+      if (!(v >= 0.0) || !(v < 1.0)) {
+        return RejectedJob(env, job, "roiPlateProbeAsync: expand must be in [0,1)",
+                           "lpr.roiPlateProbeAsync");
+      }
+      job->roiExpand = static_cast<float>(v);
+    }
+  }
+  return QueueJob(env, job, "lpr.roiPlateProbeAsync");
 }
 
 /**
@@ -1386,6 +1872,9 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"loadModelAsync", nullptr, LoadModelAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"pipelineAsync", nullptr, PipelineAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"cameraFrameAsync", nullptr, CameraFrameAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"vehicleDetectAsync", nullptr, VehicleDetectAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"roiSelfTestAsync", nullptr, RoiSelfTestAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"roiPlateProbeAsync", nullptr, RoiPlateProbeAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"benchAsync", nullptr, BenchAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"ncnnLoadAsync", nullptr, NcnnLoadAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"ncnnLoadSlotAsync", nullptr, NcnnLoadSlotAsync, nullptr, nullptr, nullptr, napi_default, nullptr},

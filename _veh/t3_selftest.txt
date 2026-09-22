@@ -1,0 +1,34 @@
+[t3check] 日志 case 数 = 25
+[t3check] 设备 srcSize = 320x320 / PNG = 320x320
+[t3check] 设备 geomFrame = 320x320
+[t3check] 整图 rgbSum 设备=66637791 PC=66637791 ✓
+[t3check] ✓ cover-boundary-inclusive -
+[t3check] ✓ cover-center             -
+[t3check] ✓ cover-left-edge          -
+[t3check] ✓ cover-negative           -
+[t3check] ✓ cover-poking-out         -
+[t3check] ✓ crop-clamped-bytes       几何: PC 重算一致; rgbSum=21232457 ✓(PC 重算一致)
+[t3check] ✓ crop-empty-src           -
+[t3check] ✓ crop-interior-bytes      几何: PC 重算一致; rgbSum=25501141 ✓(PC 重算一致)
+[t3check] ✓ crop-invalid-roi         -
+[t3check] ✓ crop-out-of-source       -
+[t3check] ✓ map-float                -
+[t3check] ✓ map-int                  -
+[t3check] ✓ map-roundtrip            -
+[t3check] ✓ map-vehicleboxes         -
+[t3check] ✓ roi-bad-src-size         PC 也判无效 ✓
+[t3check] ✓ roi-bottom-edge          几何: PC 重算一致
+[t3check] ✓ roi-center               几何: PC 重算一致
+[t3check] ✓ roi-fully-outside        几何: PC 重算一致
+[t3check] ✓ roi-left-edge            几何: PC 重算一致
+[t3check] ✓ roi-negative-expand      PC 也判无效 ✓
+[t3check] ✓ roi-no-expand            几何: PC 重算一致
+[t3check] ✓ roi-right-edge           几何: PC 重算一致
+[t3check] ✓ roi-round-outward        几何: PC 重算一致
+[t3check] ✓ roi-tall-thin            几何: PC 重算一致
+[t3check] ✓ roi-zero-area            PC 也判无效 ✓
+
+[t3check] 设备侧 ok=1 的 case: 25 / 25
+[t3check] 设备自报 total=25 failed=0
+
+[t3check] ✓ T3 自证通过：几何与像素两项都由 PC 侧独立重算确认
