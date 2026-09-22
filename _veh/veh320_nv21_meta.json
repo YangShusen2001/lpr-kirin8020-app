@@ -1,0 +1,14 @@
+{
+  "source": "veh320.png",
+  "width": 320,
+  "height": 320,
+  "stride": 320,
+  "rotation": 0,
+  "nv21Bytes": 153600,
+  "maxAbsDiff": 39,
+  "meanAbsDiff": 1.0573,
+  "psnrDb": 40.3,
+  "lumMaxDiff": 4.973,
+  "lumMeanDiff": 0.2,
+  "decodedPng": "veh320_nv21_decoded.png"
+}

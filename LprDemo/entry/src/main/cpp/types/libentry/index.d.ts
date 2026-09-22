@@ -45,11 +45,22 @@ export const pipelineAsync: (
  *   convMs  = NV21→RGBA(+旋转) 的耗时
  *   inferMs = 流水线本身的耗时
  *   w/h     = 转换后的图像尺寸（旋转 90/270 时与原帧互换）
+ *
+ * T5 新增（第 12/13 参）：
+ *   vehId   = 车辆检测会话 id；`useRoi=true` 时必须给，否则 native 明确报错
+ *   useRoi  = true 走 ROI 路径（车辆检测 → 逐框 ROI → 逐框车牌检测 → 合并去重），
+ *             false（默认）走全图直检
+ *
+ * 走 ROI 时 kv 里多出：`useRoi` / `vehCount` / `vehTruncated` / `roiTried` /
+ * `roiSkipped` / `rawHits` / `dedupeDropped` / `vehInferMs` / `roiDetectMs`，
+ * 以及每个车辆框 `v<i>=<cls>,<score>,<x1>|<y1>|<x2>|<y2>`。
+ * 车牌记录 `p<i>` 的**末位**（下标 11）是 `ownerVeh`（归属的车辆框下标，-1 = 无归属）；
+ * 既有下标（含 `p0[9]=stages`）含义不变。
  */
 export const cameraFrameAsync: (
   nv21: ArrayBuffer, width: number, height: number, stride: number, rotation: number,
   detId: number, recId: number, clsId: number, detMode?: number,
-  recSlot?: number, clsSlot?: number) => Promise<string>;
+  recSlot?: number, clsSlot?: number, vehId?: number, useRoi?: boolean) => Promise<string>;
 
 /**
  * 车辆检测（T2）。**只跑车辆检测器，不进车牌流水线。**

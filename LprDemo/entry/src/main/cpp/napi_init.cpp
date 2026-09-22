@@ -278,6 +278,15 @@ struct AsyncJob {
   // kRoiPipeline（T4）：去重阈值（spec D3，0.5）。同上，默认值只写在 NAPI 入口。
   float dedupeIou = 0;
 
+  /**
+   * kCameraFrame（T5）：走 ROI 路径还是全图直检。
+   *
+   * 两条路都在相机帧上跑同一份 NV21→RGBA，差别只在后段：直检是「整图 → 车牌检测」，
+   * ROI 是「整图 → 车辆检测 → 逐框 ROI → 逐框车牌检测 → 合并去重」。
+   * 界面上的切换开关直接改这个位。
+   */
+  bool useRoi = false;
+
   // outputs
   std::string kv;
   std::vector<float> output;
@@ -954,9 +963,34 @@ static void RunJob(AsyncJob* job) {
       (void)convMs;
 
       std::vector<PlateResult> plates;
+      std::vector<VehicleBox> vehBoxes;
+      RoiPipelineStats roiStats;
+      bool vehTruncated = false;
       std::string err;
       const double t0 = NowMs();
-      if (!LprRunPipeline(img, s, plates, err)) {
+      if (job->useRoi) {
+        // T5：ROI 路径 —— 车辆检测 → 逐框 ROI → 逐框车牌检测 → 映射回原图 → 合并去重。
+        MsSession* veh = nullptr;
+        {
+          std::lock_guard<std::mutex> lk(g_regMutex);
+          if (job->vehId < 0 || job->vehId >= (int)g_sessions.size()) {
+            job->kv = "ok=0;count=0;totalMs=0;convMs=" + Num(convWithSumMs) +
+                      ";inferMs=0;error=bad vehicle session id";
+            return;
+          }
+          veh = g_sessions[job->vehId].s;
+        }
+        RoiPipelineOptions opt;
+        opt.vehConf = job->confThresh > 0 ? job->confThresh : 0.05f;
+        opt.roiExpand = job->roiExpand > 0 ? job->roiExpand : kRoiExpandDefault;
+        opt.dedupeIou = job->dedupeIou > 0 ? job->dedupeIou : 0.5f;
+        if (!LprRunRoiPipeline(img, s, veh, opt, plates, vehBoxes, vehTruncated, roiStats, err)) {
+          LOGE("cameraFrame roiPipeline failed: %{public}s", err.c_str());
+          job->kv = "ok=0;count=0;totalMs=0;convMs=" + Num(convWithSumMs) +
+                    ";inferMs=0;error=" + KvSanitize(err);
+          return;
+        }
+      } else if (!LprRunPipeline(img, s, plates, err)) {
         LOGE("cameraFrame pipeline failed: %{public}s", err.c_str());
         job->kv = "ok=0;count=0;totalMs=0;convMs=" + Num(convWithSumMs) +
                   ";inferMs=0;error=" + KvSanitize(err);
@@ -970,7 +1004,17 @@ static void RunJob(AsyncJob* job) {
                        ";inferMs=" + Num(totalMs) +
                        ";w=" + std::to_string(img.width) +
                        ";h=" + std::to_string(img.height) +
-                       ";rgbaSum=" + std::to_string(rgbaSum) + ";error=;";
+                       ";rgbaSum=" + std::to_string(rgbaSum) +
+                       ";useRoi=" + (job->useRoi ? "1" : "0") +
+                       ";vehCount=" + std::to_string(roiStats.vehCount) +
+                       ";vehTruncated=" + (vehTruncated ? "1" : "0") +
+                       ";roiTried=" + std::to_string(roiStats.roiTried) +
+                       ";roiSkipped=" + std::to_string(roiStats.roiSkipped) +
+                       ";rawHits=" + std::to_string(roiStats.rawHits) +
+                       ";dedupeDropped=" + std::to_string(roiStats.dedupeDropped) +
+                       ";vehInferMs=" + Num(roiStats.vehInferMs) +
+                       ";roiDetectMs=" + Num(roiStats.roiDetectMs) +
+                       ";error=;";
 
       // 相机档同样带落点自证（ADR-0003）—— 相机页的落点面板靠它。
       // 相机是逐帧调用，所以这里的值就是本帧的观测值，不存在"陈旧"问题；
@@ -1020,8 +1064,27 @@ static void RunJob(AsyncJob* job) {
         v += "," + Num(p.tDetectMs) + "|" + Num(p.tLetterboxMs) + "|" + Num(p.tEncodeInferMs) +
              "|" + Num(p.tDecodeNmsMs) + "|" + Num(p.tRectifyMs) + "|" + Num(p.tRecogMs) + "|" +
              Num(p.tClsMs) + "|" + Num(p.tPackMs) + "|" + Num(p.tInferMs) + "," +
-             std::to_string(p.cropSum);
+             std::to_string(p.cropSum) +
+             // T5：车牌归属的车辆框下标（-1 = 无归属）。**追加在末尾**，
+             // 这样 p0[9]（stages）等既有下标的含义不变 —— 相机页在读它。
+             "," + std::to_string(p.ownerVeh);
         kv += "p" + std::to_string(i) + "=" + v + ";";
+      }
+      // T5：车辆框（供界面叠加与归属连线）。直检模式下为空 —— 界面据此隐藏车框层。
+      //
+      // ⚠️ 段数与 T4 的 `roiPlateProbeAsync` **必须一致**（4 段：
+      // classId,score,rect,cname）。这两处曾不一致 —— 这里 3 段、那里 4 段，
+      // 而界面按 4 段解析 ⇒ 车框被**静默丢光**：native 报 `vehCount=4`，
+      // 界面 `vehDraw=0`，一个框都画不出来，且不报任何错。
+      // 教训：跨入口共用的字段格式要么写成常量，要么在两侧注释里互相点名。
+      const std::vector<std::string>& vnames = LprCocoNames();
+      for (size_t i = 0; i < vehBoxes.size(); i++) {
+        const VehicleBox& b = vehBoxes[i];
+        const char* cname =
+            (b.classId >= 0 && b.classId < (int)vnames.size()) ? vnames[b.classId].c_str() : "?";
+        kv += "v" + std::to_string(i) + "=" + std::to_string(b.classId) + "," + Num(b.score) +
+              "," + Num(b.rect[0]) + "|" + Num(b.rect[1]) + "|" + Num(b.rect[2]) + "|" +
+              Num(b.rect[3]) + "," + Scrub(cname) + ";";
       }
       job->kv = kv;
       job->convMs = convMs;
@@ -1958,12 +2021,16 @@ static napi_value NcnnLoadSlotAsync(napi_env env, napi_callback_info info) {
  * 而相机预览给的是 NV21 —— 在 ArkTS 侧转要 21-38 ms，搬到这里就是一趟 C++ 循环。
  */
 static napi_value CameraFrameAsync(napi_env env, napi_callback_info info) {
-  size_t argc = 11;
-  napi_value args[11] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-                         nullptr, nullptr, nullptr, nullptr, nullptr};
+  size_t argc = 13;
+  napi_value args[13] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
   napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
   AsyncJob* job = new AsyncJob();
   job->kind = JobKind::kCameraFrame;
+  // T5 的 ROI 路径默认参数：与 spec D1/D3 定案值一致（只在入口写默认值）。
+  job->confThresh = 0.05f;
+  job->roiExpand = kRoiExpandDefault;
+  job->dedupeIou = 0.5f;
   if (argc < 8) {
     return RejectedJob(env, job,
                        "ok=0;count=0;totalMs=0;convMs=0;inferMs=0;error=cameraFrameAsync needs "
@@ -1990,6 +2057,18 @@ static napi_value CameraFrameAsync(napi_env env, napi_callback_info info) {
   }
   if (argc >= 10) napi_get_value_int32(env, args[9], &job->recSlot);
   if (argc >= 11) napi_get_value_int32(env, args[10], &job->clsSlot);
+  // T5：第 12/13 参 —— 车辆检测会话 id 与「是否走 ROI 路径」。
+  // 走 ROI 时必须给 vehId，否则 native 侧会以 bad vehicle session id 明确报错
+  // （而不是悄悄退回直检 —— 那会让界面上的开关变成假的）。
+  if (argc >= 12) napi_get_value_int32(env, args[11], &job->vehId);
+  if (argc >= 13) {
+    bool b = false;
+    if (napi_get_value_bool(env, args[12], &b) != napi_ok) {
+      return RejectedJob(env, job, "ok=0;error=useRoi must be a boolean",
+                         "lpr.cameraFrameAsync");
+    }
+    job->useRoi = b;
+  }
   return QueueJob(env, job, "lpr.cameraFrameAsync");
 }
 

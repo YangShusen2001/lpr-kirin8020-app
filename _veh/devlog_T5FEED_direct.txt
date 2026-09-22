@@ -1,0 +1,4 @@
+09-22 14:41:24.814 12493 12493 I A0D001/com.shusen.lprdemo/LprCamera: FEED ok=1 count=1 hit=1 veh=0 useRoi=0 src=320x320 convMs=0.8478 inferMs=59.0358 error=
+09-22 14:41:24.815 12493 12493 I A0D001/com.shusen.lprdemo/LprCamera: FEED GEOM src=320x320 view=427.60x329.15 scale=1.028603 vehDraw=0 plateDraw=1 density=2.8625 viewPos=0.00,156.01 viewPosPx=0.0,446.6
+09-22 14:41:24.816 12493 12493 I A0D001/com.shusen.lprdemo/LprCamera: FEED BOX plate i=0 owner=-1 src=106.00,113.00,171.00,131.00 draw=158.25,116.23,225.11,134.75 drawPx=453.0,332.7,644.4,385.7
+09-22 14:41:24.816 12493 12493 I A0D001/com.shusen.lprdemo/LprCamera: FEED RESULT plate=浙AG557A colour=green owner=-1 hit=1 seg=-

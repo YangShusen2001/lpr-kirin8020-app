@@ -7,8 +7,11 @@
 用法：
   python dev.py state                 唤醒 + 取布局树，报告锁屏状态 / 前台 bundle
   python dev.py layout                只取布局树并打印所有带文字的控件
+  python dev.py all                   取布局树并打印**所有**节点（含无文字容器）
+  python dev.py struct                打印带 id / name 的节点（判断窗口归属）
   python dev.py start                 启动 com.shusen.lprdemo / EntryAbility
   python dev.py tap <x> <y>           注入点击
+  python dev.py longpress <x> <y>     注入长按
   python dev.py swipe <x1> <y1> <x2> <y2> [velocity]
   python dev.py log <TAG>             读 hilog 全量并本地过滤（-x 抓全量再 grep）
   python dev.py logclear              清 hilog 缓冲
@@ -215,6 +218,31 @@ def cmd_ps():
     return 0
 
 
+def cmd_all():
+    """打印**所有**节点（含无文字容器）—— 叠加层的车牌框是无文字的 Row，
+    只有这个视图能看见它；`layout` 只吐带文字的控件，会漏掉它。"""
+    d, err = dump_layout()
+    if d is None:
+        print("[all] FAIL " + err)
+        return 1
+    print("[bundles] " + ", ".join(bundles(d)))
+    for n in iter_nodes(d):
+        t = str(attr(n, "type") or "")
+        b = str(attr(n, "bounds") or "")
+        if not b:
+            continue
+        txt = str(attr(n, "text")).strip()
+        bn = str(attr(n, "bundleName") or "")
+        print("%-12s %-24s %-28s %s" % (t, b, bn[:28], txt[:26]))
+    return 0
+
+
+def cmd_longpress(x, y):
+    rc, o, e = sh("uitest uiInput longClick %d %d" % (x, y))
+    print("[longpress %d,%d] rc=%s out=%s err=%s" % (x, y, rc, o.strip(), e.strip()))
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -225,12 +253,16 @@ def main():
         return cmd_state()
     if c == "layout":
         return cmd_layout()
+    if c == "all":
+        return cmd_all()
     if c == "struct":
         return cmd_struct()
     if c == "start":
         return cmd_start()
     if c == "tap":
         return cmd_tap(int(a[0]), int(a[1]))
+    if c == "longpress":
+        return cmd_longpress(int(a[0]), int(a[1]))
     if c == "swipe":
         return cmd_swipe(int(a[0]), int(a[1]), int(a[2]), int(a[3]),
                          int(a[4]) if len(a) > 4 else 4000)
