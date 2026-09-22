@@ -222,6 +222,82 @@ def t8_operators(g: Guard) -> None:
     g.check("T8 含 convtranspose", 1 if "convtranspose" in names else 0, 1, 0, rel)
 
 
+# ⚠ 命名歧义提醒：`t8_operators` 是**算子覆盖对撞**（.om vs .ms，51 个探针）；
+# 下面的 `t8_vehicle_npu` 是**车辆流水线二期**（换原版 YOLOv5 + 上 NPU）。
+# 两者都叫 T8 但是两件不同的事，别合并、也别互相引用数字。
+
+DRIFT = re.compile(
+    r"DET DRIFT mk=(?P<mk>\S+) (?P<be>\S+) landed=(?P<landed>\S*)"
+    r" req=(?P<req>\S*) fallback=(?P<fb>\S*)"
+    r" L2=(?P<l2>\S+) maxAbs=(?P<maxabs>\S+)"
+    r" p50=(?P<p50>\S+) mean=(?P<mean>\S+) dtype=(?P<dtype>\S+) elems=(?P<elems>\S+)")
+
+
+def t8_vehicle_npu(g: Guard) -> None:
+    """车辆流水线 T8：换原版 anchor-based YOLOv5 后的落点与延迟。
+
+    判据只认 `landed=` 这个**实际落点**字段 —— 请求后端与落点是两件事。
+    落点自证两条：(a) landed 逐字回 NPU 设备名且 fallback 为空；
+    (b) 同模型 nnrt 与 cpu 的 checksum **不同**（若静默回落 CPU 必须逐位相同）。
+    """
+    rel = "_veh/devlog_T8V7.txt"
+    g.exists("T8v 真机证据存在", rel)
+    rows: dict[tuple[str, str], dict[str, str]] = {}
+    for line in read_lines(rel):
+        m = DRIFT.search(line)
+        if m:
+            rows[(m.group("mk"), m.group("be"))] = m.groupdict()
+    g.check("T8v DET DRIFT 条目数", len(rows), 6, 0, rel)
+
+    def one(mk: str, be: str, key: str) -> float:
+        return float(rows[(mk, be)][key])
+
+    fp32 = "yolov5s_v7_320_npu_fp32.ms"
+    fp16 = "yolov5s_v7_320_npu_fp16.ms"
+
+    # (a) 落点自证之一：landed 是 NPU 设备名，且没有 fallback
+    for mk in (fp32, fp16):
+        r = rows[(mk, "nnrt")]
+        g.check(f"T8v {mk} 落点含 NPU 设备名",
+                1 if r["landed"].startswith("NNRT:NPU_ohos") else 0, 1, 0, rel)
+        g.check(f"T8v {mk} nnrt 无 fallback", 1 if r["fb"] == "" else 0, 1, 0, rel)
+        g.check(f"T8v {mk} req=nnrt", 1 if r["req"] == "nnrt" else 0, 1, 0, rel)
+
+    # (b) 落点自证之二：nnrt 与 cpu 的 checksum 必须不同
+    for mk in (fp32, fp16):
+        a, b = rows[(mk, "nnrt")]["l2"], rows[(mk, "cpu")]["l2"]
+        g.check(f"T8v {mk} nnrt/cpu checksum 不同",
+                1 if a != b else 0, 1, 0, rel)
+
+    # 延迟：同引擎同模型，唯一变量是后端
+    g.check("T8v fp32 NPU p50", one(fp32, "nnrt", "p50"), 5.392, 0.01, rel, " ms")
+    g.check("T8v fp32 CPU p50", one(fp32, "cpu", "p50"), 42.016, 0.01, rel, " ms")
+    g.check("T8v fp32 加速比",
+            one(fp32, "cpu", "p50") / one(fp32, "nnrt", "p50"), 7.79, 0.01, rel, "×")
+    g.check("T8v fp16 NPU p50", one(fp16, "nnrt", "p50"), 5.537, 0.01, rel, " ms")
+    g.check("T8v fp16 CPU p50", one(fp16, "cpu", "p50"), 41.646, 0.01, rel, " ms")
+    g.check("T8v fp16 加速比",
+            one(fp16, "cpu", "p50") / one(fp16, "nnrt", "p50"), 7.52, 0.01, rel, "×")
+    # 首输出 (1,255,40,40) 的元素数，用来确认跑的是三个裸头而不是被裁坏的图
+    g.check("T8v 首输出元素数", one(fp32, "nnrt", "elems"), 408000, 0, rel)
+
+    # converter 对比：v5-u 失败、裁切后成功 —— 这是「模型×工具链」判否的现场
+    fail_rel = "_veh/yolov5su_320_fp32.convert.log"
+    g.exists("T8v v5-u 转换日志存在", fail_rel)
+    fail_txt = "\n".join(read_lines(fail_rel))
+    g.check("T8v v5-u 死于 dfl/conv 形状推断",
+            1 if "InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed" in fail_txt
+            else 0, 1, 0, fail_rel)
+    g.check("T8v v5-u 转换失败",
+            1 if "Convert model failed" in fail_txt else 0, 1, 0, fail_rel)
+    for rel2 in ("_veh/yolov5s_v7_320_npu_fp32.convert.log",
+                 "_veh/yolov5s_v7_320_npu_fp16.convert.log"):
+        g.exists("T8v 转换日志存在 " + os.path.basename(rel2), rel2)
+        txt = "\n".join(read_lines(rel2))
+        g.check("T8v 转换成功 " + ("fp32" if "fp32" in rel2 else "fp16"),
+                1 if "CONVERT RESULT SUCCESS:0" in txt else 0, 1, 0, rel2)
+
+
 def t7_rq4(g: Guard, rel: str) -> None:
     g.exists("T7 证据存在", rel)
     path = os.path.join(ROOT, rel)
@@ -333,7 +409,11 @@ def main() -> int:
                     "evidence/ccpd_scene_rec.log", "evidence/scene_green_rec.log",
                     "models_om_ops/op_collide.csv", args.rq4,
                     "evidence/crop_ab.log", "evidence/crop_ab_det.log",
-                    "evidence/camera_windows.csv", "evidence/camera_gap_sweep.log"):
+                    "evidence/camera_windows.csv", "evidence/camera_gap_sweep.log",
+                    "_veh/devlog_T8V7.txt",
+                    "_veh/yolov5su_320_fp32.convert.log",
+                    "_veh/yolov5s_v7_320_npu_fp32.convert.log",
+                    "_veh/yolov5s_v7_320_npu_fp16.convert.log"):
             p = os.path.join(ROOT, rel)
             ok = os.path.exists(p)
             print(f"{'OK  ' if ok else 'MISS'} {rel}"
@@ -344,6 +424,7 @@ def main() -> int:
     t12_scene(g)
     t13_green(g)
     t8_operators(g)
+    t8_vehicle_npu(g)
     t7_rq4(g, args.rq4)
     rq4_drift(g, args.rq4)
     c8_dose_response(g)

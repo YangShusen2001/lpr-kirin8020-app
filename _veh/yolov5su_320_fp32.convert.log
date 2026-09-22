@@ -1,0 +1,91 @@
+ERROR [mindspore\lite\tools\converter\converter_lite\main.cc:104] main] Convert failed. Ret: Common error code.
+Convert failed. Ret: Common error code.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:1 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:1 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:1 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:1 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:1 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore/lite/tools/optimizer/const_fold/constant_folding_fusion.h:48] Run] Do constant fold failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\node_infershape.cc:310] InferShapeByNNACL] InferShapeByNNACL for op: /model.24/dfl/conv/Conv failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:317] InferProcess] node infer shape failed, node is /model.24/dfl/conv/Conv
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\optimizer\graph\infershape_pass.cc:192] Run] infer shape failed.
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\src\litert\infer_manager.cc:153] CheckInfershapeResult] Unexpected input format 0
+[WARNING] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\legacy_optimizer\graph\infershape_pass.cc:633] InferSubgraph] InferShape failed, name: /model.24/dfl/conv/Conv, type: Conv2DFusion
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\legacy_optimizer\graph\infershape_pass.cc:650] Run] InferSubgraph index: 0 failed, ret: -500
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\optimizer.cc:78] Run] Run GraphPass failed
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\graphdef_transform.cc:71] QuantTransform] Run quant_node_optimizer graphPasses Failed
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\converter_metagraph.cc:102] Build] Transform meta graph failed!ret = -500
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\converter.cc:1259] SaveGraph] Convert to meta graph failed
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\converter.cc:1212] HandleGraphCommon] Save graph failed: -1 Common error code.
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\converter.cc:1152] Convert] Handle graph failed: -1 Common error code.
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\converter.cc:1344] RunConverter] Convert model failed
+[ERROR] LITE(17280,1,?):2026-9-22 16:50:2 [mindspore\lite\tools\converter\cxx_api\converter.cc:374] Convert] Convert model failed, ret=Common error code.

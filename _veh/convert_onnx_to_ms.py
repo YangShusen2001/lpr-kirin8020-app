@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""convert_ms.py —— 调 MindSpore Lite converter 把 ONNX 转成 .ms（T8 第三步）。
+"""convert_onnx_to_ms.py —— 调 MindSpore Lite converter 把**任意** ONNX 转成 .ms（T8 第三步）。
+
+## 与 `tools/convert_ms.sh` 的分工（别搞混，两者不是重复）
+
+| | `tools/convert_ms.sh` | 本脚本 |
+|---|---|---|
+| 用途 | **生产模型**的三件套复现与逐字节比对 | 探索期**任意** ONNX 的转换 |
+| 模型表 | 硬编码三个（y5fu / rpv3 / cls），源目录也写死 | `--onnx` 传什么转什么 |
+| fp16 | 固定 `--fp16=on` | `--fp16` 开关，fp32/fp16 各转一份 |
+| 日志 | 只 `tail -4` | **完整落盘到文件**（要当证据用，见 evidence-index 2.9） |
+
+之所以需要「完整落盘」：T8 的判据是 `CONVERT RESULT SUCCESS:0` **与**日志里
+有没有 `InferShapeByNNACL … failed` 这类告警，`tail -4` 会把告警截掉。
 
 ## 本机已验证的调用方式（来自 D:\\Tools\\mindspore-lite\\run_conv.bat，不自己发明）
 
@@ -19,8 +31,9 @@
 
 ## 用法
 
-    python _veh/convert_ms.py --onnx _veh/yolov5s_v7_320_npu.onnx --tag yolov5s_v7_320_npu
-    python _veh/convert_ms.py --onnx ... --fp16
+    python _veh/convert_onnx_to_ms.py --onnx _veh/yolov5s_v7_320_npu.onnx --tag yolov5s_v7_320_npu
+    python _veh/convert_onnx_to_ms.py --onnx ... --fp16
+    python _veh/convert_onnx_to_ms.py --onnx _veh/yolov5su_320.onnx --out-dir _veh   # 失败日志也要入库
 """
 import argparse
 import os
