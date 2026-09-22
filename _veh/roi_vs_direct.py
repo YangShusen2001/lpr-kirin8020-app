@@ -168,6 +168,17 @@ def run(args):
             # 车牌可能落在非最高分的车框里。`--roi-max-boxes=-1` 遍历全部。
             if vdets:
                 tops = sorted(vdets, key=lambda d: -d["conf"])
+                # 跨类别去重（复刻 native 的 LprDedupeVehicles）：模型对同一目标
+                # 可能同时给出 cls=2(car) 与 cls=3(motorcycle) 两个框（实测
+                # IoU 0.99），而 NMS 是 class-wise 的、不互相抑制 ⇒ 同一辆车被跑
+                # 两次车牌检测。0 = 不去重（保持历史口径，便于对照）。
+                if args.veh_dedupe_iou > 0:
+                    keep = []
+                    for d in tops:
+                        if not any(iou_xyxy(d["xyxy"], k["xyxy"]) >= args.veh_dedupe_iou
+                                   for k in keep):
+                            keep.append(d)
+                    tops = keep
                 if args.roi_max_boxes > 0:
                     tops = tops[: args.roi_max_boxes]
             else:
@@ -268,7 +279,8 @@ def run(args):
         "config": {"img_dir": img_dir, "n": n, "limit": args.limit,
                    "plate_onnx": args.plate_onnx, "veh_models": args.veh_models,
                    "conf": args.conf, "iou": args.iou, "veh_conf": args.veh_conf,
-                   "roi_max_boxes": args.roi_max_boxes, "pads": pads},
+                   "roi_max_boxes": args.roi_max_boxes, "pads": pads,
+                   "veh_dedupe_iou": args.veh_dedupe_iou},
         "by_config": by_config,
         "wall_s": round(time.perf_counter() - t0, 1),
         "rows": rows,
@@ -286,6 +298,9 @@ def main():
     ap.add_argument("--conf", type=float, default=0.25, help="车牌检测置信度")
     ap.add_argument("--iou", type=float, default=0.5)
     ap.add_argument("--veh-conf", type=float, default=0.25)
+    ap.add_argument("--veh-dedupe-iou", type=float, default=0.0,
+                    help="车框跨类别去重的 IoU 阈值（复刻 native LprDedupeVehicles）；"
+                         "0 = 不去重")
     ap.add_argument("--roi-max-boxes", type=int, default=1,
                     help="每个尺度取前 N 个车辆框做 ROI；-1 = 遍历全部"
                          "（真实一帧多车场景必须用 -1，只取 top1 是错的实现）")

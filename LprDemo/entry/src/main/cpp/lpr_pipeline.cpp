@@ -1394,6 +1394,48 @@ static float BoxIou(const float a[4], const float b[4]) {
   return uni > 0 ? inter / uni : 0;
 }
 
+/**
+ * 车辆框的**跨类别**去重：同一目标被不同类别各检出一个框时，只保留最高分。
+ *
+ * 为什么必须做：模型对同一辆车可能同时给出 cls=2(car) 与 cls=3(motorcycle)
+ * 两个框（实测 IoU 0.99）。NMS 是 **class-wise** 的，不会互相抑制 —— 于是
+ * **同一辆车被跑两次车牌检测**，纯浪费且零召回收益。
+ *
+ * ⚠️ 与 D1「遍历所有车框」不冲突：D1 要的是"不因分数低就丢框"，这里丢的是
+ * **空间上重复**的框（同一目标的不同类别标签），不是低分框。去掉它不会让任何
+ * 一个**未被覆盖的目标**失去 ROI。
+ *
+ * 这是 D3 在**车框层面**的对应物：D3 要求对车牌框去重，而重叠车牌框的来源
+ * 正是重叠车框 —— 在源头去重，省的是整次车牌检测，而不只是去重那一步。
+ *
+ * 返回丢掉的框数。副作用：`boxes` 被就地改为去重后（**按分数降序**）。
+ */
+static int LprDedupeVehicles(std::vector<VehicleBox>& boxes, float iouThresh) {
+  if (boxes.size() < 2) {
+    return 0;
+  }
+  std::sort(boxes.begin(), boxes.end(),
+            [](const VehicleBox& a, const VehicleBox& b) { return a.score > b.score; });
+  std::vector<VehicleBox> keep;
+  keep.reserve(boxes.size());
+  for (const VehicleBox& b : boxes) {
+    bool dup = false;
+    for (const VehicleBox& k : keep) {
+      if (BoxIou(b.rect, k.rect) >= iouThresh) {
+        dup = true;
+        break;
+      }
+    }
+    if (!dup) {
+      keep.push_back(b);
+    }
+  }
+  const int dropped = static_cast<int>(boxes.size() - keep.size());
+  boxes.swap(keep);
+  return dropped;
+}
+
+
 bool LprDetectGeometryOf(const MsSession* det, int& outSize, bool& outNhwc, std::string& err) {
   outSize = 0;
   outNhwc = false;
@@ -2218,6 +2260,19 @@ bool LprRunRoiPipeline(const RgbaImage& img, const LprSessions& s, MsSession* ve
   }
   outStats.vehInferMs = vehMs;
   outStats.vehCount = static_cast<int>(vehs.size());
+
+  // 1.5) 车框预处理：跨类别去重 +（可选）top-N 截断。
+  //
+  // 去重放在**遍历之前**：省的是整次「裁 ROI + 车牌检测」，而不是最后那步
+  // 车牌框去重 —— 同一辆车被跑两遍的代价在遍历里，不在结果里。
+  outStats.vehDeduped = LprDedupeVehicles(vehs, opt.vehDedupeIou);
+  if (opt.vehMaxBoxes > 0 && static_cast<int>(vehs.size()) > opt.vehMaxBoxes) {
+    // LprDedupeVehicles 已按分数降序排好，直接截断即为 top-N。
+    outStats.vehTruncatedByN = static_cast<int>(vehs.size()) - opt.vehMaxBoxes;
+    vehs.resize(static_cast<size_t>(opt.vehMaxBoxes));
+  }
+  // outVehicles 给**去重后**的框：界面画的是"实际用于 ROI 的框"。画去重前的
+  // 会看到同一辆车叠两个框，既乱、又与 roiTried 的账目对不上。
   outVehicles = vehs;
 
   // 2) 逐框：裁 ROI → 车牌检测 → 映射回原图坐标

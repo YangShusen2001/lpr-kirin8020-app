@@ -384,6 +384,24 @@ struct RoiPipelineOptions {
   bool vehicleOnly = true;
   float roiExpand = kRoiExpandDefault;  // 0.15
   float dedupeIou = 0.5f;               // D3：同一块牌只留一条
+
+  /**
+   * 车框**跨类别**去重的 IoU 阈值（见 LprDedupeVehicles）。
+   *
+   * 取 0.6 而不是 D3 车牌框用的 0.5：车框比车牌框大得多，前后两辆车紧挨时
+   * 车框本身的 IoU 就可能到 0.4~0.5 —— 用 0.5 有把"两辆真车"合并成一的风险。
+   * 而同一目标被标成两个类别的框实测 IoU 达 0.99，0.6 足以覆盖。
+   */
+  float vehDedupeIou = 0.6f;
+
+  /**
+   * 每个尺度最多取前 N 个车框做 ROI（按分数降序）。**<= 0 表示不限**。
+   *
+   * ⚠️ D1 明确反对"只取 top1"：实测那会把 ROI 召回从 91.0% 打到 77.5%
+   * （−13.5pp）。这个参数存在是为了在**远距离多车**场景给耗时兜底，
+   * 默认值必须由实测数据定，不能凭感觉设。
+   */
+  int vehMaxBoxes = 0;
 };
 
 /**
@@ -391,7 +409,9 @@ struct RoiPipelineOptions {
  * （与面板解析器的纪律一致 —— 补 0 会凭空造出"跑了 0 ms"）。
  */
 struct RoiPipelineStats {
-  int vehCount = 0;       // 车辆框数
+  int vehCount = 0;       // 车辆检测**原始**输出框数（去重前，供账目核对）
+  int vehDeduped = 0;     // 跨类别去重丢掉的框数（同一目标被标成多个类别）
+  int vehTruncatedByN = 0;  // 被 top-N 截断丢掉的框数（0 = 未启用/未触发）
   int roiTried = 0;       // 真的裁了并跑完车牌检测的 ROI 数
   int roiSkipped = 0;     // 车框无效 / 裁剪失败 / 该 ROI 检测失败的数
   int rawHits = 0;        // 去重前的车牌框总数

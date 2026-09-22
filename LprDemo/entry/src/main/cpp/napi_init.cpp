@@ -1007,6 +1007,10 @@ static void RunJob(AsyncJob* job) {
                        ";rgbaSum=" + std::to_string(rgbaSum) +
                        ";useRoi=" + (job->useRoi ? "1" : "0") +
                        ";vehCount=" + std::to_string(roiStats.vehCount) +
+                       // 跨类别去重丢掉的框数（同一目标被标成多个类别，IoU 可达 0.99）。
+                       // 与 vehCount 分开报，界面才能给出完整账目：
+                       // "检出 4 → 实际跑 3（跨类去重 1）"。
+                       ";vehDeduped=" + std::to_string(roiStats.vehDeduped) +
                        ";vehTruncated=" + (vehTruncated ? "1" : "0") +
                        ";roiTried=" + std::to_string(roiStats.roiTried) +
                        ";roiSkipped=" + std::to_string(roiStats.roiSkipped) +

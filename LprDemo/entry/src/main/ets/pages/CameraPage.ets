@@ -1708,10 +1708,14 @@ struct CameraPage {
         this.plateOwner = -1;
         this.plateColour = 'unknown';
       }
-      // ROI 路的分段读数（直检模式下清空，免得挂着上一路的数）
+      // ROI 路的分段读数（直检模式下清空，免得挂着上一路的数）。
+      // 账目写全：车框「检出 N → 实际跑 M（跨类去重 D）」+ 车牌框去重丢弃数。
+      // 两个"去重"是**不同层面**的：vehDeduped 是车框层面（同一目标被标成多类），
+      // dedupeDropped 是车牌框层面（D3）。混在一起写会让人以为只有一个去重。
       if (this.landedRoi) {
         this.roiSegText = 'veh ' + str(kv, 'vehInferMs') + ' + roi ' + str(kv, 'roiDetectMs') +
-          ' ms · 车框 ' + str(kv, 'vehCount') + ' · 去重丢 ' + str(kv, 'dedupeDropped');
+          ' ms · 车框 ' + str(kv, 'vehCount') + '→' + str(kv, 'roiTried') +
+          '（跨类去重 ' + str(kv, 'vehDeduped') + '）· 牌去重丢 ' + str(kv, 'dedupeDropped');
       } else {
         this.roiSegText = '';
       }
