@@ -13,6 +13,7 @@ LprDemo/entry/oh_modules/
 *.om
 *.omc
 *.onnx
+*.pt
 *.ncnn.bin
 *.ncnn.param
 

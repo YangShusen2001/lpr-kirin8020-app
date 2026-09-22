@@ -1,0 +1,119 @@
+{
+ "source": "C:\\Users\\26671\\lpr-kirin8020-app\\_veh\\roi_vs_direct_full.json",
+ "n": 1000,
+ "configs": {
+  "direct_full_image": {
+   "path": "direct",
+   "n_images": 1000,
+   "total_boxes": 1005,
+   "boxes_per_image_mean": 1.005,
+   "zero_detection": 0,
+   "zero_rate": 0.0,
+   "hits": 1000,
+   "recall": 1.0,
+   "box_count_histogram": {
+    "0": 0,
+    "1": 995,
+    "2": 5,
+    "3+": 0
+   },
+   "multi_box_rate": 0.005,
+   "redundant_boxes": 5,
+   "redundant_per_hit": 0.005,
+   "clean_hit_rate": 0.995,
+   "clean_hits": 995
+  },
+  "roi_320|0.15": {
+   "path": "320|0.15",
+   "n_images": 1000,
+   "total_boxes": 870,
+   "boxes_per_image_mean": 0.87,
+   "zero_detection": 145,
+   "zero_rate": 0.145,
+   "hits": 851,
+   "recall": 0.851,
+   "box_count_histogram": {
+    "0": 145,
+    "1": 840,
+    "2": 15,
+    "3+": 0
+   },
+   "multi_box_rate": 0.015,
+   "redundant_boxes": 19,
+   "redundant_per_hit": 0.022,
+   "clean_hit_rate": 0.836,
+   "veh_imgsz": 320,
+   "roi_pad": 0.15,
+   "clean_hits": 836
+  },
+  "roi_320|0.4": {
+   "path": "320|0.4",
+   "n_images": 1000,
+   "total_boxes": 864,
+   "boxes_per_image_mean": 0.864,
+   "zero_detection": 143,
+   "zero_rate": 0.143,
+   "hits": 856,
+   "recall": 0.856,
+   "box_count_histogram": {
+    "0": 143,
+    "1": 850,
+    "2": 7,
+    "3+": 0
+   },
+   "multi_box_rate": 0.007,
+   "redundant_boxes": 8,
+   "redundant_per_hit": 0.009,
+   "clean_hit_rate": 0.849,
+   "veh_imgsz": 320,
+   "roi_pad": 0.4,
+   "clean_hits": 849
+  },
+  "roi_640|0.15": {
+   "path": "640|0.15",
+   "n_images": 1000,
+   "total_boxes": 345,
+   "boxes_per_image_mean": 0.345,
+   "zero_detection": 663,
+   "zero_rate": 0.663,
+   "hits": 324,
+   "recall": 0.324,
+   "box_count_histogram": {
+    "0": 663,
+    "1": 329,
+    "2": 8,
+    "3+": 0
+   },
+   "multi_box_rate": 0.008,
+   "redundant_boxes": 21,
+   "redundant_per_hit": 0.065,
+   "clean_hit_rate": 0.316,
+   "veh_imgsz": 640,
+   "roi_pad": 0.15,
+   "clean_hits": 316
+  },
+  "roi_640|0.4": {
+   "path": "640|0.4",
+   "n_images": 1000,
+   "total_boxes": 349,
+   "boxes_per_image_mean": 0.349,
+   "zero_detection": 654,
+   "zero_rate": 0.654,
+   "hits": 332,
+   "recall": 0.332,
+   "box_count_histogram": {
+    "0": 654,
+    "1": 343,
+    "2": 3,
+    "3+": 0
+   },
+   "multi_box_rate": 0.003,
+   "redundant_boxes": 17,
+   "redundant_per_hit": 0.051,
+   "clean_hit_rate": 0.329,
+   "veh_imgsz": 640,
+   "roi_pad": 0.4,
+   "clean_hits": 329
+  }
+ }
+}
