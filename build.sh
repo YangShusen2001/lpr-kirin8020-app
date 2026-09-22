@@ -125,10 +125,16 @@ echo "PWD=$(pwd)"
 echo "BUILD_MODE=$BUILD_MODE"
 echo "DEVECO_HOME=$DEVECO_HOME"
 echo "=== assembleHap ==="
+# ⚠️ 2026-09-22 修：`set -e`（见第 17 行）会让**失败的那条命令直接终止脚本**，
+# 于是下面 `rc=$?` 永远执行不到 —— 实测现象是构建日志里既没有 `[hvigor rc=...]`
+# 也没有末尾那段「=== 签名说明 ===」，而 SignHap 在 CLI 下**必然失败**，
+# 也就是说这段引导**从来没打印过**。必须在本条命令前后临时关闭 `set -e`。
+set +e
 "$LPR_NODE_HOME/node.exe" \
   "$DEVECO_HOME/tools/hvigor/bin/hvigorw.js" \
   assembleHap --mode module -p product=default -p buildMode="$BUILD_MODE" --no-daemon "$@" 2>&1
 rc=$?
+set -e
 echo "[hvigor rc=$rc]"
 
 # SignHap 在纯 CLI 下必然失败，这里显式说明原因并给出替代路径。
@@ -151,10 +157,16 @@ if [ "$rc" -ne 0 ] && [ ! -f "$PROJ/entry/build/default/outputs/default/entry-de
   echo ""
   echo "=== 签名说明 ==="
   echo "若上面失败在 :entry:default@SignHap，这是 CLI 环境的已知限制（见本脚本注释）。"
-  echo "打包产物若已生成，用下面两条命令完成签名："
-  echo "  bash tools/make_signing_material.sh    # 只需跑一次"
-  echo "  bash tools/sign_hap.sh"
+  echo "打包产物若已生成，按**目标设备**选签名脚本 ——"
+  echo "两者的信任根互不相认，选错必拒装（ADR-0009）："
+  echo "  华为商用真机（如 MIA-AL00）: bash tools/sign_hap_huawei.sh"
+  echo "                               （信任根 Huawei CBG Root CA G2）"
+  echo "  云手机 / OH 开发板:          bash tools/make_signing_material.sh   # 只需跑一次"
+  echo "                               bash tools/sign_hap.sh"
+  echo "                               （信任根 OpenHarmony Application Root CA）"
   echo "也可改用 DevEco Studio 构建（它能解开自己的加密口令）。"
+  echo "⚠️ 用错脚本的症状是装机报 code:9568257 / fail to verify pkcs7 file；"
+  echo "   那个报错与证书过期/签名算法/包名/UDID 全都无关，只去看信任根。"
 fi
 
 echo "=== 产物 ==="

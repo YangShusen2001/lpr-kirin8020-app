@@ -11,6 +11,10 @@
     "installationFree": false,
     "pages": "$profile:main_pages",
     "requestPermissions": [
+      // CAMERA：2026-09-22 曾按 ADR-0008 删除（当时相机功能整体砍掉），
+      // 同日按用户明确要求恢复 —— 见 docs/spec-vehicle-pipeline.md。
+      // 审查侧代价是真实的（要填相机用途说明），但「相机实时」是作品集演示
+      // 的主链路，不再有替代品，故连声明一起恢复。
       {
         "name": "ohos.permission.INTERNET"
       },

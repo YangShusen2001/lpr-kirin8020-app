@@ -20,8 +20,14 @@
  * 注意：ArkTS 禁用 any/unknown，JSON.parse 过不了 linter，
  * 所以原生侧一律返回 `key=value;` 扁平串（见 napi_init.cpp 的 KvSanitize）。
  */
-import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
-import { camera } from '@kit.CameraKit';
+// 【2026-09-22 相机恢复】上一轮按 ADR-0008 把相机路径整体砍掉，连带删了三个 import。
+// 同日用户要求「恢复相机实时」（docs/spec-vehicle-pipeline.md），这里只把仍需要的
+// `router` 加回来：
+//   @kit.ArkUI 的 router —— 跳 `pages/CameraPage`（入口见本文件 `pageHeader()`）
+// `@kit.CameraKit` 与 `abilityAccessCtrl / Permissions` **仍然不在这里用**：
+// 枚举物理镜头、申请 CAMERA 权限都在 CameraPage 自己那一页做，本页只负责跳转。
+// 往回加用不到的 import 会让 linter 报 unused，也会让读者以为本页碰相机。
+import { common } from '@kit.AbilityKit';
 import { image } from '@kit.ImageKit';
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -34,51 +40,65 @@ import { batteryInfo } from '@kit.BasicServicesKit';
 import { systemLoad } from '@kit.BasicServicesKit';
 // T12 读 gt.tsv 需要 TextDecoder（ArkTS 无浏览器那个全局 TextDecoder）。
 import { util } from '@kit.ArkTS';
+// 导出（长按/点「复制」）走系统剪贴板。用户定的导出形态是「终端界面上直接看 + 复制」，
+// 不是写文件 —— App 私有目录在真机/云手机上 hdc 都拉不出来，复制成文本更可用。
+import { pasteboard } from '@kit.BasicServicesKit';
 
 const TAG = 'LprMatrix';
 const NATIVE_TAG = 'LprNativeUI';
 const DOMAIN = 0xD001;
 
-// ---------------------------------------------------------------- iOS 设计变量
-// 与 CameraPage.ets 同一套（Apple HIG 系统色 + SF Pro 字体栈），
-// 两个页面必须视觉一致，否则来回跳转像两个 App。
+// ------------------------------------------------- 深色仪器风设计变量（ADR-0008）
+//
+// 【为什么整体换掉 iOS 浅色】
+// 旧控制台是 26 个探针按钮平铺在浅色长页上，结果是「看不了、认不出、跑不动」。
+// 重设计选深色仪器风（跑分台/监控台那一类）：深底让状态色更跳、等宽数字对齐后
+// 一列 p50 能竖着扫，比浅色卡片更适合高密度读数。
+//
+// 【⚠️ 颜色写法仍受 ArkUI 约束】
+// ArkUI 的 8 位 hex 是 **ARGB**（#AARRGGBB），不是 CSS 的 RGBA。半透明一律写
+// `rgba(r,g,b,a)`，绝不用 8 位 hex 抄语义色 —— 历史上照抄 iOS 的 `#7676801f`
+// 被解析成 A=0x76 的一层橄榄绿。
+//
+// 【命名】INS_ = instrument（仪器）。
 
-/** 系统分组背景（iOS 浅色模式：F2F2F7）。 */
-const IOS_BG: string = '#F2F2F7';
-/** 卡片/分组内容背景。 */
-const IOS_CARD: string = '#FFFFFF';
-/** 主文本（label）。 */
-const IOS_LABEL: string = '#000000';
-/**
- * 次级文本（secondaryLabel）。
- * ⚠️ 必须用 `rgba(...)` 而不是 8 位 hex：ArkUI 的 8 位 hex 是 **ARGB**（#AARRGGBB），
- * 而 iOS 文档给的是 **RGBA**（#RRGGBBAA）。照抄 iOS 的 8 位 hex 会被解析成
- * A=RR、R=GG、G=BB、B=AA —— 实测把 `#7676801f` 渲染成了一层橄榄绿。
- */
-const IOS_LABEL2: string = 'rgba(60,60,67,0.60)';
-/** 三级文本（tertiaryLabel）。 */
-const IOS_LABEL3: string = 'rgba(60,60,67,0.30)';
-/** 分隔线（separator）。 */
-const IOS_SEP: string = 'rgba(60,60,67,0.12)';
-/** 系统蓝（systemBlue）—— 主操作色。 */
-const IOS_BLUE: string = '#007AFF';
-/** 系统绿（systemGreen）。 */
-const IOS_GREEN: string = '#34C759';
-/** 系统橙（systemOrange）。 */
-const IOS_ORANGE: string = '#FF9500';
-/** 系统红（systemRed）。 */
-const IOS_RED: string = '#FF3B30';
-/** 系统灰（systemGray）—— 未选中分段控件底。 */
-const IOS_GRAY: string = '#8E8E93';
-/** 分段控件轨道色（fill/tertiarySystemFill）。 */
-const IOS_TRACK: string = 'rgba(118,118,128,0.12)';
-/** 主按钮的浅色底（systemBlue 12%）。 */
-const IOS_BLUE_SOFT: string = 'rgba(0,122,255,0.12)';
-/** 危险按钮的浅色底（systemRed 12%）。 */
-const IOS_RED_SOFT: string = 'rgba(255,59,48,0.12)';
+/** 页面底色：接近纯黑的冷灰，不是 #000（纯黑下发色容易显脏）。 */
+const INS_BG: string = '#0E1116';
+/** 卡片/面板底：比页面亮一档，用来切分区域。 */
+const INS_PANEL: string = '#171B22';
+/** 卡内次级区域（表头、行底纹）。 */
+const INS_PANEL2: string = '#1E232B';
+/** 主文本：不用纯白，避免长时间盯屏刺眼。 */
+const INS_LABEL: string = '#E6EAF2';
+/** 次级文本（标签、单位）。 */
+const INS_LABEL2: string = 'rgba(230,234,242,0.62)';
+/** 三级文本（禁用、占位）。 */
+const INS_LABEL3: string = 'rgba(230,234,242,0.34)';
+/** 描边与分隔线。 */
+const INS_LINE: string = 'rgba(230,234,242,0.10)';
 
-/** SF Pro 字体栈：鸿蒙无 SF Pro 时回落到系统字体，视觉上仍贴近 iOS。 */
-const IOS_FONT: string = 'HarmonyOS Sans, SF Pro Text, Helvetica Neue, sans-serif';
+/** 主操作色（深底上的青蓝，比 #007AFF 更亮才压得住）。 */
+const INS_ACCENT: string = '#4C9AFF';
+/** 主操作色浅底。 */
+const INS_ACCENT_SOFT: string = 'rgba(76,154,255,0.16)';
+
+/** 状态色 —— 深底上取高明度版本，保证对比度。 */
+/** 通过 / 已落点。 */
+const INS_OK: string = '#3DD68C';
+const INS_OK_SOFT: string = 'rgba(61,214,140,0.16)';
+/** 警告 / 回退（如请求 gpu 但落到 cpu）。 */
+const INS_WARN: string = '#F5A623';
+const INS_WARN_SOFT: string = 'rgba(245,166,35,0.16)';
+/** 失败 / 未复现。 */
+const INS_BAD: string = '#FF6B6B';
+const INS_BAD_SOFT: string = 'rgba(255,107,107,0.16)';
+/** 中性（未跑、跳过）。 */
+const INS_IDLE: string = '#8B93A3';
+
+/** 数据字体栈：数字列必须等宽，否则 p50 一列对不齐。 */
+const INS_MONO: string = 'HarmonyOS Sans, SF Mono, Menlo, Consolas, monospace';
+/** 界面字体栈。 */
+const INS_FONT: string = 'HarmonyOS Sans, SF Pro Text, Helvetica Neue, sans-serif';
 
 // ---------------------------------------------------------------- 原生演示配置
 
@@ -152,7 +172,21 @@ const MODEL_OM_LPRNET_NPUFIX: string = 'models/probe_om_lprnet_npufix.om';
  *
  * rawfile 里的文件名是 `models/op_<name>.om`。
  */
-const OP_PROBE_NAMES: string[] = [
+/**
+ * T8 · 算子覆盖对撞的探针名单。
+ *
+ * 【2026-09-22 改为动态枚举】原先是 51 个名字**硬编码**在这里，理由是
+ * `resourceManager` 没有目录枚举 API。这个理由一直不成立：
+ * `assetManager.listDir` 就能列 rawfile 目录，实测可用（e2eMatrix 已用
+ * `getRawFileList` 列过 crop 目录）。硬编码的代价很实际 ——
+ * 往 opbench 加一个算子就得回来改 ArkTS，忘了改就是**静默漏测**：
+ * 面板显示"51 个全过"，而磁盘上有 52 个。
+ *
+ * 现在由 `resolveOpProbes()` 在运行时列 `models/` 下所有 `op_*.om`。
+ * 下面这份名单**只作为兜底**：枚举失败（权限/路径/平台差异）时用它，
+ * 保证对撞实验永远跑得起来，而不是静默跑 0 个。
+ */
+const OP_PROBE_NAMES_FALLBACK: string[] = [
   'add_const', 'avgpool', 'batchnorm', 'cast_f16',
   'concat', 'conv1x1', 'conv3x3_s1', 'conv3x3_s2',
   'conv5x5', 'convtranspose', 'div_const', 'dwconv3x3',
@@ -167,6 +201,39 @@ const OP_PROBE_NAMES: string[] = [
   'slice_channel', 'softmax', 'softplus', 'strided_slice',
   'tanh', 'transpose', 'unsqueeze'
 ];
+
+/**
+ * 运行时名单（枚举成功则由 `resolveOpProbes()` 填入，长度可能 ≠ 51）。
+ */
+let OP_PROBE_NAMES: string[] = OP_PROBE_NAMES_FALLBACK;
+
+/**
+ * 列 `models/` 下所有 `op_*.om`，解析出算子名。
+ *
+ * 返回 `op_<name>.om` 里的 `<name>`，排序后返回（排序是为了让对撞输出
+ * 每次顺序一致 —— 否则两次跑的日志无法逐行 diff）。
+ * 失败返回空数组，调用方自行决定兜底。
+ */
+function scanOpProbeNames(ctx: common.UIAbilityContext): string[] {
+  const out: string[] = [];
+  try {
+    const names: string[] = ctx.resourceManager.getRawFileListSync('models');
+    for (let i = 0; i < names.length; i++) {
+      const n: string = names[i];
+      if (n.indexOf('op_') !== 0 || n.length <= 6) {
+        continue;
+      }
+      if (n.lastIndexOf('.om') !== n.length - 3) {
+        continue;
+      }
+      out.push(n.substring(3, n.length - 3));
+    }
+  } catch (e) {
+    return [];
+  }
+  out.sort();
+  return out;
+}
 
 /**
  * ncnn 版本的识别 / 分类模型（GPU 唯一通路；pnnx 从同一份 ONNX 转出）。
@@ -315,36 +382,23 @@ const E2E_ROLES_CLS: E2eRole[] = [
 const E2E_ROLES: E2eRole[] = E2E_ROLES_ALL;
 
 /**
- * 启动自检：装机后自动「Vulkan 探针 → 枚举镜头 → 加载模型 → 跑样本 → 四后端对照
- * → 全量矩阵」，全部写 hilog。
+ * 【2026-09-22 删除两个编译期自检开关】
  *
- * 存在的理由：原生 ArkUI 的按钮点不了（CDP 只能驱动 Web 内容，管不到原生组件），
- * 命令行验证需要一条不需要人手指的路径。演示前把它改成 false。
+ * 这里原本是 `AUTO_SELFTEST` 与 `AUTO_RQ4` 两个 boolean 常量，用来在装机后
+ * **自动**跑一串实验、并把结果写进 hilog。它们存在的原因是当时原生 ArkUI
+ * 的按钮点不了（CDP 只能驱动 Web 内容；uitest dumpLayout 又会把 App 推到后台
+ * 随即被系统冻结，T13 7 实测 `FROZEN_AFTER_ENTER_BG`），所以只能靠编译期
+ * 开关充当代替手指的角色。
  *
- * 2026-09-18：默认改为 **false** —— 相机实时页（pages/CameraPage）已能通过
- * `hdc shell uitest uiInput click` 驱动，不需要靠自检兜底；而且自检要跑几分钟，
- * 开着会让「打开 App → 点相机」这一步变成漫长的等待。要复跑矩阵时手动改回 true。
+ * 现在界面重设计（ADR-0008）给了三个真实可点的入口：「一键全跑」「跑当前组」
+ * 「复制」，这两个开关的**唯一理由消失了**。留着它们反而有害：
+ *   - 打开 App 就自己跑 20-30 分钟，对一台要交给别人验机的设备是负担；
+ *   - 两个互斥开关的正确组合只存在于我脑子里，复现的人一定会配错，
+ *     而配错的后果是**静默的**（把热态带进基线、把线程池带进 RQ4 前提）。
+ *
+ * 需要无人值守长跑时，改用「一键全跑」—— 顺序由 GROUP_ORDER 保证，
+ * 不再依赖任何一个编译期常量。
  */
-const AUTO_SELFTEST: boolean = false;
-/**
- * T7 · RQ4 补跑开关（2026-09-21 新增）。
- *
- * 原 T7 数据只有 **25 轮 / 6 分钟、thermal 恒为 1**，全程没跨过 thermal 2→3 的台阶
- * （`t7-rq4-thermal.md` 的限制第一条自己记着这件事）。所以 RQ4 真正要回答的那个问题
- * ——「持续负载下 NPU 收益能否维持」—— 实际上**从未被测到**。本次补跑到 20 分钟 / 80 轮。
- *
- * **为什么用开关而不是点按钮**：原生 ArkUI 按钮只能靠 `hdc shell uitest uiInput click`
- * 驱动，而要拿到坐标就得先 `uitest dumpLayout`；后者会把 App 推到后台、随即被
- * HarmonyOS 冻结（T13 §7 实测：`FROZEN_AFTER_ENTER_BG`）。一个 20 分钟的长跑
- * 不该依赖这条脆弱的驱动路径。复跑时把这里改成 true。
- *
- * 与 AUTO_SELFTEST 的关系：两者互斥。跑 RQ4 时 SELFTEST 必须为 false，
- * 否则那串探针（probeAll / threadSweep / cannProbe…）会先跑几分钟，
- * 把热态和线程池状态带进 RQ4 的基线。
- */
-const AUTO_RQ4: boolean = false;
-/** RQ4 补跑时长（分钟）。探针固定 15 s 一轮 → 20 分钟 = 80 轮。 */
-const AUTO_RQ4_MINUTES: number = 20;
 /** 自检用的样本（整车图，能同时验证检测 + 矫正 + 识别 + 分类）。 */
 const SELFTEST_SAMPLE: string = 'assets/samples/hlpr-test.jpg';
 /**
@@ -420,62 +474,80 @@ function colourLabel(colour: string): string {
   return '未知';
 }
 
-/**
- * 解析 native 的 `backends=` 字段为落点面板的显示行（ADR-0003）。
- *
- * 输入形如（三个角色用 `|` 分隔，字段用 `,` 分隔）：
- *   det,cpu,CPU,,1076.7692,nan,1|rec,nnrt,NNRT:NPU_...kirin8020_v2_0,,4.0489,3692.1536,1|...
- * 字段顺序：role, req, landed, fallback, l2, l2AsFp16, used
- *
- * 显示要点（这些是"榨干"这个项目的全部证据，不能糊）：
- *   - req 与 landed 不同时，明说"回落"而不是只显示 landed —— 静默回落正是要抓的东西
- *   - 落点是 NPU 时给个标记，方便一眼看出谁真的上了加速器
- *   - used=0 表示本次没调这个会话（如 det 走 ncnn 时），此时 l2 是陈旧值，不显示
- *   - l2AsFp16 不显示：它只在"声明 fp16 却按 fp32 读"的错标场景里才有意义，
- *     三个模型输出都声明 FP32 时它是垃圾（实测 nan / 10424）
- */
-function evidenceRows(backends: string): string[] {
-  const rows: string[] = [];
-  if (backends.length === 0) {
-    return rows;
-  }
-  for (const seg of backends.split('|')) {
-    const f: string[] = seg.split(',');
-    if (f.length < 7) {
-      continue;
-    }
-    const role: string = f[0];
-    // cls 角色已无模型：牌色自 2026-09-21 起走像素测量（ADR-0005），native 仍会在
-    // backends= 里带一行 cls 以保持字段数稳定，但它恒为 l2=0 且 used=1（没有会话可调）。
-    // 展示它会让读者以为"cls 也算了"，所以面板直接跳过。
-    if (role === 'cls') {
-      continue;
-    }
-    const req: string = f[1];
-    const landed: string = f[2];
-    const fallback: string = f[3];
-    const l2: string = f[4];
-    const used: string = f[6];
-    const isNpu: boolean = landed.indexOf('NPU') >= 0 || landed.indexOf('NNRT') >= 0;
-    let line: string = role + '  ' + (isNpu ? '⚡' : '  ') + 'LANDED=' + landed;
-    if (req.length > 0 && req !== landed) {
-      line += '  (req=' + req + (fallback.length > 0 ? ', 回落自 ' + fallback : '') + ')';
-    }
-    if (used === '1') {
-      line += '  l2=' + l2;
-    } else {
-      line += '  (本次未调用)';
-    }
-    rows.push(line);
-  }
-  return rows;
-}
-
 /** 解码后的 RGBA 帧：pipeline 只吃这个。 */
 interface RgbaFrame {
   data: ArrayBuffer;
   width: number;
   height: number;
+}
+
+// ------------------------------------------------------------ 结果类型
+
+/** 一条读数。tone: ok / warn / bad / ''（中性）/ sub（次级）/ label（灰标签）。 */
+interface ResultRow {
+  label: string;
+  value: string;
+  tone: string;
+}
+
+/** 一块实验结果。key 用于 ForEach 去重，tone 作用于分组状态灯。 */
+interface ResultGroup {
+  key: string;
+  title: string;
+  tag: string;
+  tone: string;
+  rows: ResultRow[];
+}
+
+/** 原始输出区只保留末尾 N 行 —— 20 分钟热循环有 2000+ 行，全渲染会卡。 */
+const RESULT_RAW_TAIL: number = 300;
+
+/** 分组标识。 */
+const GRP_RQ3: string = 'rq3';
+const GRP_RQ4: string = 'rq4';
+const GRP_ACC: string = 'acc';
+const GRP_T8: string = 't8';
+
+/**
+ * 分组顺序。即 `runAll` 的执行顺序（RQ4 最后）—— 见 ADR-0008「热循环必须收尾」。
+ */
+const GROUP_ORDER: string[] = [GRP_RQ3, GRP_ACC, GRP_T8, GRP_RQ4];
+
+/**
+ * RQ4 热循环时长（分钟）。
+ *
+ * 20 分钟 / 80 轮，来自 ADR-0007 的 RQ4 口径：原 T7 只有 25 轮 / 6 分钟、thermal
+ * 恒为 1，全程没跨过 2→3 的台阶，所以「持续负载下 NPU 收益能否维持」这个问题
+ * 实际上从未被测到。热特性要穿过台阶才叫热特性，所以这个值不能改小。
+ *
+ * 为什么不再用 `AUTO_RQ4` 那个编译期开关：那个开关存在的原因是「原生 ArkUI 按钮
+ * 点不了，只能靠 uitest 驱动，而 uitest dumpLayout 会把 App 冻掉」。现在界面
+ * 重设计后有了「一键全跑」，「跑 RQ4 组」是面板上的一个点击 —— 开关可以退休了。
+ */
+const RQ4_MINUTES: number = 20;
+
+/**
+ * 从 `key=value;` 两段式载荷里取值。
+ *
+ * 用**最后一个** `key=` 而不是第一个：`trail=` 这类字段内部可能再次出现
+ * 同名 token，取最后一个更接近「外层字段」。
+ */
+function payloadField(payload: string, key: string): string {
+  const needle: string = key + '=';
+  const i: number = payload.lastIndexOf(needle);
+  if (i < 0) {
+    return '';
+  }
+  const start: number = i + needle.length;
+  let j: number = start;
+  while (j < payload.length) {
+    const c: string = payload.charAt(j);
+    if (c === ' ' || c === ';') {
+      break;
+    }
+    j++;
+  }
+  return payload.substring(start, j);
 }
 
 @Entry
@@ -484,21 +556,33 @@ struct Index {
   @State lines: string[] = [];
   @State progress: string = '';
   @State busy: boolean = false;
-  /** 0 = 原生演示，1 = 探针控制台。 */
-  @State tab: number = 0;
 
-  // ---- 原生演示页状态
-  @State nStatus: string = '未加载模型';
-  @State nBackends: string = '';
-  @State nPlate: string = '';
-  @State nDetail: string = '';
-  @State nTiming: string = '';
+  // ---- 重设计（ADR-0008）新增状态
   /**
-   * 落点自证面板（ADR-0003）。内容直接来自 native 的 `backends=` 字段，**不重算**。
-   * 每行形如：`det  req=cpu  LANDED=cpu  l2=1076.77`，回落时额外标出 `←from`。
+   * 结构化结果。面板的正片；`lines` 降级成"原始输出"副表。
+   *
+   * 【为什么必须结构化】旧界面只有一坨 `lines`：26 个实验的顺序输出混在一起，
+   * 没有分组、没有单位、找不到哪行属于哪个实验 —— 用户的原话是"很多标签看都看不了"。
+   * 现在每个探针跑完，`rebuildResults()` 从 lines 里解析出**带标签的读数**。
+   * 解析器只搬运不换算，所以面板和原始输出永远对得上。
    */
-  @State nEvidence: string[] = [];
-  @State nLenses: string[] = [];
+  @State results: ResultGroup[] = [];
+  /** 顶部状态条：''（待机）/ run / ok / warn / bad。 */
+  @State runState: string = '';
+  /** 当前正在进行的步骤（如「RQ3 · 延迟分解」）。 */
+  @State currentExp: string = '';
+  /** 已用时，mm:ss / hh:mm:ss。 */
+  @State elapsed: string = '';
+  /** 当前选中的分组：GRP_RQ3 / GRP_RQ4 / GRP_ACC / GRP_T8。 */
+  @State group: string = GRP_RQ3;
+
+  // ---- 生产档落点（原「原生演示页」面板的字段，UI 砍掉后仅作编排用）
+  /**
+   * 三个生产会话的**实际落点**串（`det=NNRT:... rec=NNRT:...`）。
+   * 原先只给"原生演示"页显示，现在没有那个页了，但它仍是 E2E 矩阵的基线声明
+   * （backendProbe 把它写进日志头），所以保留。
+   */
+  @State nBackends: string = '';
 
   // ---- T7 · RQ4 持续负载热特性
   /** 热态/功耗/负载读数 + 每轮延迟，供离线聚合 */
@@ -514,6 +598,29 @@ struct Index {
   private detId: number = -1;
   private recId: number = -1;
   private clsId: number = -1;
+
+  // ---------------------------------------------------------- 页面跳转
+
+  /**
+   * 打开相机实时页（T1：把 2026-09-22 砍掉的入口加回**深色仪器风**版本上）。
+   *
+   * 【为什么用 router 而不是 Navigation】
+   * `CameraPage` 是 `@Entry` 页（2140 行，含双路预览 / 权限 / 生命周期全套），
+   * 与它在 2026-09-18 建立时的方式一致，也已注册在 `main_pages.json`。
+   * 换成 `Navigation` 就得动那页的页面装饰器 —— 超出 T1「先跑通原功能、不改造」
+   * 的范围，而风险不小（那页是本项目相机坑位的唯一载体）。
+   *
+   * 【为什么 catch 只打日志】
+   * 相机可用性取决于**设备权限与硬件**（云手机就没有相机）。
+   * 跳转失败不该把探针台一起带崩，留一条 hilog 足够定位。
+   */
+  openCamera(): void {
+    router.pushUrl({ url: 'pages/CameraPage' })
+      .catch((e: BusinessError) => {
+        hilog.error(DOMAIN, TAG, 'pushUrl(pages/CameraPage) 失败: %{public}s',
+          JSON.stringify(e));
+      });
+  }
 
   private append(s: string): void {
     this.lines = this.lines.concat([s]);
@@ -566,7 +673,6 @@ struct Index {
     if (c === undefined) {
       return;
     }
-    this.nStatus = '加载中…';
     try {
       const t0: number = Date.now();
 
@@ -585,7 +691,6 @@ struct Index {
         await lpr.loadModelAsync(MODEL_CLS, this.toArrayBuffer(clsBytes), BACKEND_CLS));
 
       if (d.get('ok') !== '1' || r.get('ok') !== '1' || k.get('ok') !== '1') {
-        this.nStatus = '加载失败';
         this.appendNative('NATIVE LOAD FAIL det=' + str(d, 'error') +
           ' rec=' + str(r, 'error') + ' cls=' + str(k, 'error'));
         return;
@@ -597,46 +702,14 @@ struct Index {
 
       this.nBackends = 'det=' + str(d, 'backend') + '  rec=' + str(r, 'backend') +
         '  cls=' + str(k, 'backend');
-      this.nStatus = '就绪（' + ((Date.now() - t0) / 1000).toFixed(1) + ' s）';
       this.appendNative('NATIVE LOAD ok ' + this.nBackends);
       this.appendNative('NATIVE TRAIL det[' + str(d, 'attemptLog') + '] rec[' +
         str(r, 'attemptLog') + '] cls[' + str(k, 'attemptLog') + ']');
+      // 会话重建后落点可能变，立刻反映到面板（否则面板会显示旧的落点）。
+      this.rebuildResults();
     } catch (e) {
       const err = e as Error;
-      this.nStatus = '异常: ' + err.message;
       this.appendNative('NATIVE LOAD EXCEPTION ' + err.message);
-    }
-  }
-
-  /**
-   * 枚举这台机器上所有物理镜头。
-   *
-   * 这是 Web 路径做不到的事：ArkWeb 的 getUserMedia 只能拿到系统给的那一路默认流，
-   * 无法按镜头类型挑选；原生 Camera Kit 才能把广角 / 超广角 / 长焦逐个列出来并按
-   * cameraId 单独打开。
-   */
-  private listLenses(): void {
-    const c: common.UIAbilityContext | undefined = this.ctx;
-    if (c === undefined) {
-      return;
-    }
-    try {
-      const mgr = camera.getCameraManager(c);
-      const cams: camera.CameraDevice[] = mgr.getSupportedCameras();
-      const out: string[] = [];
-      for (let i = 0; i < cams.length; i++) {
-        const cam: camera.CameraDevice = cams[i];
-        const line: string = '#' + cam.cameraId + ' ' + posName(cam.cameraPosition) +
-          ' · ' + lensName(cam.cameraType);
-        out.push(line);
-        this.appendNative('NATIVE LENS id=' + cam.cameraId +
-          ' pos=' + cam.cameraPosition + ' type=' + cam.cameraType + ' -> ' + line);
-      }
-      this.nLenses = out;
-      this.appendNative('NATIVE LENS count=' + cams.length);
-    } catch (e) {
-      const err = e as Error;
-      this.appendNative('NATIVE LENS EXCEPTION ' + err.message);
     }
   }
 
@@ -658,142 +731,6 @@ struct Index {
     await src.release();
     this.appendNative('NATIVE DECODE ' + file + ' ' + w + 'x' + h);
     return { data: rgba, width: w, height: h };
-  }
-
-  /**
-   * 跑一次原生完整流水线。
-   *
-   * 全链路都在 C++：letterbox → 检测 → NMS → 单应矫正（双三次）→ 识别 → CTC → 分类。
-   * JS 侧只递一张 RGBA 图和三个会话 id，拿回几十字节的结果串。
-   */
-  private async runNative(file: string): Promise<void> {
-    if (this.busy) {
-      return;
-    }
-    if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
-      await this.loadNative();
-      if (this.detId < 0) {
-        return;
-      }
-    }
-    this.busy = true;
-    try {
-      const frame: RgbaFrame | null = await this.decodeRgba(file);
-      if (frame === null) {
-        this.busy = false;
-        return;
-      }
-      const raw: string = await lpr.pipelineAsync(frame.data, frame.width, frame.height,
-        this.detId, this.recId, this.clsId, 0);
-      const kv: Map<string, string> = parseKv(raw);
-
-      if (kv.get('ok') !== '1') {
-        this.nStatus = '推理失败';
-        this.nPlate = '—';
-        this.appendNative('NATIVE PIPE FAIL ' + str(kv, 'error'));
-        this.busy = false;
-        return;
-      }
-
-      const count: number = num(kv, 'count');
-      this.nStatus = count > 0 ? '识别成功' : '未检测到车牌';
-      if (count === 0) {
-        this.nPlate = '—';
-        this.nDetail = '';
-        this.nTiming = 'total ' + str(kv, 'totalMs') + ' ms';
-        this.appendNative('NATIVE PIPE ok=0-plates total=' + str(kv, 'totalMs'));
-        this.busy = false;
-        return;
-      }
-
-      const p0: string = str(kv, 'p0');
-      const f: string[] = p0.split(',');
-      // 0=code 1=det 2=rec 3=layer 4=rect 5=crop 6=colour 7=chars 8=probs 9=times 10=sum
-      // f[6] 现在是 `colour|confidence`（像素测量），不再是三个分类器 logits
-      const clsArr: string[] = f[6].split('|');
-      const colour: string = colourLabel(clsArr[0]);
-      this.nPlate = f[0] + '  ' + colour;
-      this.nDetail = '检测 ' + f[1] + ' · 识别 ' + f[2] + ' · 层数 ' +
-        (f[3] === '1' ? '双层' : '单层') + ' · 裁剪 ' + f[5].replace('|', 'x') +
-        ' · 字符 ' + f[7];
-      this.nTiming = 'total ' + str(kv, 'totalMs') + ' ms   [' + f[9].replace(/\\|/g, ' / ') + ']';
-      // 落点面板：直接取 native 的 backends= 字段渲染，ArkTS 不重算（ADR-0003）
-      this.nEvidence = evidenceRows(str(kv, 'backends'));
-      this.appendNative('NATIVE PIPE code=' + f[0] + ' colour=' + colour +
-        ' count=' + count + ' total=' + str(kv, 'totalMs') + ' stages=' + f[9] +
-        ' cropSum=' + f[10] +
-        ' backends=' + str(kv, 'backends'));
-    } catch (e) {
-      const err = e as Error;
-      this.nStatus = '异常: ' + err.message;
-      this.appendNative('NATIVE PIPE EXCEPTION ' + err.message);
-    }
-    this.busy = false;
-  }
-
-  // ------------------------------------------------------------ 端到端对照
-
-  /**
-   * 四后端检测对照：同一张解码图 × 4 条检测路径（MS CPU / MS NNRT / ncnn CPU /
-   * ncnn Vulkan）× 3 次重复，识别与分类固定为生产配置 → 差异全部来自检测输出。
-   * match 由这里逐字符比对（原生侧只回结果串）。
-   */
-  private async backendProbe(): Promise<void> {
-    const ctx = this.ctx;
-    if (ctx === undefined || this.detId < 0 || this.recId < 0 || this.clsId < 0) {
-      this.appendNative('BACKEND E2E FAIL missing sessions');
-      return;
-    }
-    this.busy = true;
-    this.appendNative('BACKEND E2E BEGIN v1 reference=' + REFERENCE_CODE_RPV3 + ' ' + this.nBackends);
-    try {
-      const frame: RgbaFrame | null = await this.decodeRgba(SELFTEST_SAMPLE);
-      if (frame === null) {
-        this.appendNative('BACKEND E2E FAIL no frame');
-        return;
-      }
-      const detBytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(MODEL_DET);
-      const npuRaw: string =
-        await lpr.loadModelAsync(MODEL_DET, this.toArrayBuffer(detBytes), 'nnrt');
-      this.appendNative('BACKEND E2E NPU LOAD ' + npuRaw);
-      const ni: Map<string, string> = parseKv(npuRaw);
-      const ids: number[] = [this.detId, ni.get('ok') === '1' ? num(ni, 'id') : -1,
-        this.detId, this.detId];
-      const modes: number[] = [0, 0, 1, 2];
-      const labels: string[] = ['ms-cpu', 'ms-nnrt', 'ncnn-cpu', 'ncnn-vulkan'];
-      const param: Uint8Array =
-        ctx.resourceManager.getRawFileContentSync('models/y5fu_320x_head.ncnn.param');
-      const bin: Uint8Array =
-        ctx.resourceManager.getRawFileContentSync('models/y5fu_320x_head.ncnn.bin');
-      for (let k = 0; k < labels.length; k++) {
-        if (ids[k] < 0) {
-          this.appendNative('BACKEND E2E SKIP ' + labels[k] + ' load failed');
-          continue;
-        }
-        if (modes[k] !== 0) {
-          const lr: string = await lpr.ncnnLoadAsync(
-            this.toArrayBuffer(param), this.toArrayBuffer(bin), modes[k] === 2);
-          this.appendNative('BACKEND E2E LOAD ' + labels[k] + ' ' + lr);
-          if (parseKv(lr).get('ok') !== '1') {
-            continue;
-          }
-        }
-        for (let rep = 0; rep < 3; rep++) {
-          const raw: string = await lpr.pipelineAsync(frame.data, frame.width, frame.height,
-            ids[k], this.recId, this.clsId, modes[k]);
-          const kv: Map<string, string> = parseKv(raw);
-          const code: string = str(kv, 'p0').split(',')[0];
-          this.appendNative('BACKEND E2E RESULT mode=' + labels[k] + ' rep=' + rep +
-            ' match=' + (kv.get('ok') === '1' && code === REFERENCE_CODE_RPV3 ? '1' : '0') + ' ' + raw);
-        }
-      }
-      this.appendNative('BACKEND E2E END v1');
-    } catch (e) {
-      const err = e as Error;
-      this.appendNative('BACKEND E2E EXCEPTION ' + err.message);
-    } finally {
-      this.busy = false;
-    }
   }
 
   /**
@@ -2046,693 +1983,1453 @@ struct Index {
       this.appendNative('VULKAN PROBE EXCEPTION ' + err.message);
     }
   }
+  /**
+   * 启动：只做两件事 —— 拿 context、解析算子探针名单。
+   *
+   * 【为什么现在什么实验都不自动跑】重设计之前，原生 ArkUI 按钮点不了
+   * （CDP 管不到原生组件，uitest dumpLayout 又会把 App 冻掉），所以只能靠
+   * `AUTO_SELFTEST` 编译期开关兜底。现在「一键全跑」是面板上真实可点的按钮，
+   * 开关就该退休 —— 留着一个"打开 App 就自己跑 30 分钟"的隐藏行为，
+   * 对一台要交给别人验机的设备是负担，不是功能。
+   *
+   * 相机权限也不再申请：ADR-0008 把相机相关功能整体砍掉（云手机没有摄像头，
+   * 用户当前这台真机上相机路径也不是论文要测的东西），留着弹窗只会挡住界面。
+   */
+  aboutToAppear(): void {
+    this.ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    // 算子对撞名单：优先运行时枚举 rawfile，失败才回落到硬编码名单。
+    // 这里同步做，因为 opCollideProbe 要用它拼文件路径，而枚举是一次目录读。
+    const scanned: string[] = scanOpProbeNames(this.ctx);
+    if (scanned.length > 0) {
+      OP_PROBE_NAMES = scanned;
+      this.appendNative('OP SCAN n=' + scanned.length.toString() +
+        ' (runtime, from models/op_*.om)');
+    } else {
+      OP_PROBE_NAMES = OP_PROBE_NAMES_FALLBACK;
+      this.appendNative('OP SCAN FAILED -> fallback n=' +
+        OP_PROBE_NAMES_FALLBACK.length.toString() +
+        ' (硬编码名单；可能与磁盘不一致，见 OP_PROBE_NAMES_FALLBACK 注释)');
+    }
+    this.runState = '';
+  }
 
-  private requestCamera(): void {
-    const c: common.UIAbilityContext | undefined = this.ctx;
-    if (c === undefined) {
+  // ============================================================ 重设计新增：状态 / 类型 / 编排
+  //
+  // 这一节是 ADR-0008 落地的**新增部分**，逻辑层（上面的探针）一行未动。
+  // 分三类：
+  //   1. 结构化结果类型（ResultRow / ResultGroup）—— 替换「一坨等宽 lines」
+  //   2. 探针结果 → 结构化读数的**解析器**（只读 lines，不重算任何数字）
+  //   3. 编排（runAll / runGroup / copyAll / clearAll）
+  //
+  // 【一条硬规矩】下面的解析器**只做纯文本→结构化的搬运**：数值一律来自探针
+  // 自己写进 lines 的字符串，解析器不换算单位、不做统计、不臆测缺失值。
+  // 面板显示的每个数字都必须能在「原始输出」里逐字找到 —— 否则面板就成了
+  // 第二个真值源，而两份真值源一定会漂移（这个项目已经吃过一次亏：
+  // 牌色查表 vs 像素测量、文件名真值 vs gt.tsv）。
+
+  // ------------------------------------------------------------ 小工具
+
+  /** 取数组末 n 项（ArkTS 的 slice 负下标行为不稳，显式算起点）。 */
+  private tailOf(a: string[], n: string | number): string[] {
+    const k: number = typeof n === 'string' ? Number.parseInt(n, 10) : n;
+    if (a.length <= k) {
+      return a;
+    }
+    return a.slice(a.length - k);
+  }
+
+  /** 从 `key=value` 串里取一个字段。**不用正则**，纯字符串操作。 */
+  private kvField(s: string, key: string): string {
+    const needle: string = key + '=';
+    let i: number = s.indexOf(needle);
+    if (i < 0) {
+      return '';
+    }
+    i += needle.length;
+    let j: number = i;
+    while (j < s.length) {
+      const c: string = s.charAt(j);
+      if (c === ' ' || c === ',') {
+        break;
+      }
+      j++;
+    }
+    return s.substring(i, j);
+  }
+
+  /**
+   * 找最后一条以 `prefix` 开头的行。
+   *
+   * 为什么取**最后**一条：这些探针都是「LOAD 每条一次 + RESULT 每次上报一次」，
+   * 我们要的是最终状态（最后一次 load 的实际落点、最后一个 rep 的输出）。
+   */
+  private lastLineWith(prefix: string): string {
+    for (let i = this.lines.length - 1; i >= 0; i--) {
+      if (this.lines[i].indexOf(prefix) === 0) {
+        return this.lines[i];
+      }
+    }
+    return '';
+  }
+
+  /** 所有以 `prefix` 开头的行。 */
+  private linesWith(prefix: string): string[] {
+    const out: string[] = [];
+    for (let i = 0; i < this.lines.length; i++) {
+      if (this.lines[i].indexOf(prefix) === 0) {
+        out.push(this.lines[i]);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * 数字裁剪（用于把 `7.410000000000001` 显示成 `7.41`）。
+   * 只做**显示**裁剪，不改任何计算值；原值始终在「原始输出」里。
+   */
+  private fmtNum(s: string, unit: string): string {
+    const f: number = Number.parseFloat(s);
+    if (Number.isNaN(f)) {
+      return s.length > 0 ? s : '—';
+    }
+    return f.toFixed(2) + unit;
+  }
+
+  // ------------------------------------------------------------ 模型名
+
+  /**
+   * 从文件名取个短标签。
+   *
+   * 为什么要短：`y5fu_320x_head_fp32.ms` 这样的名字在 12px 等宽下占满一行，
+   * 挤掉同一行右侧的 p50 —— 而 p50 才是要竖着扫的那一列。文件名进小字副标题。
+   */
+  private modelShort(file: string): string {
+    const base: string = file.replace('models/', '').replace('.ms', '');
+    if (base.indexOf('y5fu') === 0) {
+      return 'det y5fu';
+    }
+    if (base.indexOf('rpv3') === 0) {
+      return 'rec rpv3';
+    }
+    if (base.indexOf('litemodel_cls') === 0) {
+      return base.indexOf('fp32') >= 0 ? 'cls fp32' : 'cls fp16';
+    }
+    if (base.indexOf('lprnet') >= 0) {
+      return 'lprnet';
+    }
+    return base;
+  }
+
+  /** 后端档位 → 是否落到 NPU（用于着色）。 */
+  private isNpuLanding(landed: string): boolean {
+    return landed.indexOf('NPU') >= 0 || landed.indexOf('NNRT') >= 0 ||
+      landed.indexOf('nnrt') >= 0;
+  }
+
+  /**
+   * 落点 tone。
+   *
+   * 语义按**论文关心的那件事**定：请求 NPU 却落到 CPU = warn（不是错误，
+   * 是"没吃到加速器"这一条证据）；真落到 NPU = ok。
+   * **静默回落必须看得见** —— native 侧一直如实上报 `backend=` 与
+   * `fallbackFrom=`，面板不能把它压成一个中性的 CPU。
+   */
+  private landingTone(req: string, landed: string): string {
+    const npu: boolean = this.isNpuLanding(landed);
+    if (npu) {
+      return 'ok';
+    }
+    const wantsNpu: boolean = req.indexOf('nnrt') >= 0 || req.indexOf('gpu') >= 0 ||
+      req.indexOf('kirin') >= 0;
+    return wantsNpu ? 'warn' : '';
+  }
+
+  // ------------------------------------------------------------ 结果组装
+
+  private resetResults(): void {
+    this.results = [];
+  }
+
+  private pushGroup(key: string, title: string, tag: string, tone: string,
+                    rows: ResultRow[]): void {
+    this.results = this.results.concat([{ key: key, title: title, tag: tag, tone: tone, rows: rows }]);
+  }
+
+  private row(label: string, value: string, tone: string): ResultRow {
+    return { label: label, value: value, tone: tone };
+  }
+
+  private rawTail(): string[] {
+    return this.tailOf(this.lines, RESULT_RAW_TAIL);
+  }
+
+  private groupLabel(g: string): string {
+    if (g === GRP_RQ3) {
+      return 'RQ3 · 延迟分解（端到端矩阵 + 逐模型矩阵 + 线程/亲和/gap 扫描）';
+    }
+    if (g === GRP_RQ4) {
+      return 'RQ4 · 持续负载热特性（20 分钟循环）';
+    }
+    if (g === GRP_ACC) {
+      return '精度 · A/B 对照（裁剪集合 / 整车场景 / ncnn 槽位）';
+    }
+    return 'T8 · 工具链联合属性（算子覆盖对撞 + CANN/NNRt + GPU/Vulkan）';
+  }
+
+  // ------------------------------------------------------------ 解析：延迟矩阵
+
+  /**
+   * 逐模型矩阵（probeAll / gpuProbe / threadSweep / affinitySweep / gapSweep 共用一行格式）。
+   *
+   * 行格式（probeOne 写的）：
+   *   `MATRIX <file-short> <backend> LANDED=<..> engine=ms req=<..> fallback=<..>
+   *    in=<shape>/<fmt> p50=<..>ms mean=<..>ms p50Io=<..>ms L2=<..> L2asFp16=<..>
+   *    maxAbs=<..> dtype=<..> verdict=<..>`
+   *
+   * 全部字段都从字符串里**读出来**，唯一"加工"是把 p50 裁到两位小数显示。
+   */
+  private parseMatrixRows(): ResultRow[] {
+    const rows: ResultRow[] = [];
+    const hits: string[] = this.linesWith('MATRIX ');
+    for (let i = 0; i < hits.length; i++) {
+      const s: string = hits[i];
+      if (s.indexOf('NNRT-DEVICES') >= 0 || s.indexOf('MATRIX END') === 0) {
+        continue;
+      }
+      const parts: string[] = s.split(' ');
+      if (parts.length < 3) {
+        continue;
+      }
+      const model: string = this.modelShort(parts[1]);
+      const backend: string = parts[2];
+      const landed: string = this.kvField(s, 'LANDED');
+      const req: string = this.kvField(s, 'req');
+      const p50: string = this.kvField(s, 'p50');
+      const mean: string = this.kvField(s, 'mean');
+      const p50io: string = this.kvField(s, 'p50Io');
+      const verdict: string = this.kvField(s, 'verdict');
+      const tone: string = verdict.indexOf('SUSPECT') >= 0 ? 'bad'
+        : this.landingTone(req, landed);
+      const fellBack: string = this.kvField(s, 'fallback');
+      let value: string = this.fmtNum(p50, ' ms');
+      if (mean.length > 0) {
+        value += '  · 均值 ' + this.fmtNum(mean, '');
+      }
+      if (p50io.length > 0) {
+        value += '  · IO ' + this.fmtNum(p50io, '');
+      }
+      let label: string = model + ' @ ' + backend;
+      if (fellBack.length > 0) {
+        label += '  ← 回落自 ' + fellBack;
+      }
+      rows.push(this.row(label, value, tone));
+      // 落点单独一行：这是 ADR-0003 的落点自证，不能被塞进上面那行挤掉。
+      rows.push(this.row('    落点', landed.length > 0 ? landed : '—',
+        this.landingTone(req, landed)));
+      if (verdict.length > 0 && verdict !== 'PASS') {
+        rows.push(this.row('    判定', verdict, 'bad'));
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * 端到端矩阵（e2eMatrix）。
+   *
+   * 一行一个 (role, backend, rep)。总行数 = 4 角色 × 6 后端 × 3 次 = 72 —— 全展开
+   * 会把面板冲垮，所以**按 (role, backend) 聚合成一行，显示最后一次 rep**，
+   * 并在值里标出 `match` 是否在全 rep 上一致。聚合只做"取末次 + 数一致性"，
+   * 不改数值。
+   */
+  private parseE2eRows(): ResultRow[] {
+    const hits: string[] = this.linesWith('E2EMATRIX RESULT ');
+    if (hits.length === 0) {
+      return [];
+    }
+    const order: string[] = [];
+    const last: Map<string, string> = new Map<string, string>();
+    const total: Map<string, string> = new Map<string, string>();
+    const matchN: Map<string, string> = new Map<string, string>();
+    for (let i = 0; i < hits.length; i++) {
+      const s: string = hits[i];
+      const role: string = this.kvField(s, 'role');
+      const be: string = this.kvField(s, 'backend');
+      const k: string = role + '@' + be;
+      if (!last.has(k)) {
+        order.push(k);
+        total.set(k, '0');
+        matchN.set(k, '0');
+      }
+      last.set(k, s);
+      total.set(k, (Number.parseInt(total.get(k) ?? '0', 10) + 1).toString());
+      if (this.kvField(s, 'match') === '1') {
+        matchN.set(k, (Number.parseInt(matchN.get(k) ?? '0', 10) + 1).toString());
+      }
+    }
+    const rows: ResultRow[] = [];
+    for (let i = 0; i < order.length; i++) {
+      const k: string = order[i];
+      const s: string = last.get(k) ?? '';
+      const landed: string = this.kvField(s, 'LANDED');
+      const req: string = this.kvField(s, 'req');
+      const code: string = this.kvField(s, 'code');
+      const totalMs: string = this.kvField(s, 'total');
+      const rep: string = this.kvField(s, 'rep');
+      const allMatch: boolean = (matchN.get(k) ?? '0') === (total.get(k) ?? '1');
+      let value: string = code + '  ·  ' + this.fmtNum(totalMs, ' ms');
+      if (!allMatch) {
+        value = code + '  ·  ' + this.fmtNum(totalMs, ' ms') + '  ✗ 不一致';
+      }
+      const tone: string = allMatch ? this.landingTone(req, landed) : 'warn';
+      rows.push(this.row(k, value, tone));
+      rows.push(this.row('    落点 · rep=' + rep + '/' + (total.get(k) ?? '—'),
+        landed.length > 0 ? landed : '—', this.landingTone(req, landed)));
+    }
+    return rows;
+  }
+
+  // ------------------------------------------------------------ 解析：精度
+
+  /**
+   * 精度 A/B（cropBackendAB / ccpdSceneAB / bareHeadAccuracy 共用后缀口径）。
+   *
+   * 三者的 END 行字段名不完全一致（`ok_cpu` vs `ok_cpu` 一致，但场景多两个
+   * `none_*`），所以统一按「有的就念、没有的不显示」处理，**绝不补 0**。
+   * 补 0 会凭空造出一个 0% 准确率，这比不显示危险得多。
+   */
+  private accRowsFromEnd(s: string, valueLabel: string): ResultRow[] {
+    const rows: ResultRow[] = [];
+    const n: string = this.kvField(s, 'n');
+    const agree: string = this.kvField(s, 'agree');
+    const okCpu: string = this.kvField(s, 'ok_cpu');
+    const okNp: string = this.kvField(s, 'ok_np');
+    const noneCpu: string = this.kvField(s, 'none_cpu');
+    const noneNp: string = this.kvField(s, 'none_np');
+    const badGt: string = this.kvField(s, 'bad_gt');
+    const cnt: number = Number.parseInt(n, 10);
+    if (!Number.isNaN(cnt) && cnt > 0) {
+      rows.push(this.row('样本数 n', n, ''));
+      rows.push(this.row('两后端输出一致', agree + ' / ' + n + '  (' +
+        (Number.parseInt(agree, 10) * 100 / cnt).toFixed(1) + '%)', ''));
+    } else {
+      rows.push(this.row('样本数 n', n.length > 0 ? n : '—', 'warn'));
+    }
+    if (okCpu.length > 0 && !Number.isNaN(cnt) && cnt > 0) {
+      rows.push(this.row(valueLabel + ' · CPU 命中', okCpu + ' / ' + n + '  (' +
+        (Number.parseInt(okCpu, 10) * 100 / cnt).toFixed(1) + '%)', ''));
+    }
+    if (okNp.length > 0 && !Number.isNaN(cnt) && cnt > 0) {
+      rows.push(this.row(valueLabel + ' · NPU 命中', okNp + ' / ' + n + '  (' +
+        (Number.parseInt(okNp, 10) * 100 / cnt).toFixed(1) + '%)', 'ok'));
+    }
+    if (noneCpu.length > 0 || noneNp.length > 0) {
+      rows.push(this.row('未检出车牌', 'CPU ' + noneCpu + ' · NPU ' + noneNp, 'warn'));
+    }
+    if (badGt.length > 0 && badGt !== '0') {
+      rows.push(this.row('真值表异常条数', badGt, 'bad'));
+    }
+    return rows;
+  }
+
+  /**
+   * 精度组：裁剪集合（T10/T11）+ 整车场景（T12）+ ncnn 槽位。
+   *
+   * 为什么读 END 行而不扫逐条：逐条在 filesDir 的 .log 里（1000 行），
+   * lines 里只有 PROGRESS。END 行**本身就是探针算好的汇总**，重算一遍是
+   * 制造第二个真值源。这里只搬运。
+   */
+  private parseAccGroups(): void {
+    // ---- 裁剪集合：T10（det/rec 落点 A/B，走完整流水线）
+    const cropEnd: string = this.lastLineWith('CROPAB END ');
+    if (cropEnd.length > 0) {
+      const role: string = this.kvField(cropEnd, 'role');
+      const rows: ResultRow[] = this.accRowsFromEnd(cropEnd, '逐字符命中');
+      rows.push(this.row('唯一变量', 'rec/det 落点（其余角色固定生产配置）', 'label'));
+      rows.push(this.row('日志', this.kvField(cropEnd, 'log'), 'sub'));
+      this.pushGroup('g-acc-crop', 'T10/T11 · 裁剪图集落点 A/B · role=' + role,
+        'n=1000', this.toneFromAcc(rows), rows);
+    }
+
+    // ---- 裸头准确率（T11，跳过 det/rectify 直喂 rec）
+    const bareEnd: string = this.lastLineWith('BARE END ');
+    if (bareEnd.length > 0) {
+      const rows: ResultRow[] = this.accRowsFromEnd(bareEnd, '逐字符命中');
+      rows.push(this.row('工况', '跳过 det/rectify，裁剪图直喂识别器', 'label'));
+      rows.push(this.row('日志', this.kvField(bareEnd, 'log'), 'sub'));
+      this.pushGroup('g-acc-bare', 'T11 · 识别器裸头准确率（cpu vs nnrt）',
+        'n=1000', this.toneFromAcc(rows), rows);
+    }
+
+    // ---- 整车场景：ccpd（7 字符）+ green（8 字符新能源）
+    const sets: string[] = ['ccpd', 'green'];
+    const roles: string[] = ['det', 'rec'];
+    for (let si = 0; si < sets.length; si++) {
+      for (let ri = 0; ri < roles.length; ri++) {
+        const prefix: string = 'SCENE END set=' + sets[si] + ' role=' + roles[ri] + ' ';
+        const s: string = this.lastLineWith(prefix);
+        if (s.length === 0) {
+          continue;
+        }
+        const rows: ResultRow[] = this.accRowsFromEnd(s, '整条车牌全对');
+        rows.push(this.row('唯一变量', roles[ri] + ' 的落点（其余固定生产配置）', 'label'));
+        rows.push(this.row('真值来源', '随包 gt.tsv（ArkTS 侧不重解文件名）', 'label'));
+        rows.push(this.row('日志', this.kvField(s, 'log'), 'sub'));
+        this.pushGroup('g-acc-scene-' + sets[si] + '-' + roles[ri],
+          'T12 · 整车场景 · ' + sets[si] + ' · role=' + roles[ri],
+          sets[si] === 'ccpd' ? 'n=1000 · 7 字符' : 'n=1000 · 8 字符绿牌',
+          this.toneFromAcc(rows), rows);
+      }
+    }
+
+    // ---- ncnn 槽位（GPU 唯一通路的自证）
+    const slotHits: string[] = this.linesWith('NCNNSLOT RESULT ');
+    if (slotHits.length > 0) {
+      const seen: string[] = [];
+      const last: Map<string, string> = new Map<string, string>();
+      for (let i = 0; i < slotHits.length; i++) {
+        const s: string = slotHits[i];
+        const k: string = this.kvField(s, 'role') + '@' + this.kvField(s, 'mode');
+        if (!last.has(k)) {
+          seen.push(k);
+        }
+        last.set(k, s);
+      }
+      const rows: ResultRow[] = [];
+      for (let i = 0; i < seen.length; i++) {
+        const s: string = last.get(seen[i]) ?? '';
+        const landed: string = this.kvField(s, 'LANDED');
+        const vk: string = this.kvField(s, 'vk');
+        const vkLayers: string = this.kvField(s, 'vkLayers');
+        const code: string = this.kvField(s, 'code');
+        const match: string = this.kvField(s, 'match');
+        const totalMs: string = this.kvField(s, 'total');
+        rows.push(this.row(seen[i], code + '  ·  ' + this.fmtNum(totalMs, ' ms'),
+          match === '1' ? '' : 'warn'));
+        rows.push(this.row('    落点 / vk / 层覆盖',
+          landed + '  ·  vk=' + vk + '  ·  ' + vkLayers, this.landingTone('gpu', landed)));
+      }
+      this.pushGroup('g-acc-ncnn', 'NCNN 槽位 · 三模型 × (CPU / Vulkan)',
+        'GPU 通路自证', 'ok', rows);
+    }
+  }
+
+  /** 分组状态灯：有任何 bad → bad；有 warn → warn；有读数 → ok；否则 idle。 */
+  private toneFromAcc(rows: ResultRow[]): string {
+    let warn: boolean = false;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].tone === 'bad') {
+        return 'bad';
+      }
+      if (rows[i].tone === 'warn') {
+        warn = true;
+      }
+    }
+    if (warn) {
+      return 'warn';
+    }
+    return rows.length > 0 ? 'ok' : 'idle';
+  }
+
+  // ------------------------------------------------------------ 解析：RQ4 热
+
+  /**
+   * RQ4 热特性：把逐轮 `RQ4 r=.. t=.. thermal=.. battC=.. soc=.. chg=.. load=..
+   * totalMs=.. code=.. backends=..` 聚合成可读的几行。
+   *
+   * 【唯一允许的统计】稳态段斜率：取**后 2/3** 轮的 totalMs 做一次最小二乘，
+   * 报 ms/轮。理由 —— RQ4 要回答的是「NPU 收益能否维持」，而"维持得住吗"
+   * 的判据就是延迟有没有单调爬升；报首末两点的差会被单轮噪声主导，
+   * 报均值则完全看不出漂移。**用后 2/3 是为了避开预热段**（前 1/3 还在
+   * 从冷跑到热，斜率会被那段带偏）。这一条的取舍在 ADR-0008 里记着。
+   *
+   * 除此之外一切数值都是**末轮实测值**或**计数**，不做外推。
+   */
+  private parseRq4Group(): void {
+    const hits: string[] = this.linesWith('RQ4 r=');
+    if (hits.length === 0) {
       return;
     }
-    const perms: Permissions[] = ['ohos.permission.CAMERA'];
+    const rounds: number = hits.length;
+    const first: string = hits[0];
+    const last: string = hits[rounds - 1];
+    const lastTotal: string = this.kvField(last, 'totalMs');
+    const lastThermal: string = this.kvField(last, 'thermal');
+    const lastBatt: string = this.kvField(last, 'battC');
+    const lastSoc: string = this.kvField(last, 'soc');
+    const lastChg: string = this.kvField(last, 'chg');
+    const lastLoad: string = this.kvField(last, 'load');
+    const lastCode: string = this.kvField(last, 'code');
+    const lastBackends: string = this.kvField(last, 'backends');
+    const firstTotal: string = this.kvField(first, 'totalMs');
+    const firstThermal: string = this.kvField(first, 'thermal');
+
+    // 稳态段 = 后 2/3
+    const startIdx: number = Math.floor(rounds / 3);
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (let i = startIdx; i < rounds; i++) {
+      const t: number = Number.parseFloat(this.kvField(hits[i], 'totalMs'));
+      if (!Number.isNaN(t)) {
+        xs.push(i);
+        ys.push(t);
+      }
+    }
+    const rows: ResultRow[] = [];
+    rows.push(this.row('轮数', rounds.toString() + ' 轮 · 每 15 s 一轮', ''));
+    rows.push(this.row('首轮 / 末轮端到端',
+      this.fmtNum(firstTotal, ' ms') + '  →  ' + this.fmtNum(lastTotal, ' ms'), ''));
+    if (xs.length >= 4) {
+      let sx: number = 0;
+      let sy: number = 0;
+      let sxy: number = 0;
+      let sxx: number = 0;
+      for (let i = 0; i < xs.length; i++) {
+        sx += xs[i];
+        sy += ys[i];
+        sxy += xs[i] * ys[i];
+        sxx += xs[i] * xs[i];
+      }
+      const n: number = xs.length;
+      const den: number = n * sxx - sx * sx;
+      const slope: number = den === 0 ? 0 : (n * sxy - sx * sy) / den;
+      rows.push(this.row('稳态斜率（后 2/3 轮最小二乘）',
+        (slope >= 0 ? '+' : '') + slope.toFixed(3) + ' ms/轮', ''));
+    }
+    rows.push(this.row('热档', firstThermal + '  →  ' + lastThermal, ''));
+    rows.push(this.row('电池温度', lastBatt + ' ℃  ·  SOC ' + lastSoc + '%  ·  充电 ' + lastChg, ''));
+    rows.push(this.row('系统负载档', lastLoad, ''));
+    rows.push(this.row('末轮车牌', lastCode, ''));
+    rows.push(this.row('末轮落点', lastBackends, lastBackends.indexOf('NPU') >= 0 ||
+      lastBackends.indexOf('NNRT') >= 0 ? 'ok' : 'warn'));
+    rows.push(this.row('状态', this.rq4Status.length > 0 ? this.rq4Status : '—', 'sub'));
+    // 热档没跨过 2→3 台阶是老数据的已知缺陷（t7-rq4-thermal.md 自己记着），
+    // 面板直接把它标出来，免得又一次拿恒为 1 的 thermal 去谈"热特性"。
+    if (lastThermal === firstThermal) {
+      rows.push(this.row('⚠ 热档未变化',
+        'thermal 全程恒为 ' + lastThermal + ' —— 未跨过台阶，不足以支撑"热特性"结论', 'bad'));
+    }
+    this.pushGroup('g-rq4', 'RQ4 · 持续负载热特性',
+      rounds.toString() + ' 轮', firstThermal === lastThermal ? 'warn' : 'ok', rows);
+  }
+
+  // ------------------------------------------------------------ 解析：T8 工具链
+
+  /**
+   * T8 工具链联合属性：算子对撞 + CANN/NNRt + GPU/Vulkan。
+   *
+   * 这一组的论点是**「支持性是模型 × 工具链的联合属性」** —— 所以面板必须
+   * 同时显示「多少算子建图成功」和「同一批算子在 .ms 侧建不出来的那几个」，
+   * 只报一个数字就把论点丢了。
+   */
+  private parseT8Group(): void {
+    const rows: ResultRow[] = [];
+
+    // ---- 算子对撞：逐条 `OPCOLLIDE op=<name> bytes=<n> <payload>`
+    const opHits: string[] = this.linesWith('OPCOLLIDE op=');
+    if (opHits.length > 0) {
+      let ok: number = 0;
+      let fail: number = 0;
+      const failNames: string[] = [];
+      for (let i = 0; i < opHits.length; i++) {
+        const s: string = opHits[i];
+        if (s.indexOf('ok=1') >= 0) {
+          ok++;
+        } else {
+          fail++;
+          const opName: string = this.kvField(s, 'op');
+          if (failNames.length < 6) {
+            failNames.push(opName);
+          }
+        }
+      }
+      rows.push(this.row('算子对撞', opHits.length.toString() + ' 个探针 · ok=' + ok +
+        ' · fail=' + fail, fail > 0 ? 'warn' : 'ok'));
+      if (failNames.length > 0) {
+        rows.push(this.row('建图失败（前 6）', failNames.join(', '), 'bad'));
+      }
+      rows.push(this.row('清单总数（硬编码）', OP_PROBE_NAMES.length.toString() +
+        ' 个 · 见 OP_PROBE_NAMES', 'label'));
+    }
+
+    // ---- CANN / NNRt 设备枚举
+    const enumLine: string = this.lastLineWith('CANN ENUM ');
+    if (enumLine.length > 0) {
+      rows.push(this.row('NNRt 设备', enumLine.replace('CANN ENUM ', ''), 'label'));
+    }
+    const cannTry: string[] = this.linesWith('CANN TRY ');
+    if (cannTry.length > 0) {
+      let accepted: number = 0;
+      const acceptedNames: string[] = [];
+      for (let i = 0; i < cannTry.length; i++) {
+        const s: string = cannTry[i];
+        if (s.indexOf('ok=1') >= 0) {
+          accepted++;
+          acceptedNames.push(this.kvField(s, 'model'));
+        }
+      }
+      rows.push(this.row('offline model 入口收不收',
+        cannTry.length.toString() + ' 份试投 · 接受 ' + accepted + ' 份',
+        accepted > 0 ? 'ok' : 'warn'));
+      if (acceptedNames.length > 0) {
+        rows.push(this.row('被接受的模型', acceptedNames.join(', '), 'ok'));
+      }
+    }
+
+    // ---- GPU 专项：MS Lite 的 gpu 档（编译期判否 → 静默回落）
+    const gpuHits: string[] = this.linesWith('MATRIX ');
+    let gpuReq: number = 0;
+    let gpuLanded: number = 0;
+    for (let i = 0; i < gpuHits.length; i++) {
+      const s: string = gpuHits[i];
+      const parts: string[] = s.split(' ');
+      if (parts.length >= 3 && parts[2] === 'gpu') {
+        gpuReq++;
+        if (this.isNpuLanding(this.kvField(s, 'LANDED'))) {
+          gpuLanded++;
+        }
+      }
+    }
+    if (gpuHits.length > 0) {
+      rows.push(this.row('MS Lite gpu 档', '请求 ' + gpuReq + ' 次 · 真落到加速器 ' +
+        gpuLanded + ' 次', gpuLanded === 0 && gpuReq > 0 ? 'warn' : ''));
+      rows.push(this.row('说明',
+        'MS Lite 的 GPU 是编译期判否后静默回落 CPU；GPU 真通路是 ncnn-Vulkan', 'label'));
+    }
+
+    // ---- Vulkan 探针（原生 dlopen loader 的结果，切块打进 hilog）
+    const vkHits: string[] = this.linesWith('VULKAN PROBE ');
+    if (vkHits.length > 0) {
+      const joined: string = vkHits.join('');
+      rows.push(this.row('Vulkan loader', joined.indexOf('"ok":1') >= 0 ||
+        joined.indexOf('ok=1') >= 0 ? 'dlopen 成功' : '见原始输出', 'label'));
+      rows.push(this.row('探针块数', vkHits.length.toString() + ' 块（hilog 单行上限切块）', 'sub'));
+    }
+
+    // ---- ncnn 裸 head 自证
+    const ncnnLoad: string = this.lastLineWith('NCNN LOAD ');
+    if (ncnnLoad.length > 0) {
+      rows.push(this.row('ncnn head 载入', ncnnLoad.replace('NCNN LOAD ', ''), 'label'));
+    }
+    const ncnnRun: string = this.lastLineWith('NCNN RUN ');
+    if (ncnnRun.length > 0) {
+      rows.push(this.row('ncnn 裸跑', ncnnRun.replace('NCNN RUN ', ''), 'sub'));
+    }
+
+    // ---- 检测器数值漂移（同一份裸 head，nnrt vs cpu）
+    const drift: string[] = this.linesWith('DET DRIFT ');
+    if (drift.length > 0) {
+      for (let i = 0; i < drift.length; i++) {
+        rows.push(this.row('det 漂移', drift[i].replace('DET DRIFT ', ''), 'sub'));
+      }
+    }
+
+    if (rows.length > 0) {
+      this.pushGroup('g-t8', 'T8 · 工具链联合属性',
+        '算子 × 工具链', this.toneFromAcc(rows), rows);
+    }
+  }
+
+  /** 从 lines 重建全部结构化结果。每次探针跑完调一次。 */
+  private rebuildResults(): void {
+    const keep: ResultGroup[] = this.results;
+    this.results = [];
+    // 顺序即论文顺序：RQ3 → 精度 → T8 → RQ4。
+    this.buildRq3Group();
+    this.parseAccGroups();
+    this.parseT8Group();
+    this.parseRq4Group();
+    // 若一组都没建出来（比如只跑了 Vulkan 探针），保留原样。
+    if (this.results.length === 0) {
+      this.results = keep;
+    }
+  }
+
+  /** RQ3 延迟分解组：端到端矩阵 + 逐模型矩阵 + 三张扫描表。 */
+  private buildRq3Group(): void {
+    const rows: ResultRow[] = [];
+    const e2e: ResultRow[] = this.parseE2eRows();
+    if (e2e.length > 0) {
+      rows.push(this.row('端到端矩阵（逐角色换落点）', '', 'label'));
+      for (let i = 0; i < e2e.length; i++) {
+        rows.push(e2e[i]);
+      }
+    }
+    const matrix: ResultRow[] = this.parseMatrixRows();
+    if (matrix.length > 0) {
+      rows.push(this.row('逐模型矩阵（逐模型换后端）', '', 'label'));
+      for (let i = 0; i < matrix.length; i++) {
+        rows.push(matrix[i]);
+      }
+    }
+    const devices: string = this.lastLineWith('MATRIX NNRT-DEVICES ');
+    if (devices.length > 0) {
+      rows.push(this.row('NNRt 可用设备', devices.replace('MATRIX NNRT-DEVICES ', ''), 'label'));
+    }
+    if (rows.length === 0) {
+      return;
+    }
+    // 端到端矩阵是 RQ3 的主证据；它的 match 不一致直接决定分组灯色。
+    let anyWarn: boolean = false;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].tone === 'bad') {
+        this.pushGroup('g-rq3', 'RQ3 · 端到端延迟分解',
+          rows.length.toString() + ' 项', 'bad', rows);
+        return;
+      }
+      if (rows[i].tone === 'warn') {
+        anyWarn = true;
+      }
+    }
+    this.pushGroup('g-rq3', 'RQ3 · 端到端延迟分解',
+      rows.length.toString() + ' 项', anyWarn ? 'warn' : 'ok', rows);
+  }
+
+  // ------------------------------------------------------------ 编排
+
+  /**
+   * 跑一个分组。
+   *
+   * 【为什么分组是这样切的】ADR-0008 定的三条准则：
+   *   论文要引用其数据的 → 留；纯调试用 → 砍；依赖摄像头的 → 砍（云手机没摄像头，
+   *   而用户现在也只有这一台真机）。留下来的正好按 RQ 分成四组。
+   *
+   * 【顺序】组内顺序**不能随便调**：
+   *   - rq3 内部 load 必须最先（其它全依赖会话）；
+   *   - acc 的三个探针各自 load 自己的会话，彼此独立，但要在 rq3 之后，
+   *     因为 acc 的 crop 探针会重建 rec 会话（换落点），洗掉 rq3 的会话状态；
+   *   - t8 的对撞探针每轮 load 51 个模型，会把会话表灌满，所以它必须在
+   *     所有"依赖会话"的实验之后；
+   *   - rq4 永远最后（热循环要给后续实验留冷基线，自己却不在乎前面积的热）。
+   */
+  private async runGroup(g: string): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.group = g;
+    this.runState = 'run';
+    if (g === GRP_RQ3) {
+      await this.probeRq3();
+    } else if (g === GRP_ACC) {
+      await this.probeAccuracy();
+    } else if (g === GRP_T8) {
+      await this.probeT8();
+    } else {
+      await this.probeRq4();
+    }
+    this.rebuildResults();
+    this.runState = 'ok';
+  }
+
+  /**
+   * 一键全跑。
+   *
+   * 【顺序是 ADR-0008 里定的，不要调】load → RQ3 → 精度 → T8 → RQ4。
+   * 前四步都要会话且彼此抢会话表，RQ4 只关心热、必须收尾。这条链上
+   * 任何一步失败都不中断后续 —— 一次装机后的长跑机会很贵，跑完能跑的
+   * 比中途停在第一步有用。
+   */
+  private async runAll(): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.runState = 'run';
+    this.currentExp = '加载模型';
+    this.elapsed = '00:00';
+    this.progress = '';
+    this.lines = [];
+    this.results = [];
+    const t0: number = Date.now();
+    this.tickClock(t0);
+    this.appendNative('RUNALL BEGIN ' + new Date().toISOString());
+
+    this.currentExp = 'RQ3 · 延迟分解';
+    await this.probeRq3();
+    this.rebuildResults();
+
+    this.currentExp = '精度 · A/B 对照';
+    await this.probeAccuracy();
+    this.rebuildResults();
+
+    this.currentExp = 'T8 · 工具链联合属性';
+    await this.probeT8();
+    this.rebuildResults();
+
+    this.currentExp = 'RQ4 · 持续负载热特性';
+    await this.probeRq4();
+    this.rebuildResults();
+
+    const total: number = Date.now() - t0;
+    this.currentExp = '全部完成';
+    this.elapsed = this.hhmmss(total);
+    this.appendNative('RUNALL END totalMs=' + total.toString());
+    this.runState = 'ok';
+    this.busy = false;
+  }
+
+  /** ① RQ3 组：加载生产会话 → 端到端矩阵 → 逐模型矩阵 → 三张扫描表。 */
+  private async probeRq3(): Promise<void> {
+    if (this.ctx === undefined) {
+      this.appendNative('RQ3 FAIL no context');
+      return;
+    }
+    this.progress = '加载模型';
+    await this.loadNative();
+    this.progress = '端到端矩阵';
+    await this.e2eMatrix();
+    this.progress = '逐模型矩阵';
+    await this.probeAll();
+    this.progress = '线程扫描';
+    await this.threadSweep();
+    this.progress = '亲和扫描';
+    await this.affinitySweep();
+    this.progress = '间隔扫描';
+    await this.gapSweep();
+    this.progress = '';
+  }
+
+  /**
+   * ② 精度组。
+   *
+   * 【为什么这四个都跑】它们回答的是四个**不同**的问题，不能互相替代：
+   *   - crop rec/det：换落点会不会改变输出（同工况下的分歧率）
+   *   - bare rec：跳过 det/rectify 后识别器本身的准确率（与 PC 侧 A16 可比）
+   *   - scene ccpd/green：真实整车工况下谁更敏感（det vs rec 必须都跑，
+   *     因为跨工况不可比 —— T12 已证明这一点）
+   *
+   * 【时长】这个组是全流程最贵的：crop 1000 张 × 2 落点、scene 1000×2×2、
+   * bare 1000。全跑约 20–30 分钟量级。
+   */
+  private async probeAccuracy(): Promise<void> {
+    this.progress = '裁剪图集 rec A/B';
+    await this.cropBackendAB('rec');
+    this.progress = '裁剪图集 det A/B';
+    await this.cropBackendAB('det');
+    this.progress = '识别器裸头准确率';
+    await this.bareHeadAccuracy();
+    this.progress = '整车场景 ccpd';
+    await this.ccpdSceneAB('det', 'ccpd');
+    await this.ccpdSceneAB('rec', 'ccpd');
+    this.progress = '整车场景 green';
+    await this.ccpdSceneAB('det', 'green');
+    await this.ccpdSceneAB('rec', 'green');
+    this.progress = 'ncnn 槽位';
+    await this.ncnnSlotProbe();
+    this.progress = '';
+  }
+
+  /** ③ T8 组：算子对撞（51 个）→ CANN/NNRt → GPU/Vulkan → ncnn 自证。 */
+  private async probeT8(): Promise<void> {
+    this.progress = '算子覆盖对撞';
+    await this.opCollideProbe();
+    this.progress = 'CANN / NNRt';
+    await this.cannProbe();
+    this.progress = 'GPU 专项';
+    await this.gpuProbe();
+    this.progress = '检测器漂移';
+    await this.detDriftProbe();
+    this.progress = 'ncnn 自证';
+    await this.ncnnProbe();
+    this.progress = 'Vulkan 探针';
+    this.vulkanProbeRun();
+    this.progress = '';
+    this.lines = this.lines.concat(['T8 GROUP END ts=' + Date.now().toString()]);
+  }
+
+  /**
+   * ④ RQ4 组：持续负载热循环。
+   *
+   * 【必须自己加载模型】不能指望前面留下的会话：热循环要跑 20 分钟，
+   * 期间如果会话被别的探针换过（比如 acc 的 crop 探针把 rec 换到了 cpu），
+   * 整个基线就悄悄变了 —— 而 RQ4 的全部意义就是基线可比。
+   */
+  private async probeRq4(): Promise<void> {
+    if (this.ctx === undefined) {
+      this.appendNative('RQ4 GROUP FAIL no context');
+      return;
+    }
+    this.progress = '加载生产会话';
+    await this.loadNative();
+    this.progress = '热循环 ' + RQ4_MINUTES.toString() + ' 分钟';
+    await this.rq4SustainedProbe(RQ4_MINUTES);
+    this.progress = '';
+  }
+
+  /** 跑一个分组（对外入口，含 busy 保护与结果刷新）。 */
+  private async runGroupSafe(g: string): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.runState = 'run';
+    const t0: number = Date.now();
+    this.tickClock(t0);
     try {
-      const atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
-      atManager.requestPermissionsFromUser(c, perms).then((res) => {
-        this.appendNative('CAMERA PERM auth=' + res.authResults.join(','));
+      await this.runGroup(g);
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('GROUP EXCEPTION ' + g + ' ' + err.message);
+      this.runState = 'bad';
+    }
+    this.elapsed = this.hhmmss(Date.now() - t0);
+    if (this.runState === 'ok') {
+      this.runState = 'ok';
+    }
+    this.busy = false;
+  }
+
+  /** 时钟：每 500 ms 刷一次 elapsed，让长跑看得出还在动。 */
+  private tickClock(t0: number): void {
+    const step: () => void = () => {
+      if (!this.busy) {
+        return;
+      }
+      this.elapsed = this.hhmmss(Date.now() - t0);
+      setTimeout(step, 500);
+    };
+    setTimeout(step, 500);
+  }
+
+  private hhmmss(ms: number): string {
+    const s: number = Math.floor(ms / 1000);
+    const h: number = Math.floor(s / 3600);
+    const m: number = Math.floor((s % 3600) / 60);
+    const sec: number = s % 60;
+    const two = (v: number): string => v < 10 ? '0' + v.toString() : v.toString();
+    return h > 0 ? (two(h) + ':' + two(m) + ':' + two(sec)) : (two(m) + ':' + two(sec));
+  }
+
+  // ------------------------------------------------------------ 导出
+
+  /**
+   * 复制全部结果到剪贴板 —— **这就是"一键导出"**。
+   *
+   * 为什么不写文件：用户明确要「终端界面上直接看 + 复制」；而且云手机/真机的
+   * App 私有目录 hdc 拉不出来（既不能 shell 写也不能 shell 读）。复制成文本后
+   * 粘到哪都行，比一个拉不出来的 .log 有用。
+   *
+   * 输出结构固定三段，方便直接贴进论文笔记：
+   *   1) 头部：时间 / 设备 / 结论一行
+   *   2) 结构化结果：分组标题 + 每条读数（与面板显示逐字一致）
+   *   3) 原始输出：完整 lines（不截断 —— 面板才截 300 行，复制要给全的）
+   */
+  private copyAll(): void {
+    const now: Date = new Date();
+    const parts: string[] = [];
+    parts.push('=== LPR Kirin8020 探针结果 ===');
+    parts.push('时间: ' + now.toLocaleString());
+    parts.push('分组: ' + this.groupLabel(this.group));
+    parts.push('状态: ' + (this.runState === '' ? 'idle' : this.runState) +
+      '   用时: ' + (this.elapsed.length > 0 ? this.elapsed : '-'));
+    parts.push('结果组数: ' + this.results.length.toString() +
+      '   原始输出: ' + this.lines.length.toString() + ' 行');
+    parts.push('');
+
+    if (this.results.length > 0) {
+      parts.push('---------- 结构化结果 ----------');
+      for (let i = 0; i < this.results.length; i++) {
+        const g: ResultGroup = this.results[i];
+        parts.push('');
+        parts.push('## ' + g.title + '  [' + g.tag + ']');
+        for (let j = 0; j < g.rows.length; j++) {
+          const r: ResultRow = g.rows[j];
+          if (r.value.length === 0) {
+            parts.push(r.label);
+          } else {
+            parts.push(r.label + ' : ' + r.value);
+          }
+        }
+      }
+      parts.push('');
+    }
+
+    if (this.lines.length > 0) {
+      parts.push('---------- 原始输出（完整 ' +
+        this.lines.length.toString() + ' 行） ----------');
+      for (let i = 0; i < this.lines.length; i++) {
+        parts.push(this.lines[i]);
+      }
+    }
+
+    const text: string = parts.join('\n');
+    try {
+      pasteboard.createPlainTextData(text);
+      const board: pasteboard.SystemPasteboard = pasteboard.getSystemPasteboard();
+      board.setData(pasteboard.createPlainTextData(text)).then(() => {
+        this.progress = '已复制 ' + text.length.toString() + ' 字符';
+        this.appendNative('COPY OK chars=' + text.length.toString() +
+          ' groups=' + this.results.length.toString() +
+          ' lines=' + this.lines.length.toString());
       }).catch((e: Error) => {
-        this.appendNative('CAMERA PERM FAIL ' + e.message);
+        this.appendNative('COPY FAIL ' + e.message);
+        this.progress = '复制失败';
       });
     } catch (e) {
       const err = e as Error;
-      this.appendNative('CAMERA PERM EXCEPTION ' + err.message);
+      this.appendNative('COPY EXCEPTION ' + err.message);
+      this.progress = '复制失败';
     }
   }
 
-  aboutToAppear(): void {
-    this.ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.requestCamera();
-    // T7 · RQ4 补跑：与自检互斥（见 AUTO_RQ4 注释）。等 UI 起来再跑，
-    // 免得与权限弹窗、首帧渲染抢线程、污染基线。
-    if (AUTO_RQ4) {
-      this.sleep(3000).then(() => {
-        this.loadNative().then(() => {
-          this.rq4SustainedProbe(AUTO_RQ4_MINUTES);
-        });
-      });
-    }
-    // 自检：等 UI 起来（权限弹窗不阻塞）再跑，全部结果进 hilog。
-    if (AUTO_SELFTEST) {
-      this.sleep(1500).then(() => {
-        this.vulkanProbeRun();
-        this.listLenses();
-        this.loadNative().then(() => {
-          this.runNative(SELFTEST_SAMPLE).then(() => {
-          this.backendProbe().then(() => {
-            this.e2eMatrix().then(() => {
-              this.ncnnSlotProbe().then(() => {
-                this.cannProbe().then(() => {
-                  this.probeAll().then(() => {
-                    this.threadSweep();
-                  });
-                });
-              });
-            });
-          });
-          });
-        });
-      });
-    }
+  /** 清空结果与原始输出。不清 busy —— busy 时按钮本来就不可点。 */
+  private clearAll(): void {
+    this.lines = [];
+    this.results = [];
+    this.progress = '';
+    this.currentExp = '';
+    this.elapsed = '';
+    this.runState = '';
+    this.rq4Rows = [];
+    this.rq4Status = '';
+    this.appendNative('CLEAR ts=' + Date.now().toString());
   }
 
-  // ------------------------------------------------------------ 界面
+  // ============================================================ 界面层
+  //
+  // 重设计见 docs/adr/0008-probe-console-redesign.md。
+  // 旧界面是 26 个按钮平铺 + 两个 tab，问题是「看不了 / 认不出 / 跑不动」。
+  // 本层只做三件事：**分组、呈现、编排** —— 不改任何测量逻辑（上面 2100 行）。
+  //
+  // 【三区结构】
+  //   ① 顶部状态条  —— 跑没跑 / 跑到哪 / 跑了多久（旧界面这些信息沉在 lines 末尾）
+  //   ② 中部结果区  —— 结构化分组结果 + 原始输出；**长按整区复制 = 导出**
+  //   ③ 底部操作区  —— 4 个分组 chip + 一键全跑 / 跑当前组 / 清空
+  //
+  // 【为什么没有「导出文件」】用户要的是「终端界面上直接看 + 复制」。云手机场景下
+  // hdc 拉 filesDir 本来也不通（App 私有目录既不能 shell 写也不能 shell 读），
+  // 所以导出就是**长按复制到剪贴板**，粘贴出来是可直接贴进文档的纯文本块。
 
-  /** iOS 分段控件的一段：选中为白底卡片 + 阴影，未选中透明。 */
+  // ---------------------------------------------------------- ⓪ 页头 / 相机入口
+
+  /**
+   * 页头：App 身份 + **相机实时页入口**。
+   *
+   * 【为什么加在这里】上一轮按 ADR-0008 把相机页整页砍掉时，本文件也顺手删了
+   * `router` import 与所有跳转。用户随后要求「恢复相机实时」（spec 见
+   * `docs/spec-vehicle-pipeline.md`）。入口加在**深色仪器风版本**上，
+   * 而不是回退旧的浅色版 —— 这是 T1 票的硬要求（不得回退 UI 重设计）。
+   *
+   * 【为什么单独一行，而不是塞进 statusBar】
+   * `statusBar` 那一行全是**读数**（状态灯 / 已用时）。把动作混进读数行，
+   * 「相机」会被读成又一个指标。单独一行既给了页面身份，也让入口一眼可寻 ——
+   * 旧版把 26 个操作平铺在一页里，找什么都难，这次不重复那个错。
+   */
   @Builder
-  tabButton(label: string, idx: number) {
-    Text(label)
-      .fontSize(13)
-      .fontWeight(this.tab === idx ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.tab === idx ? IOS_LABEL : IOS_LABEL2)
-      .textAlign(TextAlign.Center)
-      .layoutWeight(1)
-      .padding({ top: 7, bottom: 7 })
-      .backgroundColor(this.tab === idx ? IOS_CARD : Color.Transparent)
-      .borderRadius(7)
-      .shadow(this.tab === idx
-        ? { radius: 3, color: 'rgba(0,0,0,0.12)', offsetX: 0, offsetY: 1 }
-        : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
-      .onClick(() => {
-        this.tab = idx;
-      })
+  pageHeader() {
+    Row({ space: 10 }) {
+      Text('车牌识别 · 探针台')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(INS_LABEL2)
+        .fontFamily(INS_FONT)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text('相机 ›')
+        .fontSize(12)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(INS_ACCENT)
+        .fontFamily(INS_FONT)
+        .textAlign(TextAlign.Center)
+        .height(30)
+        .padding({ left: 14, right: 14 })
+        .backgroundColor(INS_ACCENT_SOFT)
+        .borderRadius(8)
+        .onClick(() => {
+          this.openCamera();
+        })
+    }
+    .width('100%')
+    .padding({ left: 2, right: 2 })
   }
 
+  // ---------------------------------------------------------- ① 顶部状态条
+
+  /** 状态灯：idle / run / ok / warn / bad。 */
   @Builder
-  nativeHeader() {
-    Column({ space: 14 }) {
-      // ── iOS 大标题（largeTitle）
-      Column({ space: 2 }) {
-        Text('车牌识别')
-          .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(IOS_LABEL)
-          .width('100%')
-        Text('原生端到端 · 麒麟 8020 · 无 ArkWeb')
+  statusDot(state: string) {
+    Row()
+      .width(7)
+      .height(7)
+      .borderRadius(4)
+      .backgroundColor(state === 'run' ? INS_ACCENT
+        : state === 'ok' ? INS_OK
+          : state === 'warn' ? INS_WARN
+            : state === 'bad' ? INS_BAD
+              : INS_IDLE)
+  }
+
+  /**
+   * 分组 chip。label 是人读的短名，tag 是它在论文里对应什么。
+   * 双行是有意的：单行 chip 在 360vp 宽里放不下「RQ3 延迟分解」这种有信息量的名字。
+   */
+  @Builder
+  groupChip(label: string, tag: string, active: boolean, onTap: () => void) {
+    Column({ space: 2 }) {
+      Text(label)
+        .fontSize(13)
+        .fontWeight(active ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(active ? INS_BG : INS_LABEL)
+        .fontFamily(INS_FONT)
+      Text(tag)
+        .fontSize(9)
+        .fontColor(active ? INS_BG : INS_LABEL3)
+        .fontFamily(INS_MONO)
+    }
+    .padding({ left: 11, right: 11, top: 7, bottom: 7 })
+    .backgroundColor(active ? INS_ACCENT : INS_PANEL2)
+    .borderRadius(8)
+    .onClick(onTap)
+  }
+
+  /** 顶部状态条：一眼看出「跑没跑 / 跑到哪 / 跑了多久」。 */
+  @Builder
+  statusBar() {
+    Column({ space: 8 }) {
+      Row({ space: 8 }) {
+        this.statusDot(this.busy ? 'run' : this.runState)
+        Text(this.busy ? '运行中'
+          : this.runState === 'ok' ? '已完成'
+            : this.runState === 'bad' ? '出错'
+              : this.runState === 'warn' ? '有异常'
+                : '待机')
           .fontSize(12)
-          .fontColor(IOS_LABEL2)
-          .width('100%')
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      // ── 分组卡片 1：主操作
-      Column({ space: 10 }) {
-        Button('相机实时识别')
-          .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#ffffff')
-          .backgroundColor(IOS_BLUE)
-          .type(ButtonType.Normal)
-          .borderRadius(10)
-          .width('100%')
-          .height(44)
-          .onClick(() => {
-            router.pushUrl({ url: 'pages/CameraPage' });
-          })
-        Row({ space: 10 }) {
-          Button('加载模型')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.loadNative();
-            })
-          Button('枚举镜头')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.listLenses();
-            })
-        }
-        .width('100%')
+          .fontColor(this.busy ? INS_ACCENT : INS_LABEL)
+          .fontFamily(INS_FONT)
+        Blank()
+        Text(this.elapsed.length > 0 ? this.elapsed : '—')
+          .fontSize(12)
+          .fontColor(INS_LABEL2)
+          .fontFamily(INS_MONO)
       }
       .width('100%')
-      .padding(14)
-      .backgroundColor(IOS_CARD)
-      .borderRadius(12)
 
-      // ── 分组卡片 2：后端与状态
-      Column({ space: 6 }) {
-        Row() {
-          Text('后端')
-            .fontSize(12)
-            .fontColor(IOS_LABEL2)
-          Blank()
-          // 不能用 layoutWeight(1)：Blank() 已经把值推到右端，再加权重会让
-          // 这个 Text 撑满剩余宽度（实测 bounds [154,916]→[1139,956]），
-          // 一个「—」占位符被拉成整行宽 —— 看起来像渲染故障。
-          Text(this.nBackends.length > 0 ? this.nBackends : '—')
-            .fontSize(12)
-            .fontColor(IOS_LABEL)
-            .maxLines(2)
-            .textAlign(TextAlign.End)
-            .constraintSize({ maxWidth: '70%' })
-        }
-        .width('100%')
-        Text(this.nStatus)
+      Row({ space: 8 }) {
+        Text(this.currentExp.length > 0 ? this.currentExp : '未开始')
           .fontSize(12)
-          .fontColor(IOS_LABEL2)
-          .width('100%')
+          .fontColor(INS_LABEL2)
+          .fontFamily(INS_FONT)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.progress.length > 0 ? this.progress : '')
+          .fontSize(12)
+          .fontColor(INS_LABEL3)
+          .fontFamily(INS_MONO)
       }
       .width('100%')
-      .padding(14)
-      .backgroundColor(IOS_CARD)
-      .borderRadius(12)
-      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding({ left: 14, right: 14, top: 11, bottom: 11 })
+    .backgroundColor(INS_PANEL)
+    .borderRadius(10)
+  }
 
-      // ── 分组卡片 3：样本
-      Column({ space: 8 }) {
-        Text('样本图')
+  // ---------------------------------------------------------- ② 结果区
+
+  /**
+   * 单条结果行。左标签右值，值等宽且带状态色。
+   *
+   * 等宽的意义在**竖着扫**：一列 p50 右对齐后小数点能对齐，比浅色卡片里
+   * 的散排数字快得多。这是深色仪器风相对旧界面的主要收益。
+   */
+  @Builder
+  resultRow(label: string, value: string, tone: string) {
+    Row({ space: 10 }) {
+      Text(label)
+        .fontSize(12)
+        .fontColor(tone === 'sub' ? INS_LABEL3 : INS_LABEL2)
+        .fontFamily(tone === 'sub' ? INS_MONO : INS_FONT)
+        .layoutWeight(1)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .padding({ left: tone === 'sub' ? 8 : 0 })
+      Text(value)
+        .fontSize(12)
+        .fontColor(tone === 'ok' ? INS_OK : tone === 'warn' ? INS_WARN
+          : tone === 'bad' ? INS_BAD
+            : tone === 'sub' ? INS_LABEL3
+              : tone === 'label' ? INS_LABEL2 : INS_LABEL)
+        .fontFamily(INS_MONO)
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+  }
+
+  /** 结果分组卡：一个实验一块。 */
+  @Builder
+  resultGroupCard(g: ResultGroup) {
+    Column({ space: 0 }) {
+      Row({ space: 8 }) {
+        this.statusDot(g.tone === '' ? 'idle' : g.tone)
+        Text(g.title)
           .fontSize(12)
-          .fontColor(IOS_LABEL2)
-          .width('100%')
-        Row({ space: 8 }) {
-          ForEach(NATIVE_SAMPLES, (s: string, idx: number) => {
-            // 按钮标签用**序号**而不是文件名：`crop-0-津B6H920` 这类长名在三个等宽
-            // 按钮里必然被截成 `crop-0-津…`（实测 labelStyle 自适应字号也不生效）。
-            // 文件名不丢 —— 跑完显示在读数卡的「样本」行里。
-            Button('样本 ' + (idx + 1).toString())
-              .fontSize(12)
-              .fontColor(IOS_BLUE)
-              .backgroundColor(IOS_BLUE_SOFT)
-              .type(ButtonType.Normal)
-              .borderRadius(8)
-              .layoutWeight(1)
-              .height(34)
-              .onClick(() => {
-                this.runNative(s);
-              })
-          }, (s: string) => s)
-        }
-        .width('100%')
-        // 文件名单独一行列出，三个按钮就不必挤长标签。
-        Text(this.sampleNames())
+          .fontWeight(FontWeight.Medium)
+          .fontColor(INS_LABEL)
+          .fontFamily(INS_FONT)
+          .layoutWeight(1)
+        Text(g.tag)
           .fontSize(10)
-          .fontColor(IOS_LABEL3)
-          .width('100%')
-          .maxLines(2)
+          .fontColor(INS_LABEL3)
+          .fontFamily(INS_MONO)
       }
       .width('100%')
-      .padding(14)
-      .backgroundColor(IOS_CARD)
-      .borderRadius(12)
-      .alignItems(HorizontalAlign.Start)
+      .padding({ left: 12, right: 12, top: 9, bottom: 7 })
 
-      // ── 识别结果卡（iOS 读数卡：大号车牌 + 明细）
-      if (this.nPlate.length > 0) {
-        Column({ space: 4 }) {
-          Text(this.nPlate)
-            .fontSize(26)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(IOS_LABEL)
-            .width('100%')
-          Text(this.nDetail)
-            .fontSize(11)
-            .fontColor(IOS_LABEL2)
-            .width('100%')
-          Text(this.nTiming)
-            .fontSize(11)
-            .fontColor(IOS_LABEL3)
-            .width('100%')
-          // ── 落点自证（ADR-0003）
-          // NPU 利用率在这平台上读不到，所以"谁真的算了"只能这样显示：
-          // 模块名前缀的 ⚡ = 该角色落在 NPU 上，否则是 CPU。
-          // req 与 landed 不同时明写"回落"，因为静默回落正是要抓的东西。
-          if (this.nEvidence.length > 0) {
-            Divider()
-              .color(IOS_SEP)
-              .margin({ top: 6, bottom: 6 })
-            Text('落点自证 · LANDED')
-              .fontSize(10)
-              .fontColor(IOS_LABEL3)
-              .width('100%')
-            ForEach(this.nEvidence, (row: string) => {
-              Text(row)
-                .fontSize(10)
-                .fontFamily('monospace')
-                .fontColor(IOS_LABEL2)
-                .width('100%')
-            }, (row: string) => row)
-          }
-        }
-        .width('100%')
-        .padding(14)
-        .backgroundColor(IOS_CARD)
-        .borderRadius(12)
-        .alignItems(HorizontalAlign.Start)
-      }
-
-      // ── 镜头列表卡
-      if (this.nLenses.length > 0) {
-        Column({ space: 4 }) {
-          Text('物理镜头 ' + this.nLenses.length.toString())
-            .fontSize(12)
-            .fontColor(IOS_LABEL2)
-            .width('100%')
-          ForEach(this.nLenses, (l: string) => {
-            Text(l)
-              .fontSize(11)
-              .fontColor(IOS_LABEL)
-              .width('100%')
-          }, (l: string) => l)
-        }
-        .width('100%')
-        .padding(14)
-        .backgroundColor(IOS_CARD)
-        .borderRadius(12)
-        .alignItems(HorizontalAlign.Start)
-      }
+      ForEach(g.rows, (r: ResultRow) => {
+        this.resultRow(r.label, r.value, r.tone)
+      }, (r: ResultRow, i: number) => g.key + '#' + i.toString())
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .margin({ bottom: 8 })
+    .backgroundColor(INS_PANEL2)
+    .borderRadius(8)
   }
 
+  /**
+   * 结果面板：**结构化结果在前，原始输出在后**。
+   *
+   * 旧界面只有一坨等宽 `lines`，26 个实验的顺序输出混在一起 —— 这就是
+   * 「标签看不了」的根源：找不到哪一行属于哪个实验，也没有单位。
+   * 现在每个探针在跑的过程中往 `results` 里填**带标签的读数**，
+   * 原始 `lines` 保留在下半段以备核对（它仍是落盘日志的同源副本）。
+   *
+   * **长按整区 = 复制全部**（本 App 的导出方式）。
+   */
   @Builder
-  probeHeader() {
-    Column({ space: 14 }) {
-      Column({ space: 2 }) {
-        Text('探针控制台')
-          .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(IOS_LABEL)
-          .width('100%')
-        Text('MindSpore Lite NDK · NNRT / GPU / KIRIN_NPU / CPU 逐项实测 + ncnn-Vulkan')
+  resultPanel() {
+    Column({ space: 0 }) {
+      Row({ space: 8 }) {
+        Text('结果')
           .fontSize(12)
-          .fontColor(IOS_LABEL2)
-          .width('100%')
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      Column({ space: 10 }) {
-        Row({ space: 10 }) {
-          Button(this.busy ? ('探测中 ' + this.progress) : '加速器矩阵')
-            .fontSize(13)
-            .fontColor('#ffffff')
-            .backgroundColor(IOS_BLUE)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.probeAll();
-            })
-          Button('GPU 专项')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.gpuProbe();
-            })
-          Button('清空')
-            .fontSize(13)
-            .fontColor(IOS_RED)
-            .backgroundColor(IOS_RED_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.lines = [];
-            })
-        }
-        .width('100%')
-
-        Row({ space: 10 }) {
-          Button('NPU 漂移')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.detDriftProbe();
-            })
-          Button('ncnn/Vulkan')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.ncnnProbe();
-            })
-          Button('三后端槽位')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.ncnnSlotProbe();
-            })
-        }
-        .width('100%')
-
-        Row({ space: 10 }) {
-          Button('CANN 探针')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.cannProbe();
-            })
-          Button('识别器落点 A/B')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // 数据集已打进 rawfile（assets/crops，1000 张 94x24 裁剪图）。
-              // 变 rec 落点，其余两个角色固定生产配置。
-              this.cropBackendAB('rec');
-            })
-          Button('检测器落点 A/B')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // 同一数据集、同一探针，改变 det 落点。
-              // ⚠️ 输入是 94x24 裁剪图而非整车图，det 的工况与真实场景不同，
-              // 结论只能与同输入的 rec 结果并列，不能直接外推到整车场景。
-              this.cropBackendAB('det');
-            })
-          Button('识别器裸测准确率')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // 跳过 det/rectify 直喂识别器，与 t6/A16（主机 onnxruntime）
-              // 工况一致，因此准确率数字可直接对比。
-              this.bareHeadAccuracy();
-            })
-          Button('整车 7 字 det')
-            .fontSize(12)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // CCPD2019-balance 分层抽 1000 张（30 省，每省上限 100）。
-              // T10 那 6.8% 是裁剪图工况，不能外推到真实场景 —— 本探针补这一格。
-              this.ccpdSceneAB('det', 'ccpd');
-            })
-          Button('整车 7 字 rec')
-            .fontSize(12)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // 必须与 det 同输入同工况：rec 的 4.9% 来自 T11 的**裁剪图裸喂**，
-              // 与 det 的 0.1%（真实场景）不可比。
-              this.ccpdSceneAB('rec', 'ccpd');
-            })
-          Button('整车 8 字绿牌')
-            .fontSize(12)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // CCPD-Green（Kaggle lyhue1991/ccpd-green）抽 1000 张**8 字符新能源牌**。
-              // 此前所有真实场景结论只覆盖 7 字符，本探针补 8 字符这一格。
-              // 变 rec 落点：识别器是唯一需要逐位解码的角色，8 字符对它的压力最大。
-              this.ccpdSceneAB('rec', 'green');
-            })
-          Button('绿牌 det')
-            .fontSize(12)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // T13 §6.5 明确记下的缺口：绿牌只跑了 rec，det 未测。
-              // T14 已证明「后端本身是准确率变量」，所以不能假定 det 在 8 字符上
-              // 仍是 7 字符那样的 0.1% —— 要测。
-              this.ccpdSceneAB('det', 'green');
-            })
-          Button('算子对撞')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.opCollideProbe();
-            })
-          Button('RQ4 热特性')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              // 20 分钟：够跨过 thermal 2→3 的台阶，又不至于把电量耗尽
-              this.rq4SustainedProbe(20);
-            })
-          Button('正式基准 30×')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.probeAll();
-            })
-          Button('线程扫描')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.threadSweep();
-            })
-          Button('亲和扫描')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.affinitySweep();
-            })
-          Button('Vulkan 探针')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.vulkanProbeRun();
-            })
-        }
-        .width('100%')
-
-        // ── 第三行：C8 定位实验（隔离 vs 流水线的 2 倍差距）
-        Row({ space: 10 }) {
-          Button('间隔/污染扫描')
-            .fontSize(13)
-            .fontColor(IOS_BLUE)
-            .backgroundColor(IOS_BLUE_SOFT)
-            .type(ButtonType.Normal)
-            .borderRadius(10)
-            .layoutWeight(1)
-            .height(38)
-            .onClick(() => {
-              this.gapSweep();
-            })
-        }
-        .width('100%')
-      }
-      .width('100%')
-      .padding(14)
-      .backgroundColor(IOS_CARD)
-      .borderRadius(12)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  probeLog() {
-    Scroll() {
-      Column({ space: 3 }) {
-        // 空态：iOS 风格给个占位说明，别让一大块黑面板空着。
-        if (this.lines.length === 0) {
-          Text('运行上方任一探针后，日志会出现在这里')
-            .fontSize(11)
-            .fontFamily('monospace')
-            .fontColor('rgba(255,255,255,0.4)')
-            .width('100%')
-        }
-        ForEach(this.lines, (item: string) => {
-          Text(item)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(INS_LABEL)
+          .fontFamily(INS_FONT)
+        if (this.results.length > 0) {
+          Text(this.results.length.toString() + ' 组')
             .fontSize(10)
-            .fontFamily('monospace')
-            .fontColor('#d7dce3')
-            .width('100%')
-        }, (item: string, idx: number) => idx.toString() + '_' + item)
+            .fontColor(INS_LABEL3)
+            .fontFamily(INS_MONO)
+        }
+        Blank()
+        Text(this.busy ? '运行中…' : '长按复制全部')
+          .fontSize(10)
+          .fontColor(INS_LABEL3)
+          .fontFamily(INS_FONT)
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 10, bottom: 9 })
 
-        // ── T7 · RQ4 热特性卡
-        // 热档与电池温度**只有 ArkTS 侧读得到**（native sysroot 无热态头文件）。
-        // 放在探针页而不是原生演示页：它属于测量，不属于演示。
-        // 注意：Scroll 只能有一个子组件，所以这张卡必须在这个 Column 内。
-        if (this.rq4Status.length > 0) {
-          Column({ space: 6 }) {
-            Text('RQ4 · 持续负载热特性')
-              .fontSize(13)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(IOS_LABEL)
-              .width('100%')
-            Text(this.rq4Status)
-              .fontSize(11)
-              .fontColor(IOS_LABEL2)
-              .width('100%')
-            if (this.rq4Rows.length > 0) {
-              Text('热档 ' + this.thermalLevel.toString() + ' · 电池 ' +
-                this.batteryTempC.toFixed(1) + '℃')
-                .fontSize(11)
-                .fontColor(IOS_LABEL3)
+      Divider().color(INS_LINE).strokeWidth(1)
+
+      if (this.results.length === 0 && this.lines.length === 0) {
+        Column({ space: 8 }) {
+          Text('尚无结果')
+            .fontSize(13)
+            .fontColor(INS_LABEL3)
+            .fontFamily(INS_FONT)
+          Text('点下方「一键全跑」按论文顺序跑完全部实验，')
+            .fontSize(11)
+            .fontColor(INS_LABEL3)
+            .fontFamily(INS_FONT)
+          Text('或先选一个分组，点「跑当前组」单独复跑。')
+            .fontSize(11)
+            .fontColor(INS_LABEL3)
+            .fontFamily(INS_FONT)
+        }
+        .width('100%')
+        .padding({ top: 40, bottom: 40 })
+      } else {
+        Scroll() {
+          Column({ space: 0 }) {
+            ForEach(this.results, (g: ResultGroup) => {
+              this.resultGroupCard(g)
+            }, (g: ResultGroup) => g.key)
+
+            if (this.lines.length > 0) {
+              Column({ space: 0 }) {
+                Row({ space: 8 }) {
+                  Text('原始输出')
+                    .fontSize(11)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor(INS_LABEL3)
+                    .fontFamily(INS_FONT)
+                  Blank()
+                  Text('末 ' + Math.min(this.lines.length, RESULT_RAW_TAIL).toString() +
+                    ' / ' + this.lines.length.toString() + ' 行')
+                    .fontSize(10)
+                    .fontColor(INS_LABEL3)
+                    .fontFamily(INS_MONO)
+                }
                 .width('100%')
-              ForEach(this.rq4Rows, (row: string) => {
-                Text(row)
-                  .fontSize(9)
-                  .fontFamily('monospace')
-                  .fontColor(IOS_LABEL2)
-                  .width('100%')
-              }, (row: string, idx: number) => 'rq4_' + idx.toString())
+                .padding({ left: 12, right: 12, top: 10, bottom: 6 })
+
+                ForEach(this.rawTail(), (s: string) => {
+                  Text(s)
+                    .fontSize(10)
+                    .fontColor(INS_LABEL2)
+                    .fontFamily(INS_MONO)
+                    .width('100%')
+                    .padding({ left: 12, right: 12, top: 2, bottom: 2 })
+                }, (s: string, i: number) => 'raw#' + i.toString())
+              }
+              .width('100%')
+              .margin({ top: 4 })
             }
           }
           .width('100%')
-          .padding(12)
-          .backgroundColor(IOS_CARD)
-          .borderRadius(12)
-          .alignItems(HorizontalAlign.Start)
-          .margin({ top: 8 })
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-    }
-    .layoutWeight(1)
-    .width('100%')
-    .padding(12)
-    .backgroundColor('#1c1c1e')
-    .borderRadius(12)
-    // 必须显式顶对齐：Scroll 默认把内容居中，实测那行日志飘在面板中间。
-    .align(Alignment.TopStart)
-  }
-
-  build() {
-    Column({ space: 0 }) {
-      // ── iOS 分段控件（segmented control）：灰轨道 + 白滑块
-      // ⚠️ 这里不能写 .width('100%') —— 它取父容器 100% 后再叠加 margin，
-      // 会溢出屏幕（实测 [5,185]→[1224,279]，宽 1219 > 1224 视口），
-      // 而内容卡是 x=45，左边缘对不齐。靠 margin 撑开即可。
-      Row({ space: 0 }) {
-        this.tabButton('原生演示', 0)
-        // iOS 两段式分段控件在未选中段之间有一条发丝分隔线。
-        // 注意：Divider 在 Row 里若不显式给 width 会渲染不出来（实测不可见）。
-        Divider()
-          .vertical(true)
-          .width(1)
-          .height(16)
-          .color('rgba(60,60,67,0.29)')
-        this.tabButton('探针控制台', 1)
-      }
-      .padding(2)
-      .backgroundColor(IOS_TRACK)
-      .borderRadius(9)
-      .margin({ left: 16, right: 16, top: 12, bottom: 12 })
-
-      if (this.tab === 0) {
-        Scroll() {
-          Column() {
-            this.nativeHeader()
-          }
-          .width('100%')
-          .padding({ left: 16, right: 16, bottom: 16 })
+          .padding({ top: 8, bottom: 8 })
         }
         .layoutWeight(1)
         .width('100%')
         .align(Alignment.Top)
+        .scrollBar(BarState.Auto)
       }
+    }
+    .layoutWeight(1)
+    .width('100%')
+    .backgroundColor(INS_PANEL)
+    .borderRadius(10)
+    .clip(true)
+    .gesture(
+      LongPressGesture()
+        .onAction(() => {
+          this.copyAll();
+        })
+    )
+  }
 
-      if (this.tab === 1) {
-        Column({ space: 10 }) {
-          this.probeHeader()
-          this.probeLog()
+  // ---------------------------------------------------------- ③ 操作区
+
+  /** 主按钮。 */
+  @Builder
+  primaryButton(label: string, enabled: boolean, onTap: () => void) {
+    Text(label)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(enabled ? '#0B0E12' : INS_LABEL3)
+      .fontFamily(INS_FONT)
+      .textAlign(TextAlign.Center)
+      .width('100%')
+      .height(46)
+      .backgroundColor(enabled ? INS_ACCENT : INS_PANEL2)
+      .borderRadius(10)
+      .onClick(() => {
+        if (enabled) {
+          onTap();
+        }
+      })
+  }
+
+  /**
+   * 底部操作区（固定，不随结果滚动跑掉）。
+   *
+   * 旧界面的操作按钮和结果混在同一个 Scroll 里，长跑跑到一半想清空要滑很久；
+   * 且 26 个按钮没有主次，找「跑全部」比找任意一个探针都难。
+   */
+  @Builder
+  actionBar() {
+    Column({ space: 8 }) {
+      Row({ space: 6 }) {
+        this.groupChip('RQ3', '延迟分解', this.group === 'rq3', () => {
+          this.group = 'rq3';
+        })
+        this.groupChip('RQ4', '持续负载', this.group === 'rq4', () => {
+          this.group = 'rq4';
+        })
+        this.groupChip('精度', 'A/B 对照', this.group === 'acc', () => {
+          this.group = 'acc';
+        })
+        this.groupChip('T8', '工具链', this.group === 't8', () => {
+          this.group = 't8';
+        })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Column() {
+          this.primaryButton(
+            this.busy ? ('运行中 · ' + this.progress) : '一键全跑',
+            !this.busy,
+            () => {
+              this.runAll();
+            })
         }
         .layoutWeight(1)
-        .width('100%')
-        .padding({ left: 16, right: 16, bottom: 16 })
+
+        Text('跑当前组')
+          .fontSize(12)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(46)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(10)
+          .onClick(() => {
+            if (!this.busy) {
+              this.runGroup(this.group);
+            }
+          })
+
+        Text('复制')
+          .fontSize(12)
+          .fontColor(INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(46)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(10)
+          .onClick(() => {
+            this.copyAll();
+          })
       }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Text('RQ4 热循环必须最后跑（先跑会把热态带上基线）。当前组：' +
+          this.groupLabel(this.group))
+          .fontSize(9)
+          .fontColor(INS_LABEL3)
+          .fontFamily(INS_FONT)
+          .layoutWeight(1)
+          .maxLines(2)
+        Text('清空')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_BAD)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.clearAll();
+            }
+          })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ left: 2, right: 2, top: 2 })
+  }
+
+  // ---------------------------------------------------------- 根布局
+
+  build() {
+    Column({ space: 10 }) {
+      this.pageHeader()
+      this.statusBar()
+      this.resultPanel()
+      this.actionBar()
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(IOS_BG)
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .backgroundColor(INS_BG)
   }
 }
