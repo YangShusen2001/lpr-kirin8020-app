@@ -17,6 +17,13 @@ LprDemo/entry/oh_modules/
 *.ncnn.bin
 *.ncnn.param
 
+# --- _veh/ 探索目录的处置（T7 定案）---
+# 脚本与证据（*.py / *.json / *.txt / 截图）**入库** —— 它们是可复现的依据；
+# 模型二进制（.onnx/.pt/.ms）与转换中间产物**不入库**（上面那组通配已覆盖前者）。
+# mschck/ 是 ms_fidelity_check.py 的 --outdir 产物（input_nhwc.bin / golden_nchw.bin /
+# ref.json），可由 .onnx 重新生成，所以不占仓库体积。
+_veh/mscheck/
+
 # --- 签名材料（不入库）---
 # 由 tools/make_signing_material.sh 生成到 .signing/。
 # 注意 pw.txt 存的是**明文**密钥库口令（供 hap-sign-tool 使用），绝不能入库。
