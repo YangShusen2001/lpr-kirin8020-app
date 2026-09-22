@@ -301,6 +301,23 @@ const MODELS_NNRT_GPU: string[] = [
   'models/litemodel_cls_96x_r1.ms'
 ];
 /**
+ * T8 候选：**原版 anchor-based YOLOv5**（v7.0 源码导出，非 ultralytics 的 v5-u）。
+ *
+ * 来历与判据（_veh/ 下有全程脚本与证据）：
+ *   - 权重 sha256 8b3b748c…，3 层 anchor、无 DFL，前向 (1,6300,85)
+ *   - 裸导出过不了硬门（Detect 头里 rank-5 的 permute[0,1,3,4,2]）
+ *   - 按 kirin-npu-model-porting 二节「切在最后一个 rank-4 张量」裁掉解码段后：
+ *     `tools/scan_onnx.py` 两条硬门全过（rank≤4、Transpose 0 个）
+ *   - converter 两条都 `CONVERT RESULT SUCCESS:0`，日志零告警
+ *
+ * 注意：这两个模型只用于**基准对照**（probeAll / detDriftProbe），
+ * 尚未接入车辆流水线 —— 裸头只吐 (1,255,H,W)，解码留在 Host，属于后续实现。
+ */
+const MODELS_T8: string[] = [
+  'models/yolov5s_v7_320_npu_fp32.ms',
+  'models/yolov5s_v7_320_npu_fp16.ms'
+];
+/**
  * CPU 线程扫描档（2026-09-20，threadSweep 用）。与 ms_engine.cpp 的
  * `cpu_t{N}` 分支一一对应：`OH_AI_ContextSetThreadNum` 此前恒传 4 且从未扫描，
  * 论文里所有 NPU/CPU 比值的 CPU 端都是未调优基线（ADR-015 未完成动作）。
@@ -2265,6 +2282,13 @@ struct Index {
           plan.push({ model: MODELS_FULL[i], backend: FULL_BACKENDS[j] });
         }
       }
+      // T8 候选逐个过 4 档后端。**不动 MODELS_FULL** —— threadSweep / affinitySweep /
+      // gapSweep 都用 MODELS_FULL 定范围，改了会让既有扫描的口径变掉、失去可比性。
+      for (let i = 0; i < MODELS_T8.length; i++) {
+        for (let j = 0; j < FULL_BACKENDS.length; j++) {
+          plan.push({ model: MODELS_T8[i], backend: FULL_BACKENDS[j] });
+        }
+      }
       for (let i = 0; i < MODELS_NNRT_GPU.length; i++) {
         plan.push({ model: MODELS_NNRT_GPU[i], backend: 'nnrt' });
         plan.push({ model: MODELS_NNRT_GPU[i], backend: 'gpu' });
@@ -2311,27 +2335,35 @@ struct Index {
    */
   private async detDriftProbe(): Promise<void> {
     const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    const file: string = 'models/y5fu_320x_head_fp32.ms';
+    // T8：把原版 anchor-based YOLOv5 的裸头也纳入漂移对照。
+    // 每行都带 mk=<模型> —— 多模型混在一份日志里，不带模型名就没法归因。
+    const files: string[] = ['models/y5fu_320x_head_fp32.ms'].concat(MODELS_T8);
     const backends: string[] = ['nnrt', 'cpu'];
-    for (let i = 0; i < backends.length; i++) {
-      const be: string = backends[i];
-      try {
-        const bytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(file);
-        const loadRaw: string = await lpr.loadModelAsync(file, this.toArrayBuffer(bytes), be);
-        const li: Map<string, string> = parseKv(loadRaw);
-        if (li.get('ok') !== '1') {
-          this.appendNative('DET DRIFT ' + be + ' LOAD-FAIL ' + str(li, 'error'));
-          continue;
+    for (let m = 0; m < files.length; m++) {
+      const file: string = files[m];
+      const mk: string = file.replace('models/', '');
+      for (let i = 0; i < backends.length; i++) {
+        const be: string = backends[i];
+        try {
+          const bytes: Uint8Array = ctx.resourceManager.getRawFileContentSync(file);
+          const loadRaw: string = await lpr.loadModelAsync(file, this.toArrayBuffer(bytes), be);
+          const li: Map<string, string> = parseKv(loadRaw);
+          if (li.get('ok') !== '1') {
+            this.appendNative('DET DRIFT mk=' + mk + ' ' + be + ' LOAD-FAIL ' + str(li, 'error') +
+              ' trail=' + str(li, 'attemptLog'));
+            continue;
+          }
+          const id: number = num(li, 'id');
+          const b: Map<string, string> = parseKv(await lpr.benchAsync(id, 3, 10));
+          this.appendNative('DET DRIFT mk=' + mk + ' ' + be + ' landed=' + str(li, 'backend') +
+            ' req=' + str(li, 'requested') + ' fallback=' + str(li, 'fallbackFrom') +
+            ' L2=' + str(b, 'checksum') + ' maxAbs=' + str(b, 'maxAbs') +
+            ' p50=' + str(b, 'p50Ms') + ' mean=' + str(b, 'meanMs') +
+            ' dtype=' + str(b, 'outputDtype') + ' elems=' + str(b, 'outputElems'));
+        } catch (e) {
+          const err = e as Error;
+          this.appendNative('DET DRIFT mk=' + mk + ' ' + be + ' EXCEPTION ' + err.message);
         }
-        const id: number = num(li, 'id');
-        const b: Map<string, string> = parseKv(await lpr.benchAsync(id, 3, 10));
-        this.appendNative('DET DRIFT ' + be + ' landed=' + str(li, 'backend') +
-          ' L2=' + str(b, 'checksum') + ' maxAbs=' + str(b, 'maxAbs') +
-          ' p50=' + str(b, 'p50Ms') + ' mean=' + str(b, 'meanMs') +
-          ' dtype=' + str(b, 'outputDtype') + ' elems=' + str(b, 'outputElems'));
-      } catch (e) {
-        const err = e as Error;
-        this.appendNative('DET DRIFT ' + be + ' EXCEPTION ' + err.message);
       }
     }
   }

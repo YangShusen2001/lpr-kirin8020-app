@@ -24,6 +24,21 @@ LprDemo/entry/oh_modules/
 # ref.json），可由 .onnx 重新生成，所以不占仓库体积。
 _veh/mscheck/
 
+# T8 新增两类 vendored 依赖，同样不入库：
+#   _veh/pylibs/       —— 旧版 setuptools（--target --no-deps 装的），只为补
+#                         `pkg_resources`；setuptools >= 81 起不再随包发布它，
+#                         而 yolov5 7.0 仍 `import pkg_resources as pkg`。
+#                         一行命令即可重建（见 _veh/export_yolov5_v7.py 注释）。
+#   _veh/third_party/  —— yolov5 v7.0 源码浅克隆（GPL-3.0）。上游只支持
+#                         「仓库根目录在 sys.path 上」这一种用法，PyPI 轮子不可用。
+_veh/pylibs/
+_veh/third_party/
+
+# 原始全量 hilog 转储（`hdc shell hilog -x` 直出，MB 量级）不入库 ——
+# 惯例是只入库**过滤后**的 devlog（`_veh/devlog_*.txt`，KB 量级）。
+# 过滤命令写在各脚本/日志注释里，可复现。
+_veh/*_raw.txt
+
 # --- 签名材料（不入库）---
 # 由 tools/make_signing_material.sh 生成到 .signing/。
 # 注意 pw.txt 存的是**明文**密钥库口令（供 hap-sign-tool 使用），绝不能入库。
