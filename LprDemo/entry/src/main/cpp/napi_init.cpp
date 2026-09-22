@@ -182,7 +182,13 @@ enum class JobKind {
   /** T3：ROI 裁剪与坐标映射的单元自证（纯图像运算，不需要模型会话）。 */
   kRoiSelfTest,
   /** T3：车框 → 裁 ROI → 车牌检测 → 映射回原图（单框，不循环、不去重 —— 那是 T4）。 */
-  kRoiPlateProbe
+  kRoiPlateProbe,
+  /** T4：ROI 路径端到端（车辆检测 → 逐框 ROI → 逐框车牌检测 → 映射 → 合并去重）。 */
+  kRoiPipeline,
+  /** T4：去重的单元自证（纯数据，不需要模型会话）。 */
+  kRoiDedupeSelfTest,
+  /** T4：「构造重叠车框」的集成验证（需要车辆 + 车牌两批会话）。 */
+  kRoiOverlapSelfTest
 };
 
 struct AsyncJob {
@@ -268,6 +274,9 @@ struct AsyncJob {
   // kRoiPlateProbe（T3）：ROI 外扩比例。默认取 kRoiExpandDefault（0.15），
   // 这里给同一个常量而不是另写一个字面量，避免两处默认值各自演化出分歧。
   float roiExpand = kRoiExpandDefault;
+
+  // kRoiPipeline（T4）：去重阈值（spec D3，0.5）。同上，默认值只写在 NAPI 入口。
+  float dedupeIou = 0;
 
   // outputs
   std::string kv;
@@ -1286,6 +1295,168 @@ static void RunJob(AsyncJob* job) {
       return;
     }
 
+    // ------------------------------------------------- roi pipeline (T4)
+    case JobKind::kRoiPipeline: {
+      LprSessions s;
+      MsSession* veh = nullptr;
+      {
+        std::lock_guard<std::mutex> lk(g_regMutex);
+        const int ids[3] = {job->detId, job->recId, job->clsId};
+        for (int i = 0; i < 3; i++) {
+          if (ids[i] < 0 || ids[i] >= (int)g_sessions.size()) {
+            job->kv = "ok=0;count=0;error=bad session id";
+            return;
+          }
+        }
+        if (job->vehId < 0 || job->vehId >= (int)g_sessions.size()) {
+          job->kv = "ok=0;count=0;error=bad vehicle session id";
+          return;
+        }
+        veh = g_sessions[job->vehId].s;
+        s.det = g_sessions[job->detId].s;
+        s.rec = g_sessions[job->recId].s;
+        s.cls = g_sessions[job->clsId].s;
+      }
+
+      RgbaImage img;
+      img.width = job->w;
+      img.height = job->h;
+      img.data = std::move(job->rgba);
+      if (!img.Valid()) {
+        job->kv = "ok=0;count=0;error=rgba size != w*h*4";
+        return;
+      }
+
+      RoiPipelineOptions opt;
+      opt.vehConf = job->confThresh;
+      opt.vehIou = job->iouThresh;
+      opt.roiExpand = job->roiExpand;
+      opt.dedupeIou = job->dedupeIou;
+
+      std::vector<PlateResult> plates;
+      std::vector<VehicleBox> vehs;
+      bool trunc = false;
+      RoiPipelineStats st;
+      std::string err;
+      if (!LprRunRoiPipeline(img, s, veh, opt, plates, vehs, trunc, st, err)) {
+        LOGE("roiPipeline failed: %{public}s", err.c_str());
+        job->kv = "ok=0;count=0;error=" + KvSanitize(err);
+        return;
+      }
+
+      LOGI("T4PIPE veh=%{public}d truncated=%{public}d roiTried=%{public}d roiSkipped=%{public}d "
+           "rawHits=%{public}d dropped=%{public}d count=%{public}zu vehInferMs=%{public}f "
+           "roiDetectMs=%{public}f totalMs=%{public}f",
+           st.vehCount, trunc ? 1 : 0, st.roiTried, st.roiSkipped, st.rawHits, st.dedupeDropped,
+           plates.size(), st.vehInferMs, st.roiDetectMs, st.totalMs);
+
+      std::string kv = "ok=1;vehCount=" + std::to_string(st.vehCount) +
+                       ";vehTruncated=" + (trunc ? "1" : "0") +
+                       ";roiTried=" + std::to_string(st.roiTried) +
+                       ";roiSkipped=" + std::to_string(st.roiSkipped) +
+                       ";rawHits=" + std::to_string(st.rawHits) +
+                       ";dedupeDropped=" + std::to_string(st.dedupeDropped) +
+                       ";count=" + std::to_string(plates.size()) +
+                       ";conf=" + Num(opt.vehConf) + ";iou=" + Num(opt.vehIou) +
+                       ";expand=" + Num(opt.roiExpand) + ";dedupeIou=" + Num(opt.dedupeIou) +
+                       ";vehInferMs=" + Num(st.vehInferMs) +
+                       ";roiDetectMs=" + Num(st.roiDetectMs) +
+                       ";totalMs=" + Num(st.totalMs) + ";error=;";
+
+      const std::vector<std::string>& names = LprCocoNames();
+      for (size_t i = 0; i < vehs.size(); i++) {
+        const VehicleBox& b = vehs[i];
+        const char* cname =
+            (b.classId >= 0 && b.classId < (int)names.size()) ? names[b.classId].c_str() : "?";
+        LOGI("T4VEH idx=%{public}zu cls=%{public}d name=%{public}s score=%{public}f "
+             "rect=%{public}f,%{public}f,%{public}f,%{public}f",
+             i, b.classId, cname, b.score, b.rect[0], b.rect[1], b.rect[2], b.rect[3]);
+        kv += "v" + std::to_string(i) + "=" + std::to_string(b.classId) + "," + Num(b.score) +
+              "," + Num(b.rect[0]) + "|" + Num(b.rect[1]) + "|" + Num(b.rect[2]) + "|" +
+              Num(b.rect[3]) + "," + Scrub(cname) + ";";
+      }
+      for (size_t i = 0; i < plates.size(); i++) {
+        const PlateResult& p = plates[i];
+        LOGI("T4PLATE idx=%{public}zu rect=%{public}d,%{public}d,%{public}d,%{public}d "
+             "score=%{public}f owner=%{public}d colour=%{public}s code=%{public}s "
+             "recConf=%{public}f",
+             i, p.rect[0], p.rect[1], p.rect[2], p.rect[3], p.detScore, p.ownerVeh,
+             p.colour.c_str(), p.code.c_str(), p.recConf);
+        kv += "p" + std::to_string(i) + "=" + std::to_string(p.rect[0]) + "|" +
+              std::to_string(p.rect[1]) + "|" + std::to_string(p.rect[2]) + "|" +
+              std::to_string(p.rect[3]) + "," + Num(p.detScore) + "," +
+              std::to_string(p.ownerVeh) + "," + Scrub(p.colour) + "," + Scrub(p.code) + "," +
+              Num(p.recConf) + ";";
+      }
+      job->kv = kv;
+      return;
+    }
+
+    // ------------------------------------------------- roi dedupe self test (T4)
+    case JobKind::kRoiDedupeSelfTest: {
+      const std::string report = LprDedupeSelfTest();
+      std::string line;
+      for (size_t i = 0; i <= report.size(); i++) {
+        if (i == report.size() || report[i] == '\n') {
+          if (!line.empty()) {
+            LOGI("T4DEDUPE %{public}s", line.c_str());
+          }
+          line.clear();
+        } else {
+          line += report[i];
+        }
+      }
+      job->kv = report;
+      return;
+    }
+
+    // ---------------------------------------- roi overlap dedupe probe (T4)
+    // 构造重叠车框，验证去重真的把"同一块牌检出两次"收敛成一条。
+    case JobKind::kRoiOverlapSelfTest: {
+      LprSessions s;
+      MsSession* veh = nullptr;
+      {
+        std::lock_guard<std::mutex> lk(g_regMutex);
+        const int ids[3] = {job->detId, job->recId, job->clsId};
+        for (int i = 0; i < 3; i++) {
+          if (ids[i] < 0 || ids[i] >= (int)g_sessions.size()) {
+            job->kv = "case=overlap-detect;ok=0;err=bad session id\ntotal=1;failed=1\n";
+            return;
+          }
+        }
+        if (job->vehId < 0 || job->vehId >= (int)g_sessions.size()) {
+          job->kv = "case=overlap-detect;ok=0;err=bad vehicle session id\ntotal=1;failed=1\n";
+          return;
+        }
+        veh = g_sessions[job->vehId].s;
+        s.det = g_sessions[job->detId].s;
+        s.rec = g_sessions[job->recId].s;
+        s.cls = g_sessions[job->clsId].s;
+      }
+      RgbaImage img;
+      img.width = job->w;
+      img.height = job->h;
+      img.data = std::move(job->rgba);
+      if (!img.Valid()) {
+        job->kv = "case=overlap-detect;ok=0;err=rgba size != w*h*4\ntotal=1;failed=1\n";
+        return;
+      }
+      const std::string report = LprOverlapDedupeProbe(img, s, veh, 6);
+      std::string line;
+      for (size_t i = 0; i <= report.size(); i++) {
+        if (i == report.size() || report[i] == '\n') {
+          if (!line.empty()) {
+            LOGI("T4OVERLAP %{public}s", line.c_str());
+          }
+          line.clear();
+        } else {
+          line += report[i];
+        }
+      }
+      job->kv = report;
+      return;
+    }
+
     // ---------------------------------------------------------------- bench
     case JobKind::kBench: {
       MsSession* s = nullptr;
@@ -1628,6 +1799,128 @@ static napi_value RoiPlateProbeAsync(napi_env env, napi_callback_info info) {
 }
 
 /**
+ * T4：ROI 路径端到端 —— 车辆检测 → **逐框**裁 ROI → 逐框车牌检测 → 映射回原图
+ * → 合并去重。输出车牌框 + 车牌串 + 颜色 + 归属的车辆。
+ *
+ * 默认参数即 spec 的定案值：vehConf=0.05（D1）、roiExpand=0.15、dedupeIou=0.5（D3）。
+ * 三个阈值都可显式传，但必须在合法区间内，否则**报错**而不是静默退回默认值。
+ *
+ * `vehId` 是车辆检测器（yolov5su），与 `detId`（车牌检测器 y5fu_320x）不是同一个模型。
+ */
+static napi_value RoiPipelineAsync(napi_env env, napi_callback_info info) {
+  size_t argc = 10;
+  napi_value args[10] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                         nullptr, nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kRoiPipeline;
+  job->confThresh = 0.05f;             // D1：极低阈值
+  job->iouThresh = 0.5f;
+  job->roiExpand = kRoiExpandDefault;  // 0.15
+  job->dedupeIou = 0.5f;               // D3
+  if (argc < 7) {
+    return RejectedJob(env, job,
+                       "roiPipelineAsync needs (vehId, detId, recId, clsId, rgba, w, h, "
+                       "vehConf?, roiExpand?, dedupeIou?)",
+                       "lpr.roiPipelineAsync");
+  }
+  if (napi_get_value_int32(env, args[0], &job->vehId) != napi_ok ||
+      napi_get_value_int32(env, args[1], &job->detId) != napi_ok ||
+      napi_get_value_int32(env, args[2], &job->recId) != napi_ok ||
+      napi_get_value_int32(env, args[3], &job->clsId) != napi_ok) {
+    return RejectedJob(env, job, "roiPipelineAsync: ids must be integers",
+                       "lpr.roiPipelineAsync");
+  }
+  if (!ReadArrayBufferArgU8(env, args[4], job->rgba)) {
+    return RejectedJob(env, job, "roiPipelineAsync: rgba ArrayBuffer is empty",
+                       "lpr.roiPipelineAsync");
+  }
+  if (napi_get_value_int32(env, args[5], &job->w) != napi_ok ||
+      napi_get_value_int32(env, args[6], &job->h) != napi_ok) {
+    return RejectedJob(env, job, "roiPipelineAsync: width/height must be integers",
+                       "lpr.roiPipelineAsync");
+  }
+  double v = 0;
+  if (argc >= 8 && napi_get_value_double(env, args[7], &v) == napi_ok) {
+    if (!(v > 0.0) || !(v < 1.0)) {
+      return RejectedJob(env, job, "roiPipelineAsync: vehConf must be in (0,1)",
+                         "lpr.roiPipelineAsync");
+    }
+    job->confThresh = static_cast<float>(v);
+  }
+  if (argc >= 9 && napi_get_value_double(env, args[8], &v) == napi_ok) {
+    if (!(v >= 0.0) || !(v < 1.0)) {
+      return RejectedJob(env, job, "roiPipelineAsync: roiExpand must be in [0,1)",
+                         "lpr.roiPipelineAsync");
+    }
+    job->roiExpand = static_cast<float>(v);
+  }
+  if (argc >= 10 && napi_get_value_double(env, args[9], &v) == napi_ok) {
+    if (!(v > 0.0) || !(v <= 1.0)) {
+      return RejectedJob(env, job, "roiPipelineAsync: dedupeIou must be in (0,1]",
+                         "lpr.roiPipelineAsync");
+    }
+    job->dedupeIou = static_cast<float>(v);
+  }
+  return QueueJob(env, job, "lpr.roiPipelineAsync");
+}
+
+/**
+ * T4：合并去重的单元自证（纯数据，不需要模型会话，因此也没有入参）。
+ *
+ * 为什么单独一条入口：票面要求「构造重叠车框验证去重生效」。重叠车框的**后果**就是
+ * 同一块牌被检出两次 —— 这里直接把那种输入喂给去重函数，断言保留条数与保留的是哪一条。
+ * 返回多行报告（不是 kv 串），末行 `total=N;failed=M`。
+ */
+static napi_value RoiDedupeSelfTestAsync(napi_env env, napi_callback_info info) {
+  (void)env;
+  (void)info;
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kRoiDedupeSelfTest;
+  return QueueJob(env, job, "lpr.roiDedupeSelfTestAsync");
+}
+
+/**
+ * T4：「构造重叠车框」的集成验证。
+ *
+ * 与纯数据的 `roiDedupeSelfTestAsync` 不同，这条需要**真的跑模型**：取图上分数最高的
+ * 真实车框 A，人为构造一个向四周外扩 6 px 的车框 B（与 A 必然重叠），两个重叠 ROI 各自
+ * 跑车牌检测 —— 同一块牌会被检出两次，去重后必须只剩 1 条。这才是票面要的
+ * 「构造重叠车框验证去重生效」，而不是只喂重叠的**车牌框**。
+ *
+ * 入参同 `roiPipelineAsync` 的前 7 个。返回多行报告，末行 `total=N;failed=M`。
+ */
+static napi_value RoiOverlapSelfTestAsync(napi_env env, napi_callback_info info) {
+  size_t argc = 7;
+  napi_value args[7] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  AsyncJob* job = new AsyncJob();
+  job->kind = JobKind::kRoiOverlapSelfTest;
+  if (argc < 7) {
+    return RejectedJob(env, job,
+                       "roiOverlapSelfTestAsync needs (vehId, detId, recId, clsId, rgba, w, h)",
+                       "lpr.roiOverlapSelfTestAsync");
+  }
+  if (napi_get_value_int32(env, args[0], &job->vehId) != napi_ok ||
+      napi_get_value_int32(env, args[1], &job->detId) != napi_ok ||
+      napi_get_value_int32(env, args[2], &job->recId) != napi_ok ||
+      napi_get_value_int32(env, args[3], &job->clsId) != napi_ok) {
+    return RejectedJob(env, job, "roiOverlapSelfTestAsync: ids must be integers",
+                       "lpr.roiOverlapSelfTestAsync");
+  }
+  if (!ReadArrayBufferArgU8(env, args[4], job->rgba)) {
+    return RejectedJob(env, job, "roiOverlapSelfTestAsync: rgba ArrayBuffer is empty",
+                       "lpr.roiOverlapSelfTestAsync");
+  }
+  if (napi_get_value_int32(env, args[5], &job->w) != napi_ok ||
+      napi_get_value_int32(env, args[6], &job->h) != napi_ok) {
+    return RejectedJob(env, job, "roiOverlapSelfTestAsync: width/height must be integers",
+                       "lpr.roiOverlapSelfTestAsync");
+  }
+  return QueueJob(env, job, "lpr.roiOverlapSelfTestAsync");
+}
+
+/**
  * 把一份 ncnn param/bin 加载到槽位（识别=1 / 分类=2，0 保留给检测旁路）。
  * 统一走推理线程：Vulkan 首次加载含 shader 编译，压在 JS 线程上会被 watchdog 杀。
  */
@@ -1875,6 +2168,9 @@ static napi_value Init(napi_env env, napi_value exports) {
       {"vehicleDetectAsync", nullptr, VehicleDetectAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"roiSelfTestAsync", nullptr, RoiSelfTestAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"roiPlateProbeAsync", nullptr, RoiPlateProbeAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"roiPipelineAsync", nullptr, RoiPipelineAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"roiDedupeSelfTestAsync", nullptr, RoiDedupeSelfTestAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"roiOverlapSelfTestAsync", nullptr, RoiOverlapSelfTestAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"benchAsync", nullptr, BenchAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"ncnnLoadAsync", nullptr, NcnnLoadAsync, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"ncnnLoadSlotAsync", nullptr, NcnnLoadSlotAsync, nullptr, nullptr, nullptr, napi_default, nullptr},

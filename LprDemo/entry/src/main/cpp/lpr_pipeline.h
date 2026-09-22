@@ -43,6 +43,13 @@ struct RgbaImage {
 /** One plate: detection box + rectified crop + recognition + classification. */
 struct PlateResult {
   int rect[4] = {0, 0, 0, 0};  // x1, y1, x2, y2 in source-image coordinates
+  /**
+   * 车牌归属的车辆框下标（指向 ROI 路径返回的 `outVehicles`）；**-1 = 无归属**。
+   *
+   * 直检路径不填（保持 -1）。T4 起由 `LprRunRoiPipeline` 写入 —— 这是界面画
+   * 「车牌 → 哪辆车」连线的唯一依据。
+   */
+  int ownerVeh = -1;
   float detScore = 0;
   int layer = 0;  // 0 = single, 1 = double (DOUBLE_LAYER)
 
@@ -367,6 +374,91 @@ long long LprRgbSum(const RgbaImage& img);
  * 自动改用确定性图案合成一张 320x320，保证自证在任何情况下都能跑完。
  */
 std::string LprRoiSelfTest(const RgbaImage& img);
+
+// ---------------------------------------------------------------- ROI 路径串联（T4）
+
+/** ROI 路径的可调参数。默认值即 spec D1 / D3 的定案值。 */
+struct RoiPipelineOptions {
+  float vehConf = 0.05f;                // D1：极低阈值，「宁误检不漏检」
+  float vehIou = 0.5f;
+  bool vehicleOnly = true;
+  float roiExpand = kRoiExpandDefault;  // 0.15
+  float dedupeIou = 0.5f;               // D3：同一块牌只留一条
+};
+
+/**
+ * ROI 路径的分段统计。**不补零**：没发生的阶段保持 0，由调用方如实呈现
+ * （与面板解析器的纪律一致 —— 补 0 会凭空造出"跑了 0 ms"）。
+ */
+struct RoiPipelineStats {
+  int vehCount = 0;       // 车辆框数
+  int roiTried = 0;       // 真的裁了并跑完车牌检测的 ROI 数
+  int roiSkipped = 0;     // 车框无效 / 裁剪失败 / 该 ROI 检测失败的数
+  int rawHits = 0;        // 去重前的车牌框总数
+  int dedupeDropped = 0;  // 去重丢掉的数量
+  float vehInferMs = 0;
+  float roiDetectMs = 0;
+  float totalMs = 0;
+};
+
+/**
+ * 按 IoU 去重（spec D3）。
+ *
+ * 为什么必须有：遍历所有车辆框时，同一块牌会被**两个车框各检出一次**
+ * （车框重叠、或牌同时落在两个框里），不去重界面就会输出两行同一张牌。
+ *
+ * 规则：按 `detScore` **降序**排序后贪心保留，与已保留的任一条 IoU ≥ `iouThresh`
+ * 即丢弃。先排序再贪心 ⇒ 保留的是高分那条，且结果与输入顺序无关。
+ * 返回去重后的条数；`plates` 就地替换为去重结果（仍按分数降序）。
+ */
+int LprDedupePlates(std::vector<PlateResult>& plates, float iouThresh);
+
+/**
+ * 去重的单元自证：构造已知的重叠/不重叠框，断言保留条数与保留的是哪一条。
+ * 返回逐行报告（同 `LprRoiSelfTest` 的格式）。
+ */
+std::string LprDedupeSelfTest();
+
+/**
+ * ROI 路径端到端（T4）：整车 → 车辆检测 → **逐框**裁 ROI → 逐框车牌检测
+ * → 框映射回原图坐标 → 合并去重。
+ *
+ * 两条实测优化都在这里（spec D1），少任一条召回掉 8.5 个百分点：
+ *   1. 车辆检测用极低置信阈值（默认 0.05）；
+ *   2. **遍历所有车辆框**，不是只取最高分那个（一帧多车时取 top1 是错的）。
+ *
+ * `veh` 是车辆检测会话（yolov5su）。⚠️ 它与 `s.det`（车牌检测器 y5fu_320x）
+ * **不是同一个模型** —— 混用会报 `yolov5u 期望单输出，实际 3`。
+ *
+ * `outVehicles` 是去重前的全部车辆框（供界面画框与归属连线），按分数降序；
+ * 截断时 `outVehTruncated` 置真，调用方必须如实报告。
+ * 每条 `PlateResult::ownerVeh` 指向 `outVehicles` 的下标。
+ *
+ * **单个 ROI 失败不会让整帧失败**（记进 `roiSkipped` 继续下一个）——
+ * 一帧多车时，一个框裁坏不该把其它车的结果一起丢掉。
+ */
+bool LprRunRoiPipeline(const RgbaImage& img, const LprSessions& s, MsSession* veh,
+                       const RoiPipelineOptions& opt,
+                       std::vector<PlateResult>& outPlates,
+                       std::vector<VehicleBox>& outVehicles, bool& outVehTruncated,
+                       RoiPipelineStats& outStats, std::string& err);
+
+/**
+ * T4 的「构造重叠车框」集成验证。
+ *
+ * 票面要求「构造重叠车框验证去重生效」。单元用例喂的是**重叠的车牌框**，而重叠车框的
+ * **后果**才是同一块牌被两个车框各检出一次 —— 这里把那条因果链整条跑一遍：
+ *
+ *   车框 A = 图上分数最高的真实车框
+ *   车框 B = A 向四周各外扩 `growPx` 像素（**人为构造**，与 A 必然重叠）
+ *   → 两个重叠 ROI → 各自跑车牌检测 → 同一块牌被检出两次
+ *   → 去重后必须只剩 1 条，且保留高分那条
+ *
+ * `growPx` 默认 6。返回报告行（同自证格式）；`raw != 2` 时判失败并在细节里写明
+ * 「去重未被触发（用例无效）」，不把它混成"去重实现错了"。
+ */
+std::string LprOverlapDedupeProbe(const RgbaImage& img, const LprSessions& s, MsSession* veh,
+                                  int growPx);
 
 /** CTC greedy decode over one [T] index row with its per-step probabilities. */
 void LprCtcGreedy(const std::vector<int>& idx, const std::vector<float>& prob,

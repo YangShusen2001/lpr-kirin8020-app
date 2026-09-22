@@ -1,0 +1,14 @@
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4PIPE veh=5 truncated=0 roiTried=5 roiSkipped=0 rawHits=1 dropped=0 count=1 vehInferMs=87.131561 roiDetectMs=66.823593 totalMs=158.472031
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4VEH idx=0 cls=2 name=car score=0.935537 rect=19.651146,65.395630,245.053497,184.305176
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4VEH idx=1 cls=2 name=car score=0.270940 rect=290.464172,95.732590,319.778748,135.602249
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4VEH idx=2 cls=3 name=motorcycle score=0.163512 rect=290.838867,98.037033,319.749878,135.746964
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4VEH idx=3 cls=2 name=car score=0.058915 rect=0.253269,66.283203,62.576523,88.878082
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4VEH idx=4 cls=7 name=truck score=0.052160 rect=40.047974,34.418541,195.310425,72.316879
+09-22 09:37:01.212 15870 16214 I A0D001/com.shusen.lprdemo/LprNative: T4PLATE idx=0 rect=107,114,170,130 score=0.855748 owner=0 colour=green code=浙AG557A recConf=0.990234
+09-22 09:37:01.215 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4PIPE veh=5 truncated=0 roiTried=5 roiSkipped=0 rawHits=1 dropped=0 count=1 vehInferMs=87.1316 roiDetectMs=66.8236 totalMs=158.4720
+09-22 09:37:01.215 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4VEH idx=0 cls=2 score=0.9355 rect=19.6511|65.3956|245.0535|184.3052 name=car
+09-22 09:37:01.216 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4VEH idx=1 cls=2 score=0.2709 rect=290.4642|95.7326|319.7787|135.6022 name=car
+09-22 09:37:01.216 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4VEH idx=2 cls=3 score=0.1635 rect=290.8389|98.0370|319.7499|135.7470 name=motorcycle
+09-22 09:37:01.216 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4VEH idx=3 cls=2 score=0.0589 rect=0.2533|66.2832|62.5765|88.8781 name=car
+09-22 09:37:01.217 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4VEH idx=4 cls=7 score=0.0522 rect=40.0480|34.4185|195.3104|72.3169 name=truck
+09-22 09:37:01.217 15870 15870 I A0D001/com.shusen.lprdemo/LprNativeUI: T4PLATE idx=0 rect=107|114|170|130 score=0.8557 owner=0 colour=green code=浙AG557A recConf=0.9902

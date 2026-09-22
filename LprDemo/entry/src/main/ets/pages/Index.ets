@@ -907,32 +907,10 @@ struct Index {
     this.busy = true;
     this.progress = 'ROI 探针';
     try {
-      if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
-        this.appendNative('T3PROBE 车牌三会话尚未加载，先加载…');
-        await this.loadNative();
-      }
-      if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
-        this.appendNative('T3PROBE FAIL 会话不可用 det=' + this.detId.toString() +
-          ' rec=' + this.recId.toString() + ' cls=' + this.clsId.toString());
+      // 车辆检测器与车牌三检测器是**两批模型**，ensureAllSessions 负责都备齐。
+      const ready: boolean = await this.ensureAllSessions();
+      if (!ready) {
         return;
-      }
-      // 车辆检测器是**另一个模型**，与上面三个分开加载。
-      if (this.vehId < 0) {
-        this.appendNative('T3PROBE 车辆检测会话尚未加载，先加载 ' + MODEL_VEH + ' …');
-        const c: common.UIAbilityContext | undefined = this.ctx;
-        if (c === undefined) {
-          this.appendNative('T3PROBE FAIL 无 UIAbilityContext');
-          return;
-        }
-        const bytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_VEH);
-        const loadRaw: string = await lpr.loadModelAsync(MODEL_VEH, this.toArrayBuffer(bytes),
-          'cpu');
-        const lk: Map<string, string> = parseKv(loadRaw);
-        if (lk.get('ok') !== '1') {
-          this.appendNative('T3PROBE FAIL 车辆模型加载失败 ' + loadRaw);
-          return;
-        }
-        this.vehId = num(lk, 'id');
       }
       const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
       if (frame === null) {
@@ -1002,6 +980,166 @@ struct Index {
       }
     }
     return num(kv, 'vehCount');
+  }
+
+  /**
+   * 确保四个会话都在：车牌三会话（det / rec / cls）+ **车辆检测会话（veh）**。
+   *
+   * 分开写成一个方法，是因为 T3 探针与 T4 路径都要这一步；两处各写一遍必然漂移。
+   * 返回 false 表示有会话不可用（原因已经 append 到屏上）。
+   */
+  private async ensureAllSessions(): Promise<boolean> {
+    if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
+      this.appendNative('会话未加载，先加载车牌三模型…');
+      await this.loadNative();
+    }
+    if (this.detId < 0 || this.recId < 0 || this.clsId < 0) {
+      this.appendNative('FAIL 车牌会话不可用 det=' + this.detId.toString() +
+        ' rec=' + this.recId.toString() + ' cls=' + this.clsId.toString());
+      return false;
+    }
+    if (this.vehId < 0) {
+      this.appendNative('车辆检测会话未加载，先加载 ' + MODEL_VEH + ' …');
+      const c: common.UIAbilityContext | undefined = this.ctx;
+      if (c === undefined) {
+        this.appendNative('FAIL 无 UIAbilityContext');
+        return false;
+      }
+      const bytes: Uint8Array = c.resourceManager.getRawFileContentSync(MODEL_VEH);
+      const loadRaw: string = await lpr.loadModelAsync(MODEL_VEH, this.toArrayBuffer(bytes),
+        'cpu');
+      const lk: Map<string, string> = parseKv(loadRaw);
+      if (lk.get('ok') !== '1') {
+        this.appendNative('FAIL 车辆模型加载失败 ' + loadRaw);
+        return false;
+      }
+      this.vehId = num(lk, 'id');
+    }
+    return true;
+  }
+
+  /**
+   * T4：ROI 路径端到端 —— 车辆检测 → **逐框**裁 ROI → 逐框车牌检测 → 映射回原图
+   * → 合并去重，输出车牌框 + 车牌串 + 颜色 + 归属的车辆。
+   *
+   * 与「ROI 探针」的区别：探针只做**最高分那一个**车框、且不去重；这里遍历所有车框
+   * 并合并去重 —— 也就是 spec D1 + D3 要求的完整路径。
+   */
+  private async roiPipelineRun(): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.progress = 'ROI 路径';
+    try {
+      const ready: boolean = await this.ensureAllSessions();
+      if (!ready) {
+        return;
+      }
+      const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
+      if (frame === null) {
+        this.appendNative('T4PIPE FAIL 解不出测试图 ' + VEH_SAMPLE);
+        return;
+      }
+      const raw: string = await lpr.roiPipelineAsync(this.vehId, this.detId, this.recId,
+        this.clsId, frame.data, frame.width, frame.height);
+      const kv: Map<string, string> = parseKv(raw);
+      if (kv.get('ok') !== '1') {
+        this.appendNative('T4PIPE FAIL ' + raw);
+        return;
+      }
+      this.appendNative('T4PIPE veh=' + str(kv, 'vehCount') +
+        ' truncated=' + str(kv, 'vehTruncated') +
+        ' roiTried=' + str(kv, 'roiTried') + ' roiSkipped=' + str(kv, 'roiSkipped') +
+        ' rawHits=' + str(kv, 'rawHits') + ' dropped=' + str(kv, 'dedupeDropped') +
+        ' count=' + str(kv, 'count') +
+        ' vehInferMs=' + str(kv, 'vehInferMs') + ' roiDetectMs=' + str(kv, 'roiDetectMs') +
+        ' totalMs=' + str(kv, 'totalMs'));
+      const nv: number = num(kv, 'vehCount');
+      for (let i = 0; i < nv; i++) {
+        const f: string[] = str(kv, 'v' + i.toString()).split(',');
+        if (f.length < 4) {
+          continue;
+        }
+        this.appendNative('T4VEH idx=' + i.toString() + ' cls=' + f[0] + ' score=' + f[1] +
+          ' rect=' + f[2] + ' name=' + f[3]);
+      }
+      const np: number = num(kv, 'count');
+      for (let i = 0; i < np; i++) {
+        const f: string[] = str(kv, 'p' + i.toString()).split(',');
+        if (f.length < 6) {
+          continue;
+        }
+        this.appendNative('T4PLATE idx=' + i.toString() + ' rect=' + f[0] + ' score=' + f[1] +
+          ' owner=' + f[2] + ' colour=' + f[3] + ' code=' + f[4] + ' recConf=' + f[5]);
+      }
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('T4PIPE EXCEPTION ' + err.message);
+    } finally {
+      this.busy = false;
+      this.progress = '';
+    }
+  }
+
+  /**
+   * T4：合并去重的单元自证（纯数据，不需要模型）。
+   *
+   * 构造完全重合 / IoU 0.667 / IoU 0.333 / 链式重叠 / 边界相接 / 空输入等已知输入，
+   * 断言保留条数与**保留的是哪一条**。这是「构造重叠车框验证去重生效」的落地形式：
+   * 重叠车框的后果就是同一块牌被检出两次，这里直接把那种输入喂给去重函数。
+   */
+  private async roiDedupeSelfTest(): Promise<void> {
+    if (this.busy) {
+      return;
+    }
+    this.busy = true;
+    this.progress = '去重自证';
+    try {
+      // 1) 纯数据单元用例
+      const raw: string = await lpr.roiDedupeSelfTestAsync();
+      const lines: string[] = raw.split('\n');
+      let verdict: string = 'total=?;failed=?';
+      for (let i = 0; i < lines.length; i++) {
+        const ln: string = lines[i].trim();
+        if (ln.length === 0) {
+          continue;
+        }
+        this.appendNative('T4DEDUPE ' + ln);
+        if (ln.indexOf('failed=') >= 0) {
+          verdict = ln;
+        }
+      }
+      this.appendNative('T4DEDUPE VERDICT ' + verdict);
+
+      // 2) 构造重叠车框的集成验证（票面原文要的就是这一条，单元用例只是它的近亲）
+      const ready: boolean = await this.ensureAllSessions();
+      if (!ready) {
+        this.appendNative('T4OVERLAP SKIP 会话不可用，构造重叠车框验证未跑');
+        return;
+      }
+      const frame: RgbaFrame | null = await this.decodeRgba(VEH_SAMPLE);
+      if (frame === null) {
+        this.appendNative('T4OVERLAP SKIP 解不出测试图 ' + VEH_SAMPLE);
+        return;
+      }
+      const oRaw: string = await lpr.roiOverlapSelfTestAsync(this.vehId, this.detId,
+        this.recId, this.clsId, frame.data, frame.width, frame.height);
+      const oLines: string[] = oRaw.split('\n');
+      for (let i = 0; i < oLines.length; i++) {
+        const ln: string = oLines[i].trim();
+        if (ln.length === 0) {
+          continue;
+        }
+        this.appendNative('T4OVERLAP ' + ln);
+      }
+    } catch (e) {
+      const err = e as Error;
+      this.appendNative('T4DEDUPE EXCEPTION ' + err.message);
+    } finally {
+      this.busy = false;
+      this.progress = '';
+    }
   }
 
   /**
@@ -3660,14 +3798,16 @@ struct Index {
       }
       .width('100%')
 
-      Row({ space: 8 }) {
-        Text('RQ4 热循环必须最后跑（先跑会把热态带上基线）。当前组：' +
-          this.groupLabel(this.group))
-          .fontSize(9)
-          .fontColor(INS_LABEL3)
-          .fontFamily(INS_FONT)
-          .layoutWeight(1)
-          .maxLines(2)
+      // 提示单独占一行：按钮从 4 个涨到 6 个后，它跟按钮抢同一行会被压成一条缝。
+      Text('RQ4 热循环必须最后跑（先跑会把热态带上基线）。当前组：' +
+        this.groupLabel(this.group))
+        .fontSize(9)
+        .fontColor(INS_LABEL3)
+        .fontFamily(INS_FONT)
+        .width('100%')
+        .maxLines(2)
+
+      Row({ space: 6 }) {
         Text('车辆检测')
           .fontSize(11)
           .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
@@ -3710,6 +3850,36 @@ struct Index {
           .onClick(() => {
             if (!this.busy) {
               this.roiPlateProbe();
+            }
+          })
+
+        Text('ROI 路径')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.roiPipelineRun();
+            }
+          })
+
+        Text('去重自证')
+          .fontSize(11)
+          .fontColor(this.busy ? INS_LABEL3 : INS_LABEL)
+          .fontFamily(INS_FONT)
+          .textAlign(TextAlign.Center)
+          .height(28)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(INS_PANEL2)
+          .borderRadius(8)
+          .onClick(() => {
+            if (!this.busy) {
+              this.roiDedupeSelfTest();
             }
           })
 

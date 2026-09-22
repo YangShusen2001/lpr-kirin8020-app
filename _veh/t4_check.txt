@@ -1,0 +1,24 @@
+[t4check] 去重自证 case 数 = 10
+[t4check] ✓ dedupe-chain               kept=2; scores=0.900000 0.700000; exp=2 条 0.9/0.7
+[t4check] ✓ dedupe-empty               kept=0
+[t4check] ✓ dedupe-exact-dup           kept=1; scores=0.900000; exp=1 条且 score=0.9
+[t4check] ✓ dedupe-iou-0333            kept=2; exp=2（IoU 0.333 < 0.5）
+[t4check] ✓ dedupe-iou-0667            kept=1; scores=0.900000; exp=1（IoU 0.667 >= 0.5）
+[t4check] ✓ dedupe-keeps-owner         kept=1; owner=7; exp=owner=7（高分那条的归属）
+[t4check] ✓ dedupe-order-independent   kept=2; scores=0.900000 0.700000; exp=2 条 0.9/0.7（与输入顺序无关）
+[t4check] ✓ dedupe-single              kept=1
+[t4check] ✓ dedupe-sorted-desc         scores=0.900000 0.500000 0.200000; exp=0.9 0.5 0.2
+[t4check] ✓ dedupe-touch-edges         kept=2; exp=2（边界相接 IoU=0，不是重复）
+[t4check] 去重自证 ok = 10 / 10；设备自报 total=10 failed=0
+[t4check] ROI 路径：veh=5 roiTried=5 roiSkipped=0 rawHits=1 dropped=0 count=1
+[t4check] 耗时：vehInferMs=87.1316 roiDetectMs=66.8236 totalMs=158.4720
+[t4check]   车牌#0 rect=107|114|170|130 score=0.8557 owner=0 colour=green code=浙AG557A
+[t4check]   车辆#0 cls=2 score=0.9355 name=car rect=19.6511|65.3956|245.0535|184.3052
+[t4check]   车辆#1 cls=2 score=0.2709 name=car rect=290.4642|95.7326|319.7787|135.6022
+[t4check]   车辆#2 cls=3 score=0.1635 name=motorcycle rect=290.8389|98.0370|319.7499|135.7470
+[t4check]   车辆#3 cls=2 score=0.0589 name=car rect=0.2533|66.2832|62.5765|88.8781
+[t4check]   车辆#4 cls=7 score=0.0522 name=truck rect=40.0480|34.4185|195.3104|72.3169
+[t4check] 召回测量配置：veh_conf=0.05 roi_max_boxes=0 n=1000
+[t4check] 配置 320|0.15：ROI top1=0.905 any=0.907 （直检 top1=1.0）；无车辆率=0.085
+
+[t4check] ✓ T4 判据全过：去重自证 / ROI 路径账目与归属 / CCPD 召回

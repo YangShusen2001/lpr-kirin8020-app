@@ -1,0 +1,4 @@
+09-22 09:42:15.207 18869 19211 I A0D001/com.shusen.lprdemo/LprNative: T4OVERLAP case=overlap-dedupe;ok=1;growPx=6;boxA=19,65,245,184;boxB=13,59,251,190;roi0=0,47,279,156;roi1=0,39,287,171;raw=2;kept=1;iouBefore=0.888889;codeBefore=浙AG557A;keptCode=浙AG557A;keptScore=0.855748
+09-22 09:42:15.207 18869 19211 I A0D001/com.shusen.lprdemo/LprNative: T4OVERLAP total=1;failed=0
+09-22 09:42:15.209 18869 18869 I A0D001/com.shusen.lprdemo/LprNativeUI: T4OVERLAP case=overlap-dedupe;ok=1;growPx=6;boxA=19,65,245,184;boxB=13,59,251,190;roi0=0,47,279,156;roi1=0,39,287,171;raw=2;kept=1;iouBefore=0.888889;codeBefore=浙AG557A;keptCode=浙AG557A;keptScore=0.855748
+09-22 09:42:15.210 18869 18869 I A0D001/com.shusen.lprdemo/LprNativeUI: T4OVERLAP total=1;failed=0

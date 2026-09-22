@@ -2015,3 +2015,358 @@ std::string LprRoiSelfTest(const RgbaImage& img) {
   rep += "total=" + std::to_string(total) + ";failed=" + std::to_string(failed) + "\n";
   return rep;
 }
+
+// ---------------------------------------------------------------- ROI 路径串联（T4）
+
+/** 整数框的 IoU（车牌框是整数像素）。 */
+static float PlateRectIou(const int a[4], const int b[4]) {
+  const float x1 = static_cast<float>(std::max(a[0], b[0]));
+  const float y1 = static_cast<float>(std::max(a[1], b[1]));
+  const float x2 = static_cast<float>(std::min(a[2], b[2]));
+  const float y2 = static_cast<float>(std::min(a[3], b[3]));
+  const float iw = x2 - x1;
+  const float ih = y2 - y1;
+  if (!(iw > 0) || !(ih > 0)) {
+    return 0;
+  }
+  const float inter = iw * ih;
+  const float aa = static_cast<float>(std::max(0, a[2] - a[0]) * std::max(0, a[3] - a[1]));
+  const float bb = static_cast<float>(std::max(0, b[2] - b[0]) * std::max(0, b[3] - b[1]));
+  const float uni = aa + bb - inter;
+  return uni > 0 ? inter / uni : 0;
+}
+
+int LprDedupePlates(std::vector<PlateResult>& plates, float iouThresh) {
+  const size_t n = plates.size();
+  if (n <= 1) {
+    return static_cast<int>(n);
+  }
+  // 先按分数降序 —— 保证"保留高分"且与输入顺序无关。
+  std::vector<int> order(n);
+  for (size_t i = 0; i < n; i++) {
+    order[i] = static_cast<int>(i);
+  }
+  std::stable_sort(order.begin(), order.end(), [&plates](int a, int b) {
+    return plates[a].detScore > plates[b].detScore;
+  });
+  std::vector<PlateResult> kept;
+  kept.reserve(n);
+  for (int idx : order) {
+    const PlateResult& p = plates[idx];
+    bool dup = false;
+    for (const PlateResult& k : kept) {
+      if (PlateRectIou(p.rect, k.rect) >= iouThresh) {
+        dup = true;
+        break;
+      }
+    }
+    if (!dup) {
+      kept.push_back(p);
+    }
+  }
+  plates.swap(kept);
+  return static_cast<int>(plates.size());
+}
+
+namespace {
+PlateResult MkTestPlate(int x1, int y1, int x2, int y2, float score, int owner = -1) {
+  PlateResult p;
+  p.rect[0] = x1;
+  p.rect[1] = y1;
+  p.rect[2] = x2;
+  p.rect[3] = y2;
+  p.detScore = score;
+  p.ownerVeh = owner;
+  return p;
+}
+}  // namespace
+
+std::string LprDedupeSelfTest() {
+  std::string rep;
+  int total = 0;
+  int failed = 0;
+  const float kT = 0.5f;  // D3 的阈值
+
+  auto row = [&rep, &total, &failed](const char* name, bool ok, const std::string& detail) {
+    total++;
+    if (!ok) {
+      failed++;
+    }
+    rep += "case=";
+    rep += name;
+    rep += ";ok=";
+    rep += (ok ? "1" : "0");
+    if (!detail.empty()) {
+      rep += ";";
+      rep += detail;
+    }
+    rep += "\n";
+  };
+
+  auto scores = [](const std::vector<PlateResult>& v) {
+    std::string s;
+    for (size_t i = 0; i < v.size(); i++) {
+      if (i) s += " ";
+      s += std::to_string(v[i].detScore);
+    }
+    return s;
+  };
+
+  // 1) 完全重合 → 只留一条，且是高分那条
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.5f), MkTestPlate(0, 0, 100, 100, 0.9f)};
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 1 && v.size() == 1 && v[0].detScore == 0.9f;
+    row("dedupe-exact-dup", ok, "kept=" + std::to_string(n) + ";scores=" + scores(v) +
+                                    ";exp=1 条且 score=0.9");
+  }
+  // 2) IoU = 0.667 ≥ 0.5 → 判重（重叠车框的典型情形）
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.9f), MkTestPlate(20, 0, 120, 100, 0.8f)};
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 1 && v[0].detScore == 0.9f;
+    row("dedupe-iou-0667", ok, "kept=" + std::to_string(n) + ";scores=" + scores(v) +
+                                   ";exp=1（IoU 0.667 >= 0.5）");
+  }
+  // 3) IoU = 0.333 < 0.5 → 不判重（两条都是真的）
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.9f), MkTestPlate(50, 0, 150, 100, 0.8f)};
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 2;
+    row("dedupe-iou-0333", ok, "kept=" + std::to_string(n) + ";exp=2（IoU 0.333 < 0.5）");
+  }
+  // 4) 三条链式重叠 + 一条独立 → 留 2（A 与 C）
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.9f),     // A
+                               MkTestPlate(10, 0, 110, 100, 0.8f),    // B：与 A IoU 0.818 → 丢
+                               MkTestPlate(200, 0, 300, 100, 0.7f)};  // C：与 A 无交 → 留
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 2 && v[0].detScore == 0.9f && v[1].detScore == 0.7f;
+    row("dedupe-chain", ok, "kept=" + std::to_string(n) + ";scores=" + scores(v) +
+                                ";exp=2 条 0.9/0.7");
+  }
+  // 5) 与输入顺序无关（把第 4 条的顺序打乱）
+  {
+    std::vector<PlateResult> v{MkTestPlate(200, 0, 300, 100, 0.7f),
+                               MkTestPlate(10, 0, 110, 100, 0.8f),
+                               MkTestPlate(0, 0, 100, 100, 0.9f)};
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 2 && v[0].detScore == 0.9f && v[1].detScore == 0.7f;
+    row("dedupe-order-independent", ok, "kept=" + std::to_string(n) + ";scores=" + scores(v) +
+                                           ";exp=2 条 0.9/0.7（与输入顺序无关）");
+  }
+  // 6) 只挨着、不重叠（IoU = 0）→ 不算重
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.9f), MkTestPlate(100, 0, 200, 100, 0.8f)};
+    const int n = LprDedupePlates(v, kT);
+    row("dedupe-touch-edges", n == 2, "kept=" + std::to_string(n) +
+                                          ";exp=2（边界相接 IoU=0，不是重复）");
+  }
+  // 7) 空输入不崩
+  {
+    std::vector<PlateResult> v;
+    const int n = LprDedupePlates(v, kT);
+    row("dedupe-empty", n == 0, "kept=" + std::to_string(n));
+  }
+  // 8) 单条输入原样返回
+  {
+    std::vector<PlateResult> v{MkTestPlate(5, 6, 50, 40, 0.77f)};
+    const int n = LprDedupePlates(v, kT);
+    row("dedupe-single", n == 1 && v[0].detScore == 0.77f, "kept=" + std::to_string(n));
+  }
+  // 9) 归属随保留者一起留下（去重不能把 ownerVeh 丢掉，否则界面连不出归属线）
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 100, 100, 0.5f, 3), MkTestPlate(0, 0, 100, 100, 0.9f, 7)};
+    const int n = LprDedupePlates(v, kT);
+    row("dedupe-keeps-owner", n == 1 && v[0].ownerVeh == 7,
+        "kept=" + std::to_string(n) + ";owner=" + std::to_string(v[0].ownerVeh) +
+            ";exp=owner=7（高分那条的归属）");
+  }
+  // 10) 输出保持分数降序
+  {
+    std::vector<PlateResult> v{MkTestPlate(0, 0, 10, 10, 0.2f), MkTestPlate(50, 50, 60, 60, 0.9f),
+                               MkTestPlate(200, 200, 210, 210, 0.5f)};
+    const int n = LprDedupePlates(v, kT);
+    const bool ok = n == 3 && v[0].detScore == 0.9f && v[1].detScore == 0.5f && v[2].detScore == 0.2f;
+    row("dedupe-sorted-desc", ok, "scores=" + scores(v) + ";exp=0.9 0.5 0.2");
+  }
+
+  rep += "total=" + std::to_string(total) + ";failed=" + std::to_string(failed) + "\n";
+  return rep;
+}
+
+bool LprRunRoiPipeline(const RgbaImage& img, const LprSessions& s, MsSession* veh,
+                       const RoiPipelineOptions& opt, std::vector<PlateResult>& outPlates,
+                       std::vector<VehicleBox>& outVehicles, bool& outVehTruncated,
+                       RoiPipelineStats& outStats, std::string& err) {
+  outPlates.clear();
+  outVehicles.clear();
+  outVehTruncated = false;
+  outStats = RoiPipelineStats();
+  if (!img.Valid()) {
+    err = "roiPipeline: invalid image";
+    return false;
+  }
+  const double t0 = NowMs();
+
+  // 1) 车辆检测：D1 的两条优化都在这里（低阈值 + 遍历所有框）
+  std::vector<VehicleBox> vehs;
+  float vehMs = 0;
+  if (!LprVehicleDetect(img, veh, opt.vehConf, opt.vehIou, opt.vehicleOnly, vehs,
+                        outVehTruncated, vehMs, err)) {
+    return false;
+  }
+  outStats.vehInferMs = vehMs;
+  outStats.vehCount = static_cast<int>(vehs.size());
+  outVehicles = vehs;
+
+  // 2) 逐框：裁 ROI → 车牌检测 → 映射回原图坐标
+  const double t1 = NowMs();
+  for (size_t i = 0; i < vehs.size(); i++) {
+    const RoiRect roi = LprRoiFromBox(vehs[i].rect, img.width, img.height, opt.roiExpand);
+    if (!roi.valid) {
+      outStats.roiSkipped++;
+      continue;
+    }
+    RgbaImage crop;
+    std::string cerr;
+    if (!LprCropRoi(img, roi, crop, cerr)) {
+      outStats.roiSkipped++;
+      continue;
+    }
+    std::vector<PlateResult> hits;
+    std::string perr;
+    if (!LprRunPipeline(crop, s, hits, perr)) {
+      // 单个 ROI 失败不让整帧失败 —— 一帧多车时，一个框出问题不该连累其它车。
+      outStats.roiSkipped++;
+      continue;
+    }
+    outStats.roiTried++;
+    for (PlateResult& p : hits) {
+      // 少了这一步，框会整体偏移 (roi.x0, roi.y0) —— T3 已证过。
+      LprRoiMapRect(p.rect, roi);
+      p.ownerVeh = static_cast<int>(i);
+      outPlates.push_back(p);
+    }
+  }
+  outStats.roiDetectMs = static_cast<float>(NowMs() - t1);
+
+  // 3) 合并去重（D3）
+  outStats.rawHits = static_cast<int>(outPlates.size());
+  LprDedupePlates(outPlates, opt.dedupeIou);
+  outStats.dedupeDropped = outStats.rawHits - static_cast<int>(outPlates.size());
+
+  outStats.totalMs = static_cast<float>(NowMs() - t0);
+  return true;
+}
+
+std::string LprOverlapDedupeProbe(const RgbaImage& img, const LprSessions& s, MsSession* veh,
+                                  int growPx) {
+  std::string rep;
+  int total = 0;
+  int failed = 0;
+  auto row = [&rep, &total, &failed](const char* name, bool ok, const std::string& detail) {
+    total++;
+    if (!ok) {
+      failed++;
+    }
+    rep += "case=";
+    rep += name;
+    rep += ";ok=";
+    rep += (ok ? "1" : "0");
+    if (!detail.empty()) {
+      rep += ";";
+      rep += detail;
+    }
+    rep += "\n";
+  };
+  auto finish = [&rep, &total, &failed]() {
+    rep += "total=" + std::to_string(total) + ";failed=" + std::to_string(failed) + "\n";
+    return rep;
+  };
+
+  if (!img.Valid()) {
+    row("overlap-detect", false, "why=图无效");
+    return finish();
+  }
+
+  std::vector<VehicleBox> vehs;
+  bool trunc = false;
+  float vehMs = 0;
+  std::string err;
+  if (!LprVehicleDetect(img, veh, 0.05f, 0.5f, /*vehicleOnly=*/true, vehs, trunc, vehMs, err)) {
+    row("overlap-detect", false, "err=" + err);
+    return finish();
+  }
+  if (vehs.empty()) {
+    row("overlap-detect", false, "why=图上没有车辆框，构造不出重叠车框");
+    return finish();
+  }
+
+  // 车框 A = 真实最高分框；车框 B = A 向四周各外扩 growPx（人为构造，与 A 必然重叠）
+  const VehicleBox a = vehs[0];
+  VehicleBox b = vehs[0];
+  b.rect[0] -= static_cast<float>(growPx);
+  b.rect[1] -= static_cast<float>(growPx);
+  b.rect[2] += static_cast<float>(growPx);
+  b.rect[3] += static_cast<float>(growPx);
+  const VehicleBox boxes[2] = {a, b};
+
+  std::vector<PlateResult> hits;
+  std::string detail = "growPx=" + std::to_string(growPx) +
+                       ";boxA=" + std::to_string(static_cast<int>(a.rect[0])) + "," +
+                       std::to_string(static_cast<int>(a.rect[1])) + "," +
+                       std::to_string(static_cast<int>(a.rect[2])) + "," +
+                       std::to_string(static_cast<int>(a.rect[3])) + ";boxB=" +
+                       std::to_string(static_cast<int>(b.rect[0])) + "," +
+                       std::to_string(static_cast<int>(b.rect[1])) + "," +
+                       std::to_string(static_cast<int>(b.rect[2])) + "," +
+                       std::to_string(static_cast<int>(b.rect[3])) + ";";
+  for (int i = 0; i < 2; i++) {
+    const RoiRect roi = LprRoiFromBox(boxes[i].rect, img.width, img.height, kRoiExpandDefault);
+    if (!roi.valid) {
+      detail += "roi" + std::to_string(i) + "=invalid;";
+      continue;
+    }
+    RgbaImage crop;
+    std::string cerr;
+    if (!LprCropRoi(img, roi, crop, cerr)) {
+      detail += "roi" + std::to_string(i) + "=cropfail;";
+      continue;
+    }
+    std::vector<PlateResult> got;
+    std::string perr;
+    if (!LprRunPipeline(crop, s, got, perr)) {
+      detail += "roi" + std::to_string(i) + "=pipefail;";
+      continue;
+    }
+    detail += "roi" + std::to_string(i) + "=" + std::to_string(roi.x0) + "," +
+              std::to_string(roi.y0) + "," + std::to_string(roi.w) + "," +
+              std::to_string(roi.h) + ";";
+    for (PlateResult& p : got) {
+      LprRoiMapRect(p.rect, roi);
+      p.ownerVeh = i;
+      hits.push_back(p);
+    }
+  }
+
+  const int raw = static_cast<int>(hits.size());
+  float iouBefore = 0;
+  if (raw >= 2) {
+    iouBefore = PlateRectIou(hits[0].rect, hits[1].rect);
+  }
+  const std::string codeBefore = raw >= 1 ? hits[0].code : std::string();
+  const int kept = LprDedupePlates(hits, 0.5f);
+
+  detail += "raw=" + std::to_string(raw) + ";kept=" + std::to_string(kept) +
+            ";iouBefore=" + std::to_string(iouBefore) + ";codeBefore=" + codeBefore;
+  if (kept >= 1) {
+    detail += ";keptCode=" + hits[0].code + ";keptScore=" + std::to_string(hits[0].detScore);
+  }
+  if (raw < 2) {
+    detail += ";why=只有一个 ROI 检出车牌，去重未被触发 —— 这条用例无效，不代表去重实现有问题";
+  }
+  // 期望：两个重叠 ROI 都检出同一块牌（raw=2），去重后只剩 1 条
+  row("overlap-dedupe", raw == 2 && kept == 1, detail);
+  return finish();
+}

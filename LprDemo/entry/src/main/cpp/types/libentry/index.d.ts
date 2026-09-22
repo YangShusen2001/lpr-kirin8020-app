@@ -115,6 +115,50 @@ export const roiPlateProbeAsync: (
   boxIdx?: number, expand?: number) => Promise<string>;
 
 /**
+ * T4：ROI 路径端到端 —— 车辆检测 → **逐框**裁 ROI → 逐框车牌检测 → 映射回原图
+ * → 合并去重。返回车牌框 + 车牌串 + 颜色 + **归属的车辆下标**。
+ *
+ * 默认参数即 spec 定案值：`vehConf=0.05`（D1 极低阈值）、`roiExpand=0.15`、
+ * `dedupeIou=0.5`（D3）。三者都可显式传，但必须在合法区间内，否则**报错**而非静默退回。
+ *
+ * 返回 kv 串，字段：
+ * - 汇总：`vehCount` / `vehTruncated` / `roiTried` / `roiSkipped` / `rawHits` /
+ *   `dedupeDropped` / `count` / `vehInferMs` / `roiDetectMs` / `totalMs`
+ * - 车辆框：`v<i>=<cls>,<score>,<x1>|<y1>|<x2>|<y2>,<name>`
+ * - 车牌：`p<i>=<x1>|<y1>|<x2>|<y2>,<detScore>,<ownerVeh>,<colour>,<code>,<recConf>`
+ *
+ * `rawHits - count == dedupeDropped`；`dedupeDropped > 0` 就是去重真的生效了的证据。
+ *
+ * ⚠️ `vehId`（yolov5su 车辆检测器）与 `detId`（y5fu_320x 车牌检测器）不是同一个模型。
+ */
+export const roiPipelineAsync: (
+  vehId: number, detId: number, recId: number, clsId: number,
+  rgba: ArrayBuffer, width: number, height: number,
+  vehConf?: number, roiExpand?: number, dedupeIou?: number) => Promise<string>;
+
+/**
+ * T4：合并去重的单元自证（纯数据，无入参、不需要模型会话）。
+ *
+ * 构造完全重合 / IoU 0.667 / IoU 0.333 / 链式重叠 / 边界相接 / 空输入等已知输入，
+ * 断言保留条数与**保留的是哪一条**（高分者）。返回多行报告，末行 `total=N;failed=M`。
+ */
+export const roiDedupeSelfTestAsync: () => Promise<string>;
+
+/**
+ * T4：「构造重叠车框」的集成验证（需要**真的跑模型**，与上面的纯数据自证互补）。
+ *
+ * 取图上分数最高的真实车框 A，人为构造一个向四周外扩 6 px 的车框 B（与 A 必然重叠）；
+ * 两个重叠 ROI 各自跑车牌检测 ⇒ 同一块牌被检出两次 ⇒ 去重后必须只剩 1 条。
+ * 报告里给出 `raw` / `kept` / `iouBefore` / `keptCode`。
+ *
+ * `raw != 2` 时判失败并在细节里写明「去重未被触发（用例无效）」—— 不把用例无效
+ * 混成"去重实现错了"。
+ */
+export const roiOverlapSelfTestAsync: (
+  vehId: number, detId: number, recId: number, clsId: number,
+  rgba: ArrayBuffer, width: number, height: number) => Promise<string>;
+
+/**
  * ncnn 通用模型槽位（识别=1 / 分类=2，0 保留给检测旁路）。
  *
  * GPU（Vulkan）在麒麟 8020 上只有 ncnn 一条通路，而 MS Lite 的 GPU 档编译期判否 ——
